@@ -32,11 +32,19 @@ next begins.
   CSP enforced, offline cMaps/fonts resolve); PDF bytes transferred via IPC.
 - Preferences (theme, layout, reading mode) persisted to disk by the main process.
 
+### ✅ M2 — Navigation & search
+
+- **Thumbnail rail** (lazy-rendered) with current-page sync and click-to-jump.
+- **Outline / bookmarks** panel built from the document outline, with
+  collapsible nodes that navigate to their destination page.
+- **Full-text search** across the whole document: live result count, next/prev,
+  and on-page **highlighting** (matches mapped to text-item rectangles), with the
+  active match emphasized and scrolled into view.
+
 ## In progress / planned
 
 | Milestone                                   | Scope                                                                                                                                                                   |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M2 — Navigation & search**                | Lazy thumbnail rail; outline/bookmarks; full-text search with match highlighting and next/prev.                                                                         |
 | **M3 — Page management + undo/redo engine** | Command-pattern history store; reorder/rotate/delete/insert/extract/duplicate/crop/merge/split via pdf-lib; multi-select.                                               |
 | **M4 — Annotations & markup**               | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle. |
 | **M5 — Forms (AcroForm)**                   | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                     |
