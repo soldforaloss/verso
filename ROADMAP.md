@@ -99,12 +99,25 @@ next begins.
   the existing machinery (no parallel layer).
 - Live progress; English bundled (more languages via `@tesseract.js-data/<lang>`).
 
+### ✅ M8 — Security, metadata & export
+
+- **Document properties** editor (title, author, subject, keywords, creator,
+  producer) applied with pdf-lib on save.
+- **Security via a bundled qpdf sidecar** (Apache-2.0): 256-bit AES encryption
+  with permission flags, password removal, structural repair, and
+  linearization — through a single zod-validated IPC channel whose arguments
+  are built entirely in the main process ([ADR-0010](./docs/decisions/0010-security-export-redaction.md)).
+- **True redaction**: marked pages are rasterized so the content beneath the
+  box is destroyed, not merely hidden — gated behind an explicit warning, with
+  unmarked pages copied losslessly.
+- **Export** pages to PNG/JPEG (annotations and filled fields baked in) and
+  **print** via Chromium's PDF viewer in a sandboxed offscreen window.
+
 ## In progress / planned
 
-| Milestone                            | Scope                                                                                                                                                         |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M8 — Security, metadata & export** | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |
-| **M9 — Polish, packaging & release** | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                     |
+| Milestone                            | Scope                                                                                                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **M9 — Polish, packaging & release** | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline. |
 
 ## Stretch / future
 

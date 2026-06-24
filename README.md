@@ -47,7 +47,7 @@ Verso is built milestone by milestone. Status reflects what's on `main`.
 | Forms      | Fill & save AcroForms (text, check, radio, dropdown, list)              | ✅ M5  |
 | Editing    | Add/edit text, images, shapes; cover-&-replace existing text (Tier 1–2) | ✅ M6  |
 | OCR        | Make scanned PDFs searchable (tesseract.js, offline)                    | ✅ M7  |
-| Security   | Passwords/permissions, repair, linearize, **true redaction**, export    | ⏳ M8  |
+| Security   | Passwords/permissions, repair, linearize, **true redaction**, export    | ✅ M8  |
 | Polish     | Shortcuts, auto-update, icon, release pipeline                          | ⏳ M9  |
 
 See [`ROADMAP.md`](./ROADMAP.md) for the full plan, including stretch goals
@@ -64,11 +64,17 @@ See [`ROADMAP.md`](./ROADMAP.md) for the full plan, including stretch goals
 git clone https://github.com/soldforaloss/verso.git
 cd verso
 npm install
+npm run fetch:qpdf # download the qpdf security sidecar into resources/bin (optional)
 
 npm run dev        # launch in development with HMR
 npm run build      # typecheck + production build into out/
 npm run build:win  # produce the Windows installer + portable exe in release/
 ```
+
+> The security features (encrypt/decrypt/repair/linearize) use a bundled
+> [qpdf](https://github.com/qpdf/qpdf) sidecar. `npm run fetch:qpdf` downloads it
+> (not committed); on macOS install it with `brew install qpdf`. Without it,
+> those features show as unavailable and everything else works normally.
 
 ## Tech stack
 
