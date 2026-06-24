@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+node_modules/.tmp/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+tests/fixtures/*.out.pdf
+
+# Bundled sidecar binaries (downloaded by scripts/CI, not committed)
+resources/bin/
+
+# Scaffolding scratch (locked dir from an interactive probe)
+.scaffold-probe/
