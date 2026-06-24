@@ -5,9 +5,12 @@ import type {
   Preferences,
   PingRequest,
   PingResponse,
+  PrintPdfRequest,
   ReadFileRequest,
   RecentFile,
   SaveDialogRequest,
+  SecurityStatus,
+  TransformPdfRequest,
   WriteFileRequest,
   WriteInDirRequest
 } from './ipc'
@@ -52,6 +55,14 @@ export interface VersoApi {
   writeFile(request: WriteFileRequest): Promise<void>
   /** Writes bytes to `<dir>/<name>` (atomic); resolves to the full path. */
   writeFileInDir(request: WriteInDirRequest): Promise<string>
+
+  /** Reports qpdf sidecar availability and version. */
+  getSecurityStatus(): Promise<SecurityStatus>
+  /** Runs a qpdf transform (encrypt/decrypt/repair/linearize); resolves to bytes. */
+  transformPdf(request: TransformPdfRequest): Promise<Uint8Array<ArrayBuffer>>
+
+  /** Prints the given PDF bytes via the OS print dialog. */
+  printPdf(request: PrintPdfRequest): Promise<void>
 
   /**
    * Subscribes to "open this file" requests originating outside the UI (file

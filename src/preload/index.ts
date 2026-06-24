@@ -30,6 +30,11 @@ const api: VersoApi = {
   writeFile: (request) => ipcRenderer.invoke(IpcChannels.writeFile, request),
   writeFileInDir: (request) => ipcRenderer.invoke(IpcChannels.writeFileInDir, request),
 
+  getSecurityStatus: () => ipcRenderer.invoke(IpcChannels.getSecurityStatus),
+  transformPdf: (request) => ipcRenderer.invoke(IpcChannels.transformPdf, request),
+
+  printPdf: (request) => ipcRenderer.invoke(IpcChannels.printPdf, request),
+
   onOpenFile: (callback) => {
     const listener = (_event: Electron.IpcRendererEvent, document: OpenedDocument): void =>
       callback(document)

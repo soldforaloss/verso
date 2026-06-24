@@ -110,3 +110,55 @@ export const WriteInDirRequestSchema = z.object({
   bytes: z.instanceof(Uint8Array)
 })
 export type WriteInDirRequest = z.infer<typeof WriteInDirRequestSchema>
+
+// --- Security (qpdf sidecar) -----------------------------------------------
+
+/** Availability of the bundled qpdf sidecar binary. */
+export const SecurityStatusSchema = z.object({
+  available: z.boolean(),
+  version: z.string().nullable()
+})
+export type SecurityStatus = z.infer<typeof SecurityStatusSchema>
+
+/** Permission flags applied when encrypting (256-bit AES). */
+export const PdfPermissionsSchema = z.object({
+  printing: z.boolean(),
+  modifying: z.boolean(),
+  copying: z.boolean(),
+  annotating: z.boolean()
+})
+export type PdfPermissions = z.infer<typeof PdfPermissionsSchema>
+
+const PASSWORD_MAX = 256
+
+/**
+ * A qpdf transform request. The bytes are the document to transform; the main
+ * process never lets the renderer supply raw qpdf arguments — every flag is
+ * derived from these validated fields.
+ */
+export const TransformPdfRequestSchema = z.discriminatedUnion('operation', [
+  z.object({
+    operation: z.literal('encrypt'),
+    bytes: z.instanceof(Uint8Array),
+    userPassword: z.string().max(PASSWORD_MAX),
+    ownerPassword: z.string().max(PASSWORD_MAX),
+    permissions: PdfPermissionsSchema
+  }),
+  z.object({
+    operation: z.literal('decrypt'),
+    bytes: z.instanceof(Uint8Array),
+    password: z.string().max(PASSWORD_MAX)
+  }),
+  z.object({ operation: z.literal('repair'), bytes: z.instanceof(Uint8Array) }),
+  z.object({ operation: z.literal('linearize'), bytes: z.instanceof(Uint8Array) })
+])
+export type TransformPdfRequest = z.infer<typeof TransformPdfRequestSchema>
+
+export type TransformOperation = TransformPdfRequest['operation']
+
+// --- Printing --------------------------------------------------------------
+
+export const PrintPdfRequestSchema = z.object({
+  bytes: z.instanceof(Uint8Array)
+})
+export type PrintPdfRequest = z.infer<typeof PrintPdfRequestSchema>

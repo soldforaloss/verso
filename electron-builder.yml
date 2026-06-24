@@ -27,11 +27,13 @@ files:
 asarUnpack:
   - resources/**
 
-# NOTE (M8): the qpdf sidecar binary will be added here once it is integrated:
-# extraResources:
-#   - from: resources/bin
-#     to: bin
-#     filter: ['**/*']
+# The qpdf sidecar (Apache-2.0) is downloaded into resources/bin by
+# `npm run fetch:qpdf` (not committed) and bundled here. At runtime the main
+# process resolves it from `<resources>/bin` (see src/main/qpdf.ts).
+extraResources:
+  - from: resources/bin
+    to: bin
+    filter: ['**/*']
 
 win:
   executableName: Verso

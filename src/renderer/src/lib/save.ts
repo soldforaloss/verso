@@ -193,7 +193,7 @@ function formValuesForTab(tab: DocumentTab): Record<string, Record<string, FormV
 }
 
 /** Materializes the whole document (used for save and e2e verification). */
-export function buildDocumentPdf(tab: DocumentTab): Promise<Uint8Array> {
+export function buildDocumentPdf(tab: DocumentTab): Promise<Uint8Array<ArrayBuffer>> {
   return buildDocumentBytes(tab)
 }
 

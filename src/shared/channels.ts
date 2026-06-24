@@ -37,6 +37,14 @@ export const IpcChannels = {
   /** Writes bytes to `<dir>/<name>` (atomic); returns the full path. */
   writeFileInDir: 'file:write-in-dir',
 
+  /** Reports whether the bundled qpdf sidecar is available (+ its version). */
+  getSecurityStatus: 'security:status',
+  /** Runs a qpdf transform (encrypt/decrypt/repair/linearize); returns bytes. */
+  transformPdf: 'security:transform',
+
+  /** Prints a PDF (given bytes) via a hidden window and the OS print dialog. */
+  printPdf: 'print:pdf',
+
   /**
    * Event (main → renderer): a file was opened outside the UI — via the OS file
    * association, a CLI argument, a second instance, or macOS `open-file`.

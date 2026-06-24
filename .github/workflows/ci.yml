@@ -55,6 +55,13 @@ jobs:
       - name: Prepare Electron binary
         run: node node_modules/electron/install.js
 
+      # Download the qpdf sidecar so the security e2e exercises the real
+      # encrypt/decrypt path. Best-effort: if the download fails, the test
+      # falls back to asserting the graceful "unavailable" UI.
+      - name: Fetch qpdf sidecar
+        continue-on-error: true
+        run: npm run fetch:qpdf
+
       - name: End-to-end tests (Electron)
         run: npm run test:e2e
 

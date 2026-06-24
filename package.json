@@ -34,6 +34,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "fixtures": "node scripts/generate-fixtures.mjs",
+    "fetch:qpdf": "node scripts/fetch-qpdf.mjs",
     "prepare": "husky"
   },
   "dependencies": {
