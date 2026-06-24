@@ -4,6 +4,7 @@ import {
   ChevronUp,
   Columns2,
   FolderOpen,
+  FormInput,
   Maximize,
   Minimize,
   Moon,
@@ -30,6 +31,7 @@ import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
 import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
+import { useFormStore } from '@/store/formStore'
 import { selectCanRedo, selectCanUndo, useHistoryStore } from '@/store/historyStore'
 import type { DocumentTab } from '@/store/documentStore'
 import type { LayoutMode, ReadingMode } from '@shared/ipc'
@@ -82,6 +84,8 @@ export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const canUndo = useHistoryStore(selectCanUndo(tab.id))
   const canRedo = useHistoryStore(selectCanRedo(tab.id))
   const clearSelection = useSelectionStore((s) => s.clear)
+  const hasForm = useFormStore((s) => s.hasFields[tab.id] ?? false)
+  const resetForm = useFormStore((s) => s.resetSources)
 
   const [pageInput, setPageInput] = useState(String(currentPage))
   const inputFocused = useRef(false)
@@ -145,6 +149,16 @@ export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
       >
         <Save />
       </Button>
+      {hasForm && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Reset form fields"
+          onClick={() => resetForm(tab.sourceIds)}
+        >
+          <FormInput />
+        </Button>
+      )}
 
       <Divider />
 
