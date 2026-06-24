@@ -8,12 +8,15 @@ import {
   Minimize,
   Moon,
   PanelLeft,
+  Redo2,
   RotateCcw,
   RotateCw,
+  Save,
   ScrollText,
   Search,
   Square,
   Sun,
+  Undo2,
   ZoomIn,
   ZoomOut
 } from 'lucide-react'
@@ -21,9 +24,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { openViaDialog } from '@/lib/open'
+import { saveDocument } from '@/lib/save'
+import { rotatePages } from '@/lib/pageOps'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
 import { useSearchStore } from '@/store/searchStore'
+import { useSelectionStore } from '@/store/selectionStore'
+import { selectCanRedo, selectCanUndo, useHistoryStore } from '@/store/historyStore'
+import type { DocumentTab } from '@/store/documentStore'
 import type { LayoutMode, ReadingMode } from '@shared/ipc'
 
 const READING_LABEL: Record<ReadingMode, string> = {
@@ -37,25 +45,25 @@ const READING_NEXT: Record<ReadingMode, ReadingMode> = {
   night: 'normal'
 }
 
-function Divider(): React.JSX.Element {
-  return <div className="mx-1 h-5 w-px bg-border" />
-}
-
 const LAYOUTS: { mode: LayoutMode; label: string; Icon: typeof ScrollText }[] = [
   { mode: 'continuous', label: 'Continuous', Icon: ScrollText },
   { mode: 'single', label: 'Single page', Icon: Square },
   { mode: 'two-up', label: 'Two-up', Icon: Columns2 }
 ]
 
-export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element {
+function Divider(): React.JSX.Element {
+  return <div className="mx-1 h-5 w-px bg-border" />
+}
+
+export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
+  const pageCount = tab.pages.length
+
   const scale = useViewStore((s) => s.scale)
   const zoomMode = useViewStore((s) => s.zoomMode)
   const currentPage = useViewStore((s) => s.currentPage)
   const zoomIn = useViewStore((s) => s.zoomIn)
   const zoomOut = useViewStore((s) => s.zoomOut)
   const setZoomMode = useViewStore((s) => s.setZoomMode)
-  const rotateCw = useViewStore((s) => s.rotateCw)
-  const rotateCcw = useViewStore((s) => s.rotateCcw)
   const requestScrollToPage = useViewStore((s) => s.requestScrollToPage)
 
   const layout = usePreferencesStore((s) => s.layout)
@@ -71,11 +79,14 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
   const openSearch = useSearchStore((s) => s.open)
   const closeSearch = useSearchStore((s) => s.close)
 
+  const canUndo = useHistoryStore(selectCanUndo(tab.id))
+  const canRedo = useHistoryStore(selectCanRedo(tab.id))
+  const clearSelection = useSelectionStore((s) => s.clear)
+
   const [pageInput, setPageInput] = useState(String(currentPage))
   const inputFocused = useRef(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Keep the page box in sync with scrolling unless the user is editing it.
   useEffect(() => {
     if (!inputFocused.current) setPageInput(String(currentPage))
   }, [currentPage])
@@ -88,17 +99,24 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
 
   const commitPage = (): void => {
     const parsed = Number.parseInt(pageInput, 10)
-    if (Number.isFinite(parsed)) {
-      requestScrollToPage(Math.min(Math.max(1, parsed), pageCount))
-    } else {
-      setPageInput(String(currentPage))
-    }
+    if (Number.isFinite(parsed)) requestScrollToPage(Math.min(Math.max(1, parsed), pageCount))
+    else setPageInput(String(currentPage))
   }
 
   const toggleFullscreen = (): void => {
     if (document.fullscreenElement) void document.exitFullscreen()
     else void document.documentElement.requestFullscreen()
   }
+
+  const undo = (): void => {
+    clearSelection()
+    useHistoryStore.getState().undo(tab.id)
+  }
+  const redo = (): void => {
+    clearSelection()
+    useHistoryStore.getState().redo(tab.id)
+  }
+  const rotateCurrent = (delta: number): void => rotatePages(tab.id, [currentPage - 1], delta)
 
   return (
     <div className="flex items-center gap-0.5 border-b px-2 py-1.5">
@@ -118,6 +136,23 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
         onClick={() => void openViaDialog()}
       >
         <FolderOpen />
+      </Button>
+      <Button
+        variant={tab.dirty ? 'default' : 'ghost'}
+        size="icon"
+        title={tab.dirty ? 'Save (Ctrl+S) — unsaved changes' : 'Save (Ctrl+S)'}
+        onClick={() => void saveDocument(tab)}
+      >
+        <Save />
+      </Button>
+
+      <Divider />
+
+      <Button variant="ghost" size="icon" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}>
+        <Undo2 />
+      </Button>
+      <Button variant="ghost" size="icon" title="Redo (Ctrl+Y)" disabled={!canRedo} onClick={redo}>
+        <Redo2 />
       </Button>
 
       <Divider />
@@ -194,10 +229,20 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
 
       <Divider />
 
-      <Button variant="ghost" size="icon" title="Rotate counter-clockwise" onClick={rotateCcw}>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Rotate page left"
+        onClick={() => rotateCurrent(-90)}
+      >
         <RotateCcw />
       </Button>
-      <Button variant="ghost" size="icon" title="Rotate clockwise" onClick={rotateCw}>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Rotate page right"
+        onClick={() => rotateCurrent(90)}
+      >
         <RotateCw />
       </Button>
 

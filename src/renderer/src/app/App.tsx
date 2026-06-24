@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
 import { TriangleAlert } from 'lucide-react'
-import { getDocumentPdf, useDocumentStore } from '@/store/documentStore'
+import { useDocumentStore } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
 import { useSearchStore } from '@/store/searchStore'
+import { useSelectionStore } from '@/store/selectionStore'
+import { useHistoryStore } from '@/store/historyStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
+import { saveDocument } from '@/lib/save'
 import { Toolbar } from '@/features/viewer/Toolbar'
 import { Viewer } from '@/features/viewer/Viewer'
 import { Sidebar } from '@/features/navigation/Sidebar'
@@ -22,12 +25,10 @@ function App(): React.JSX.Element {
   const hydrate = usePreferencesStore((s) => s.hydrate)
   const resetForDocument = useViewStore((s) => s.resetForDocument)
 
-  // Load persisted preferences from disk on startup.
   useEffect(() => {
     void window.api.getPreferences().then(hydrate)
   }, [hydrate])
 
-  // Apply the theme, and follow the OS when set to "system".
   useEffect(() => {
     applyTheme(theme)
     if (theme !== 'system') return
@@ -37,41 +38,59 @@ function App(): React.JSX.Element {
     return () => mq.removeEventListener('change', onChange)
   }, [theme])
 
-  // Files opened from outside the UI (file association, CLI, second instance).
   useEffect(() => {
     return window.api.onOpenFile((document) => {
       void useDocumentStore.getState().openDocument(document)
     })
   }, [])
 
-  // Reset the view and clear search whenever the active document changes.
+  // Reset view/search/selection whenever the active document changes.
   useEffect(() => {
     resetForDocument()
     useSearchStore.getState().reset()
+    useSelectionStore.getState().clear()
   }, [activeId, resetForDocument])
 
-  // Application keyboard shortcuts (the full map + cheat-sheet arrive in M9).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const mod = event.ctrlKey || event.metaKey
-      if (mod && event.key.toLowerCase() === 'o') {
+      if (!mod) return
+      const key = event.key.toLowerCase()
+      const docs = useDocumentStore.getState()
+      const tab = activeId ? docs.getTab(activeId) : undefined
+
+      if (key === 'o') {
         event.preventDefault()
         void openViaDialog()
-      } else if (mod && event.key.toLowerCase() === 'w' && activeId) {
+      } else if (key === 'w' && tab) {
         event.preventDefault()
-        closeDocument(activeId)
-      } else if (mod && (event.key === '=' || event.key === '+')) {
+        if (!tab.dirty || window.confirm(`Discard unsaved changes to “${tab.name}”?`)) {
+          closeDocument(tab.id)
+        }
+      } else if (key === 's' && tab) {
         event.preventDefault()
-        useViewStore.getState().zoomIn()
-      } else if (mod && event.key === '-') {
+        void saveDocument(tab, event.shiftKey)
+      } else if (key === 'z' && tab) {
         event.preventDefault()
-        useViewStore.getState().zoomOut()
-      } else if (mod && event.key === '0') {
+        useSelectionStore.getState().clear()
+        if (event.shiftKey) useHistoryStore.getState().redo(tab.id)
+        else useHistoryStore.getState().undo(tab.id)
+      } else if (key === 'y' && tab) {
         event.preventDefault()
-        useViewStore.getState().setZoomMode('fit-width')
-      } else if (mod && event.key.toLowerCase() === 'f') {
+        useSelectionStore.getState().clear()
+        useHistoryStore.getState().redo(tab.id)
+      } else if (key === 'f') {
         event.preventDefault()
         useSearchStore.getState().open()
+      } else if (key === '=' || key === '+') {
+        event.preventDefault()
+        useViewStore.getState().zoomIn()
+      } else if (key === '-') {
+        event.preventDefault()
+        useViewStore.getState().zoomOut()
+      } else if (key === '0') {
+        event.preventDefault()
+        useViewStore.getState().setZoomMode('fit-width')
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -126,15 +145,13 @@ function ActiveDocument(): React.JSX.Element {
     )
   }
 
-  const pdf = getDocumentPdf(tab.id)
-
   return (
     <>
-      <Toolbar pageCount={tab.pageCount} />
+      <Toolbar tab={tab} />
       <div className="flex min-h-0 flex-1">
         {sidebarOpen && <Sidebar tab={tab} />}
         <div className="relative min-w-0 flex-1">
-          {searchOpen && pdf && <SearchBar pdf={pdf} />}
+          {searchOpen && <SearchBar tab={tab} />}
           <Viewer tab={tab} />
         </div>
       </div>

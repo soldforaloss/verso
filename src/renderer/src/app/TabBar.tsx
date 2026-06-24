@@ -32,13 +32,18 @@ export function TabBar(): React.JSX.Element | null {
             {tab.name}
           </span>
           {tab.status === 'error' && <span className="size-1.5 rounded-full bg-destructive" />}
+          {tab.dirty && (
+            <span className="size-1.5 rounded-full bg-primary" title="Unsaved changes" />
+          )}
           <button
             type="button"
             aria-label={`Close ${tab.name}`}
             className="-mr-1 flex size-4 shrink-0 items-center justify-center rounded opacity-0 hover:bg-muted group-hover:opacity-100"
             onClick={(event) => {
               event.stopPropagation()
-              closeDocument(tab.id)
+              if (!tab.dirty || window.confirm(`Discard unsaved changes to “${tab.name}”?`)) {
+                closeDocument(tab.id)
+              }
             }}
           >
             <X className="size-3.5" />
