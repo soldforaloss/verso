@@ -7,9 +7,11 @@ import {
   Maximize,
   Minimize,
   Moon,
+  PanelLeft,
   RotateCcw,
   RotateCw,
   ScrollText,
+  Search,
   Square,
   Sun,
   ZoomIn,
@@ -21,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { openViaDialog } from '@/lib/open'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
+import { useSearchStore } from '@/store/searchStore'
 import type { LayoutMode, ReadingMode } from '@shared/ipc'
 
 const READING_LABEL: Record<ReadingMode, string> = {
@@ -61,6 +64,12 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
   const setReadingMode = usePreferencesStore((s) => s.setReadingMode)
   const theme = usePreferencesStore((s) => s.theme)
   const toggleTheme = usePreferencesStore((s) => s.toggleTheme)
+  const sidebarOpen = usePreferencesStore((s) => s.sidebarOpen)
+  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
+
+  const searchOpen = useSearchStore((s) => s.isOpen)
+  const openSearch = useSearchStore((s) => s.open)
+  const closeSearch = useSearchStore((s) => s.close)
 
   const [pageInput, setPageInput] = useState(String(currentPage))
   const inputFocused = useRef(false)
@@ -93,6 +102,15 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
 
   return (
     <div className="flex items-center gap-0.5 border-b px-2 py-1.5">
+      <Button
+        variant={sidebarOpen ? 'secondary' : 'ghost'}
+        size="icon"
+        title="Toggle sidebar"
+        aria-pressed={sidebarOpen}
+        onClick={toggleSidebar}
+      >
+        <PanelLeft />
+      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -204,6 +222,15 @@ export function Toolbar({ pageCount }: { pageCount: number }): React.JSX.Element
       </div>
 
       <div className="ml-auto flex items-center gap-0.5">
+        <Button
+          variant={searchOpen ? 'secondary' : 'ghost'}
+          size="icon"
+          title="Find in document (Ctrl+F)"
+          aria-pressed={searchOpen}
+          onClick={() => (searchOpen ? closeSearch() : openSearch())}
+        >
+          <Search />
+        </Button>
         <Button
           variant="ghost"
           size="sm"

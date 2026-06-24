@@ -1,11 +1,14 @@
 import { useEffect } from 'react'
 import { TriangleAlert } from 'lucide-react'
-import { useDocumentStore } from '@/store/documentStore'
+import { getDocumentPdf, useDocumentStore } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
+import { useSearchStore } from '@/store/searchStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { Toolbar } from '@/features/viewer/Toolbar'
 import { Viewer } from '@/features/viewer/Viewer'
+import { Sidebar } from '@/features/navigation/Sidebar'
+import { SearchBar } from '@/features/navigation/SearchBar'
 import { TabBar } from './TabBar'
 import { EmptyState } from './EmptyState'
 
@@ -41,9 +44,10 @@ function App(): React.JSX.Element {
     })
   }, [])
 
-  // Reset the view whenever the active document changes.
+  // Reset the view and clear search whenever the active document changes.
   useEffect(() => {
     resetForDocument()
+    useSearchStore.getState().reset()
   }, [activeId, resetForDocument])
 
   // Application keyboard shortcuts (the full map + cheat-sheet arrive in M9).
@@ -65,6 +69,9 @@ function App(): React.JSX.Element {
       } else if (mod && event.key === '0') {
         event.preventDefault()
         useViewStore.getState().setZoomMode('fit-width')
+      } else if (mod && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        useSearchStore.getState().open()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -91,10 +98,11 @@ function App(): React.JSX.Element {
   )
 }
 
-/** Renders the toolbar + viewer (or a loading/error state) for the active tab. */
+/** Renders the toolbar + sidebar + viewer (or a loading/error state). */
 function ActiveDocument(): React.JSX.Element {
-  const activeId = useDocumentStore((s) => s.activeId)
   const tab = useDocumentStore((s) => s.tabs.find((t) => t.id === s.activeId)) ?? null
+  const sidebarOpen = usePreferencesStore((s) => s.sidebarOpen)
+  const searchOpen = useSearchStore((s) => s.isOpen)
 
   if (!tab) return <EmptyState />
 
@@ -118,11 +126,17 @@ function ActiveDocument(): React.JSX.Element {
     )
   }
 
+  const pdf = getDocumentPdf(tab.id)
+
   return (
     <>
       <Toolbar pageCount={tab.pageCount} />
-      <div className="min-h-0 flex-1">
-        <Viewer key={activeId ?? 'none'} tab={tab} />
+      <div className="flex min-h-0 flex-1">
+        {sidebarOpen && <Sidebar tab={tab} />}
+        <div className="relative min-w-0 flex-1">
+          {searchOpen && pdf && <SearchBar pdf={pdf} />}
+          <Viewer tab={tab} />
+        </div>
       </div>
     </>
   )
