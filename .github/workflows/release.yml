@@ -25,6 +25,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Bundle the qpdf security sidecar (Apache-2.0) into the installer.
+      - name: Fetch qpdf sidecar
+        run: npm run fetch:qpdf
+
+      # Regenerate the committed app icons for reproducibility.
+      - name: Generate icons
+        run: npm run icon
+
       - name: Build
         run: npm run build
 

@@ -22,3 +22,4 @@ a future contributor would otherwise have to reverse-engineer or relitigate.
 | [0008](./0008-in-place-editing.md)              | In-place editing tiers & ContentEditor         | Accepted |
 | [0009](./0009-ocr.md)                           | OCR (tesseract.js) & invisible text layer      | Accepted |
 | [0010](./0010-security-export-redaction.md)     | Security (qpdf), export & rasterized redaction | Accepted |
+| [0011](./0011-packaging-and-release.md)         | Packaging, icons & release pipeline            | Accepted |

@@ -113,11 +113,18 @@ next begins.
 - **Export** pages to PNG/JPEG (annotations and filled fields baked in) and
   **print** via Chromium's PDF viewer in a sandboxed offscreen window.
 
-## In progress / planned
+### ✅ M9 — Polish, packaging & release
 
-| Milestone                            | Scope                                                                                                                                     |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **M9 — Polish, packaging & release** | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline. |
+- **Keyboard shortcuts cheat-sheet** (press `?` or the toolbar button) and a
+  top-level **error boundary** with a calm, recoverable fallback.
+- A code-generated **app icon** (no image-library dependency) wired into the
+  window, installer, and `.pdf` file association, with a matching in-app mark.
+- **Opt-in auto-update** via electron-updater (packaged builds only; the sole
+  network call Verso makes) and a tag-triggered **release pipeline** that
+  publishes the Windows installer + portable exe and the update feed
+  ([ADR-0011](./docs/decisions/0011-packaging-and-release.md)).
+
+All planned milestones (M0–M9) have shipped. Future work lives below.
 
 ## Stretch / future
 

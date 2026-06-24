@@ -36,6 +36,7 @@
     "fixtures": "node scripts/generate-fixtures.mjs",
     "fetch:qpdf": "node scripts/fetch-qpdf.mjs",
     "icon": "node scripts/generate-icon.mjs",
+    "screenshot": "node scripts/screenshot.mjs",
     "prepare": "husky"
   },
   "dependencies": {

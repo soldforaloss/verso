@@ -16,7 +16,7 @@ machine, with no account, no telemetry, and no cloud.
 
 </div>
 
-> _Screenshots and a demo GIF land with the viewer (M1)._
+![Verso reading a PDF, with the page toolbar, annotation tools, and thumbnail rail](docs/assets/viewer.png)
 
 ## Why Verso?
 
@@ -48,14 +48,16 @@ Verso is built milestone by milestone. Status reflects what's on `main`.
 | Editing    | Add/edit text, images, shapes; cover-&-replace existing text (Tier 1–2) | ✅ M6  |
 | OCR        | Make scanned PDFs searchable (tesseract.js, offline)                    | ✅ M7  |
 | Security   | Passwords/permissions, repair, linearize, **true redaction**, export    | ✅ M8  |
-| Polish     | Shortcuts, auto-update, icon, release pipeline                          | ⏳ M9  |
+| Polish     | Shortcuts cheat-sheet, error boundary, icon, auto-update, release       | ✅ M9  |
 
 See [`ROADMAP.md`](./ROADMAP.md) for the full plan, including stretch goals
 (true content-stream editing, macOS/Linux, form creation, PDF compare).
 
 ## Install
 
-> Release downloads will appear here once M1 ships. For now, build from source.
+Grab the Windows installer or portable `.exe` from the
+[**Releases**](https://github.com/soldforaloss/verso/releases) page (published by
+the tagged release pipeline), or build from source below.
 
 ### Build from source
 
