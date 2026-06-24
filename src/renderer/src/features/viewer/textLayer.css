@@ -1,0 +1,36 @@
+/*
+ * Minimal CSS required by PDF.js's `TextLayer` (v5/v6) for a selectable,
+ * copyable, invisible text overlay aligned to the rendered canvas. The layer
+ * scales via the `--total-scale-factor` custom property set per page.
+ */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  text-align: initial;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: currentColor;
+  z-index: 2;
+  --total-scale-factor: 1;
+}
+
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.textLayer ::selection {
+  background: rgba(64, 120, 255, 0.35);
+}

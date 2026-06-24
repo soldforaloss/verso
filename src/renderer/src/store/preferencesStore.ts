@@ -1,22 +1,12 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-
-export type ThemeMode = 'light' | 'dark' | 'system'
-
-interface PreferencesState {
-  theme: ThemeMode
-  setTheme: (theme: ThemeMode) => void
-  toggleTheme: () => void
-}
+import type { LayoutMode, Preferences, ReadingMode, ThemeMode } from '@shared/ipc'
 
 /**
- * Resolves a (possibly `system`) theme preference to the concrete light/dark
- * value that should be applied right now.
- *
- * NOTE: persistence currently uses `localStorage`. In M1 this migrates to the
- * main process (preferences written to disk via IPC) per the spec's
- * "persist UI preferences to disk via the main process" requirement.
+ * UI preferences, persisted to disk by the main process (per the spec's
+ * "persist UI preferences via the main process"). The store is hydrated from
+ * disk on startup and writes through every change.
  */
+
 export function resolveTheme(theme: ThemeMode): 'light' | 'dark' {
   if (theme === 'system') {
     const prefersDark =
@@ -33,13 +23,57 @@ export function applyTheme(theme: ThemeMode): void {
   document.documentElement.style.colorScheme = resolved
 }
 
-export const usePreferencesStore = create<PreferencesState>()(
-  persist(
-    (set, get) => ({
-      theme: 'system',
-      setTheme: (theme) => set({ theme }),
-      toggleTheme: () => set({ theme: resolveTheme(get().theme) === 'dark' ? 'light' : 'dark' })
-    }),
-    { name: 'verso.preferences' }
-  )
-)
+/** Fire-and-forget write-through to the main process (no-op outside Electron). */
+function persist(patch: Partial<Preferences>): void {
+  if (typeof window !== 'undefined' && window.api) {
+    void window.api.setPreferences(patch)
+  }
+}
+
+interface PreferencesState extends Preferences {
+  hydrated: boolean
+  hydrate: (prefs: Preferences) => void
+  setTheme: (theme: ThemeMode) => void
+  toggleTheme: () => void
+  setLayout: (layout: LayoutMode) => void
+  setReadingMode: (mode: ReadingMode) => void
+  setSidebarOpen: (open: boolean) => void
+  toggleSidebar: () => void
+}
+
+export const usePreferencesStore = create<PreferencesState>((set, get) => ({
+  theme: 'system',
+  layout: 'continuous',
+  readingMode: 'normal',
+  sidebarOpen: true,
+  hydrated: false,
+
+  hydrate: (prefs) => set({ ...prefs, hydrated: true }),
+
+  setTheme: (theme) => {
+    set({ theme })
+    persist({ theme })
+  },
+  toggleTheme: () => {
+    const next: ThemeMode = resolveTheme(get().theme) === 'dark' ? 'light' : 'dark'
+    set({ theme: next })
+    persist({ theme: next })
+  },
+  setLayout: (layout) => {
+    set({ layout })
+    persist({ layout })
+  },
+  setReadingMode: (readingMode) => {
+    set({ readingMode })
+    persist({ readingMode })
+  },
+  setSidebarOpen: (sidebarOpen) => {
+    set({ sidebarOpen })
+    persist({ sidebarOpen })
+  },
+  toggleSidebar: () => {
+    const sidebarOpen = !get().sidebarOpen
+    set({ sidebarOpen })
+    persist({ sidebarOpen })
+  }
+}))

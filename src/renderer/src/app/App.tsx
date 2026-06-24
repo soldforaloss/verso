@@ -1,28 +1,30 @@
-import { useEffect, useState } from 'react'
-import { FileText, Moon, ShieldCheck, Sun, TriangleAlert } from 'lucide-react'
-import type { AppInfo } from '@shared/ipc'
-import { Button } from '@/components/ui/button'
-import { usePreferencesStore, applyTheme } from '@/store/preferencesStore'
+import { useEffect } from 'react'
+import { TriangleAlert } from 'lucide-react'
+import { useDocumentStore } from '@/store/documentStore'
+import { useViewStore } from '@/store/viewStore'
+import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
+import { openPath, openViaDialog } from '@/lib/open'
+import { Toolbar } from '@/features/viewer/Toolbar'
+import { Viewer } from '@/features/viewer/Viewer'
+import { TabBar } from './TabBar'
+import { EmptyState } from './EmptyState'
 
-type BridgeStatus =
-  | { state: 'checking' }
-  | { state: 'ok'; pong: string; info: AppInfo }
-  | { state: 'error'; message: string }
-
-/**
- * M0 shell. Beyond looking like Verso, it proves the security model works end
- * to end: it can only reach the main process through `window.api`, which is the
- * single contextBridge surface. A successful ping + app-info round-trip means
- * the typed, zod-validated IPC path is wired correctly.
- *
- * The PDF viewer replaces this hero in M1.
- */
 function App(): React.JSX.Element {
-  const theme = usePreferencesStore((s) => s.theme)
-  const toggleTheme = usePreferencesStore((s) => s.toggleTheme)
-  const [bridge, setBridge] = useState<BridgeStatus>({ state: 'checking' })
+  const tabs = useDocumentStore((s) => s.tabs)
+  const activeId = useDocumentStore((s) => s.activeId)
+  const closeDocument = useDocumentStore((s) => s.closeDocument)
+  const active = tabs.find((tab) => tab.id === activeId) ?? null
 
-  // Apply theme on mount + whenever it changes, and react to OS changes.
+  const theme = usePreferencesStore((s) => s.theme)
+  const hydrate = usePreferencesStore((s) => s.hydrate)
+  const resetForDocument = useViewStore((s) => s.resetForDocument)
+
+  // Load persisted preferences from disk on startup.
+  useEffect(() => {
+    void window.api.getPreferences().then(hydrate)
+  }, [hydrate])
+
+  // Apply the theme, and follow the OS when set to "system".
   useEffect(() => {
     applyTheme(theme)
     if (theme !== 'system') return
@@ -32,120 +34,97 @@ function App(): React.JSX.Element {
     return () => mq.removeEventListener('change', onChange)
   }, [theme])
 
-  // Verify the contextBridge ⇄ IPC path once.
+  // Files opened from outside the UI (file association, CLI, second instance).
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        const [pong, info] = await Promise.all([
-          window.api.ping({ message: 'hello from renderer' }),
-          window.api.getAppInfo()
-        ])
-        if (!cancelled) setBridge({ state: 'ok', pong: pong.reply, info })
-      } catch (error) {
-        if (!cancelled) {
-          setBridge({
-            state: 'error',
-            message: error instanceof Error ? error.message : 'Unknown bridge error'
-          })
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
+    return window.api.onOpenFile((document) => {
+      void useDocumentStore.getState().openDocument(document)
+    })
   }, [])
 
+  // Reset the view whenever the active document changes.
+  useEffect(() => {
+    resetForDocument()
+  }, [activeId, resetForDocument])
+
+  // Application keyboard shortcuts (the full map + cheat-sheet arrive in M9).
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const mod = event.ctrlKey || event.metaKey
+      if (mod && event.key.toLowerCase() === 'o') {
+        event.preventDefault()
+        void openViaDialog()
+      } else if (mod && event.key.toLowerCase() === 'w' && activeId) {
+        event.preventDefault()
+        closeDocument(activeId)
+      } else if (mod && (event.key === '=' || event.key === '+')) {
+        event.preventDefault()
+        useViewStore.getState().zoomIn()
+      } else if (mod && event.key === '-') {
+        event.preventDefault()
+        useViewStore.getState().zoomOut()
+      } else if (mod && event.key === '0') {
+        event.preventDefault()
+        useViewStore.getState().setZoomMode('fit-width')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [activeId, closeDocument])
+
+  const onDrop = (event: React.DragEvent): void => {
+    event.preventDefault()
+    const file = event.dataTransfer.files[0]
+    if (!file) return
+    const path = window.api.getPathForFile(file)
+    if (path) void openPath(path)
+  }
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b px-5 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <FileText className="size-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight">Verso</div>
-            <div className="text-xs text-muted-foreground">PDF viewer &amp; editor</div>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title="Toggle light / dark theme"
-        >
-          <Sun className="hidden size-4 dark:block" />
-          <Moon className="block size-4 dark:hidden" />
-        </Button>
-      </header>
-
-      <main className="flex flex-1 items-center justify-center p-8">
-        <div className="w-full max-w-xl text-center">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            A calm place to read and edit PDFs.
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Fast, keyboard-friendly, and completely private. The viewer arrives in the next
-            milestone — for now, here is proof the secure foundation is in place.
-          </p>
-
-          <BridgeCard bridge={bridge} />
-
-          <p className="mt-6 text-xs text-muted-foreground">
-            No telemetry · No analytics · Works fully offline
-          </p>
-        </div>
-      </main>
+    <div
+      className="flex h-full flex-col"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={onDrop}
+    >
+      <TabBar />
+      {active ? <ActiveDocument key={active.id} /> : <EmptyState />}
     </div>
   )
 }
 
-function BridgeCard({ bridge }: { bridge: BridgeStatus }): React.JSX.Element {
-  return (
-    <div className="mx-auto mt-8 rounded-xl border bg-card p-5 text-left text-card-foreground shadow-sm">
-      {bridge.state === 'checking' && (
-        <p className="text-sm text-muted-foreground">Verifying secure bridge…</p>
-      )}
+/** Renders the toolbar + viewer (or a loading/error state) for the active tab. */
+function ActiveDocument(): React.JSX.Element {
+  const activeId = useDocumentStore((s) => s.activeId)
+  const tab = useDocumentStore((s) => s.tabs.find((t) => t.id === s.activeId)) ?? null
 
-      {bridge.state === 'error' && (
-        <div className="flex items-start gap-3">
-          <TriangleAlert className="mt-0.5 size-5 text-destructive" />
-          <div>
-            <p className="text-sm font-medium text-destructive">Secure bridge unavailable</p>
-            <p className="mt-1 text-xs text-muted-foreground">{bridge.message}</p>
-          </div>
+  if (!tab) return <EmptyState />
+
+  if (tab.status === 'error') {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <TriangleAlert className="size-8 text-destructive" />
+        <div>
+          <p className="font-medium">Couldn’t open “{tab.name}”</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tab.error}</p>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {bridge.state === 'ok' && (
-        <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 size-5 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Secure bridge verified</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              contextIsolation · sandbox · zod-validated IPC — “{bridge.pong}”
-            </p>
-            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-              <Stat label="Version" value={bridge.info.version} />
-              <Stat label="Platform" value={`${bridge.info.platform} · ${bridge.info.arch}`} />
-              <Stat label="Electron" value={bridge.info.electron} />
-              <Stat label="Chromium" value={bridge.info.chrome} />
-              <Stat label="Node" value={bridge.info.node} />
-            </dl>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+  if (tab.status === 'loading') {
+    return (
+      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        Opening “{tab.name}”…
+      </div>
+    )
+  }
 
-function Stat({ label, value }: { label: string; value: string }): React.JSX.Element {
   return (
-    <div className="flex justify-between gap-2">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="truncate font-medium tabular-nums">{value}</dd>
-    </div>
+    <>
+      <Toolbar pageCount={tab.pageCount} />
+      <div className="min-h-0 flex-1">
+        <Viewer key={activeId ?? 'none'} tab={tab} />
+      </div>
+    </>
   )
 }
 
