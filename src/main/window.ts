@@ -1,62 +1,24 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, shell, session } from 'electron'
 import log from 'electron-log/main'
+import { DEV_CSP } from './csp'
+import { APP_ORIGIN } from './protocol'
 
 /** Schemes we are willing to hand off to the OS default handler. */
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:'])
 
 /**
- * Builds the Content-Security-Policy header.
- *
- * Production is strict: scripts may only come from our own bundle. We allow
- * `wasm-unsafe-eval` (required by Chromium to compile WebAssembly, e.g. the
- * OCR engine) but never plain `unsafe-eval`. Inline styles are permitted
- * because Radix primitives set positional `style=""` attributes; this does not
- * widen the script surface.
- *
- * Development additionally allows the Vite dev server, its HMR websocket, and
- * the eval/inline that React Fast Refresh relies on. The dev relaxations never
- * ship to users.
+ * In development the renderer is served over http by Vite, so the CSP is applied
+ * as a response header. In production the renderer is served by our `app://`
+ * protocol, which attaches the (strict) CSP itself — so we only install the dev
+ * header hook here.
  */
-function buildCsp(isDev: boolean): string {
-  if (isDev) {
-    return [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "worker-src 'self' blob:",
-      "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'none'",
-      "frame-ancestors 'none'"
-    ].join('; ')
-  }
-
-  return [
-    "default-src 'self'",
-    "script-src 'self' 'wasm-unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "worker-src 'self' blob:",
-    "connect-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'none'",
-    "frame-ancestors 'none'"
-  ].join('; ')
-}
-
-/** Applies the CSP to every response served to the renderer. */
-function installCsp(isDev: boolean): void {
+function installDevCsp(): void {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [buildCsp(isDev)]
+        'Content-Security-Policy': [DEV_CSP]
       }
     })
   })
@@ -87,14 +49,12 @@ function hardenNavigation(window: BrowserWindow, appOrigin: string): void {
   })
 
   window.webContents.on('will-navigate', (event, url) => {
-    // Allow in-app navigation only within our own origin (dev HMR reloads).
     if (!url.startsWith(appOrigin)) {
       event.preventDefault()
       openExternal(url)
     }
   })
 
-  // Never allow <webview> embedding.
   window.webContents.on('will-attach-webview', (event) => {
     event.preventDefault()
   })
@@ -106,14 +66,15 @@ function hardenNavigation(window: BrowserWindow, appOrigin: string): void {
  * preload as the only bridge.
  */
 export function createMainWindow(): BrowserWindow {
-  const isDev = !app.isPackaged && Boolean(process.env['ELECTRON_RENDERER_URL'])
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  const isDev = !app.isPackaged && Boolean(devUrl)
 
-  installCsp(isDev)
+  if (isDev) installDevCsp()
 
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 640,
+    minWidth: 720,
     minHeight: 480,
     show: false,
     backgroundColor: '#0b0d12',
@@ -134,13 +95,12 @@ export function createMainWindow(): BrowserWindow {
 
   window.once('ready-to-show', () => window.show())
 
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (isDev && devUrl) {
     hardenNavigation(window, devUrl)
     void window.loadURL(devUrl)
   } else {
-    hardenNavigation(window, 'file://')
-    void window.loadFile(join(__dirname, '../renderer/index.html'))
+    hardenNavigation(window, APP_ORIGIN)
+    void window.loadURL(`${APP_ORIGIN}/index.html`)
   }
 
   return window

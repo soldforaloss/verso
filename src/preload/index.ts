@@ -1,6 +1,7 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { IpcChannels } from '@shared/channels'
 import type { VersoApi } from '@shared/api'
+import type { OpenedDocument } from '@shared/ipc'
 
 /**
  * The preload bridge — the single, minimal seam between the untrusted renderer
@@ -13,7 +14,27 @@ import type { VersoApi } from '@shared/api'
  */
 const api: VersoApi = {
   ping: (request) => ipcRenderer.invoke(IpcChannels.ping, request),
-  getAppInfo: () => ipcRenderer.invoke(IpcChannels.getAppInfo)
+  getAppInfo: () => ipcRenderer.invoke(IpcChannels.getAppInfo),
+
+  openFileDialog: () => ipcRenderer.invoke(IpcChannels.openFileDialog),
+  readFile: (request) => ipcRenderer.invoke(IpcChannels.readFile, request),
+
+  getRecentFiles: () => ipcRenderer.invoke(IpcChannels.getRecentFiles),
+  clearRecentFiles: () => ipcRenderer.invoke(IpcChannels.clearRecentFiles),
+
+  getPreferences: () => ipcRenderer.invoke(IpcChannels.getPreferences),
+  setPreferences: (update) => ipcRenderer.invoke(IpcChannels.setPreferences, update),
+
+  onOpenFile: (callback) => {
+    const listener = (_event: Electron.IpcRendererEvent, document: OpenedDocument): void =>
+      callback(document)
+    ipcRenderer.on(IpcChannels.openFileEvent, listener)
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.openFileEvent, listener)
+    }
+  },
+
+  getPathForFile: (file) => webUtils.getPathForFile(file)
 }
 
 if (process.contextIsolated) {

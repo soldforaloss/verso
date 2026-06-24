@@ -11,7 +11,28 @@ export const IpcChannels = {
   /** Liveness probe used to verify the typed contextBridge path end to end. */
   ping: 'app:ping',
   /** Returns process/version information for the About panel and footer. */
-  getAppInfo: 'app:get-info'
+  getAppInfo: 'app:get-info',
+
+  /** Shows the native open dialog and returns the chosen document (or null). */
+  openFileDialog: 'dialog:open-file',
+  /** Reads a PDF from an absolute path (drag-drop, CLI, file association). */
+  readFile: 'file:read',
+
+  /** Lists recently opened files (most-recent first). */
+  getRecentFiles: 'recent:list',
+  /** Clears the recent-files list. */
+  clearRecentFiles: 'recent:clear',
+
+  /** Reads persisted UI preferences from disk. */
+  getPreferences: 'prefs:get',
+  /** Merges and persists UI preferences; returns the full updated set. */
+  setPreferences: 'prefs:set',
+
+  /**
+   * Event (main → renderer): a file was opened outside the UI — via the OS file
+   * association, a CLI argument, a second instance, or macOS `open-file`.
+   */
+  openFileEvent: 'app:open-file-event'
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

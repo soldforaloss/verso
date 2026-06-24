@@ -1,12 +1,13 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron'
 import type { ZodType } from 'zod'
 import log from 'electron-log/main'
+import { APP_ORIGIN } from '../protocol'
 
 /**
  * Validates that an IPC request originates from one of our own renderer frames
  * and not from injected/remote content. In dev the renderer is served over
- * http(s) by Vite; in production it is loaded from the bundled file. Anything
- * else is rejected.
+ * http(s) by Vite; in production it is served from our `app://` protocol.
+ * Anything else is rejected.
  */
 function isTrustedSender(event: IpcMainInvokeEvent): boolean {
   const url = event.senderFrame?.url
@@ -15,8 +16,7 @@ function isTrustedSender(event: IpcMainInvokeEvent): boolean {
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl && url.startsWith(devUrl)) return true
 
-  // Packaged build: renderer is loaded from a local file inside the app bundle.
-  return url.startsWith('file://')
+  return url.startsWith(APP_ORIGIN)
 }
 
 /**

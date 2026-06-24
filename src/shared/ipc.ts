@@ -37,3 +37,56 @@ export const AppInfoSchema = z.object({
   node: z.string()
 })
 export type AppInfo = z.infer<typeof AppInfoSchema>
+
+// --- Documents -------------------------------------------------------------
+
+/** A PDF loaded into memory and handed to the renderer. */
+export const OpenedDocumentSchema = z.object({
+  /** Stable per-open identifier (used as the tab/document key). */
+  id: z.string(),
+  /** Display name (file name without directory). */
+  name: z.string(),
+  /** Absolute path on disk, or null for documents with no backing file. */
+  path: z.string().nullable(),
+  /** Raw PDF bytes. */
+  bytes: z.instanceof(Uint8Array)
+})
+export type OpenedDocument = z.infer<typeof OpenedDocumentSchema>
+
+export const ReadFileRequestSchema = z.object({
+  path: z.string().min(1).max(4_096)
+})
+export type ReadFileRequest = z.infer<typeof ReadFileRequestSchema>
+
+// --- Recent files ----------------------------------------------------------
+
+export const RecentFileSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  lastOpenedAt: z.number().int().nonnegative()
+})
+export type RecentFile = z.infer<typeof RecentFileSchema>
+
+// --- Preferences -----------------------------------------------------------
+
+export const ThemeModeSchema = z.enum(['light', 'dark', 'system'])
+export type ThemeMode = z.infer<typeof ThemeModeSchema>
+
+export const LayoutModeSchema = z.enum(['continuous', 'single', 'two-up'])
+export type LayoutMode = z.infer<typeof LayoutModeSchema>
+
+export const ReadingModeSchema = z.enum(['normal', 'sepia', 'night'])
+export type ReadingMode = z.infer<typeof ReadingModeSchema>
+
+/** Persisted UI preferences. Every field has a default. */
+export const PreferencesSchema = z.object({
+  theme: ThemeModeSchema.default('system'),
+  layout: LayoutModeSchema.default('continuous'),
+  readingMode: ReadingModeSchema.default('normal'),
+  sidebarOpen: z.boolean().default(true)
+})
+export type Preferences = z.infer<typeof PreferencesSchema>
+
+/** A partial update accepted by `setPreferences`. */
+export const PartialPreferencesSchema = PreferencesSchema.partial()
+export type PartialPreferences = z.infer<typeof PartialPreferencesSchema>
