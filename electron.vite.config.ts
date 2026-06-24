@@ -5,10 +5,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-// Absolute, posix-style path to the installed pdfjs-dist package, so the
-// cMap/font copy works regardless of the renderer's Vite root.
+// Absolute, posix-style paths to installed packages whose static assets we
+// bundle (so the cMap/font copy and offline OCR work regardless of Vite root).
 const require = createRequire(import.meta.url)
-const pdfjsRoot = dirname(require.resolve('pdfjs-dist/package.json')).replace(/\\/g, '/')
+const pkgDir = (id: string): string =>
+  dirname(require.resolve(`${id}/package.json`)).replace(/\\/g, '/')
+const pdfjsRoot = pkgDir('pdfjs-dist')
+const tesseractRoot = pkgDir('tesseract.js')
+const tesseractCoreRoot = pkgDir('tesseract.js-core')
+const tessLangRoot = pkgDir('@tesseract.js-data/eng')
 
 /**
  * electron-vite configuration.
@@ -74,6 +79,18 @@ export default defineConfig({
           {
             src: `${pdfjsRoot}/standard_fonts/*`,
             dest: 'standard_fonts',
+            rename: { stripBase: true }
+          },
+          // Offline OCR assets: tesseract worker, wasm cores, and English data.
+          {
+            src: `${tesseractRoot}/dist/worker.min.js`,
+            dest: 'tesseract',
+            rename: { stripBase: true }
+          },
+          { src: `${tesseractCoreRoot}/*`, dest: 'tesseract/core', rename: { stripBase: true } },
+          {
+            src: `${tessLangRoot}/4.0.0/eng.traineddata.gz`,
+            dest: 'tessdata',
             rename: { stripBase: true }
           }
         ]

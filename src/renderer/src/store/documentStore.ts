@@ -22,6 +22,8 @@ export interface DocumentTab {
   sourceIds: string[]
   /** Annotations keyed by the logical page's stable key. */
   annotations: Record<string, Annotation[]>
+  /** Bumped when a source's bytes are replaced (e.g. OCR), to force re-render. */
+  sourceRevision: number
 }
 
 export interface PdfSource {
@@ -65,6 +67,8 @@ interface DocumentState {
   markSaved: (id: string, path: string, name: string) => void
   /** Marks a tab dirty (e.g. when a form field changes). */
   markDirty: (id: string) => void
+  /** Replaces a source's bytes (e.g. after OCR) and forces a re-render. */
+  replaceSource: (tabId: string, sourceId: string, bytes: Uint8Array) => Promise<void>
   getTab: (id: string) => DocumentTab | undefined
 }
 
@@ -92,7 +96,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       dirty: false,
       pages: [],
       sourceIds: [source.id],
-      annotations: {}
+      annotations: {},
+      sourceRevision: 0
     }
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id }))
 
@@ -170,7 +175,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   markDirty: (id) =>
     set((state) => ({
       tabs: state.tabs.map((tab) => (tab.id === id && !tab.dirty ? { ...tab, dirty: true } : tab))
+    })),
+
+  replaceSource: async (tabId, sourceId, bytes) => {
+    const previous = sourceCache.get(sourceId)
+    const { pdf, destroy } = await loadPdfDocument(bytes)
+    sourceCache.set(sourceId, { pdf, bytes, destroy })
+    if (previous) void previous.destroy()
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, dirty: true, sourceRevision: tab.sourceRevision + 1 } : tab
+      )
     }))
+  }
 }))
 
 /** Registers a source id under a tab so it is destroyed when the tab closes. */
