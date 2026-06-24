@@ -15,6 +15,7 @@ export type Tool =
   | 'underline'
   | 'strike'
   | 'squiggly'
+  | 'edittext'
 
 export const MARKUP_TOOLS = new Set<Tool>(['highlight', 'underline', 'strike', 'squiggly'])
 export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow'])

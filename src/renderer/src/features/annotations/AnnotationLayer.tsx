@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { DRAWING_TOOLS, MARKUP_TOOLS, PLACING_TOOLS, useToolStore } from '@/store/toolStore'
-import { addAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
+import {
+  addAnnotation,
+  addAnnotations,
+  removeAnnotation,
+  updateAnnotation
+} from '@/lib/annotationOps'
 import {
   boundsOf,
   newAnnotationId,
@@ -18,13 +23,19 @@ import {
   pageToScreen,
   screenToPage
 } from '@/lib/annotationGeometry'
-import type { PageViewport } from '@/lib/pdf'
+import { OverlayContentEditor } from '@/lib/contentEditor'
+import type { PageViewport, PdfDocument } from '@/lib/pdf'
+
+const contentEditor = new OverlayContentEditor()
 
 interface Props {
   docId: string
   pageKey: string
   viewport: PageViewport
   annotations: Annotation[]
+  /** Source document + page index — needed for cover-&-replace text editing. */
+  pdf: PdfDocument
+  pageIndex: number
 }
 
 type Gesture =
@@ -42,7 +53,9 @@ export function AnnotationLayer({
   docId,
   pageKey,
   viewport,
-  annotations
+  annotations,
+  pdf,
+  pageIndex
 }: Props): React.JSX.Element {
   const tool = useToolStore((s) => s.tool)
   const color = useToolStore((s) => s.color)
@@ -102,8 +115,42 @@ export function AnnotationLayer({
     return () => document.removeEventListener('mouseup', onMouseUp)
   }, [isMarkup, tool, color, viewport, docId, pageKey])
 
+  // Samples a hex background color from the rendered page canvas for a page rect.
+  const sampleBackground = (pageRect: Rect): string => {
+    try {
+      const canvas = containerRef.current?.parentElement?.querySelector('canvas')
+      if (!(canvas instanceof HTMLCanvasElement)) return '#ffffff'
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return '#ffffff'
+      const top = pageToScreen(viewport, { x: pageRect.x, y: pageRect.y + pageRect.height })
+      const dpr = window.devicePixelRatio || 1
+      const sx = Math.max(0, Math.round((top.x + 2) * dpr))
+      const sy = Math.max(0, Math.round((top.y - 3) * dpr))
+      const [r, g, b] = ctx.getImageData(sx, sy, 1, 1).data
+      return `#${[r ?? 255, g ?? 255, b ?? 255].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+    } catch {
+      return '#ffffff'
+    }
+  }
+
+  // Tier 2 cover-&-replace: edit the existing text run under the click.
+  const editTextRunAt = async (point: Point): Promise<void> => {
+    const page = await pdf.getPage(pageIndex + 1)
+    const created = await contentEditor.editTextRun({ page, pageKey, point, sampleBackground })
+    if (!created) return
+    addAnnotations(docId, created, 'Edit text')
+    const textAnnotation = created[created.length - 1]
+    if (textAnnotation) selectAnnotation(pageKey, textAnnotation.id)
+    useToolStore.getState().setTool('select')
+  }
+
   // ---- Create gestures (container captures pointer for drawing / placing) ----
   const onContainerDown = (event: React.PointerEvent): void => {
+    if (tool === 'edittext') {
+      event.preventDefault()
+      void editTextRunAt(local(event))
+      return
+    }
     if (!isDrawing && !isPlacing) return
     event.preventDefault()
     const p = local(event)
@@ -291,7 +338,12 @@ export function AnnotationLayer({
     <div
       ref={containerRef}
       className="absolute inset-0"
-      style={{ width, height, zIndex: 3, pointerEvents: isDrawing || isPlacing ? 'auto' : 'none' }}
+      style={{
+        width,
+        height,
+        zIndex: 3,
+        pointerEvents: isDrawing || isPlacing || tool === 'edittext' ? 'auto' : 'none'
+      }}
       onPointerDown={onContainerDown}
       onPointerMove={onContainerMove}
       onPointerUp={onContainerUp}
@@ -311,7 +363,7 @@ export function AnnotationLayer({
         )}
       </svg>
       {all
-        .filter((a) => a.type === 'text' || a.type === 'note')
+        .filter((a) => a.type === 'text' || a.type === 'note' || a.type === 'image')
         .map((annotation) => (
           <HtmlAnnotation
             key={annotation.id}
@@ -413,7 +465,7 @@ function renderVector(annotation: Annotation, ctx: VectorContext): React.JSX.Ele
           width={r.width}
           height={r.height}
           fill={annotation.filled ? annotation.color : 'none'}
-          fillOpacity={annotation.filled ? 0.25 : 0}
+          fillOpacity={annotation.filled ? annotation.opacity : 0}
           stroke={annotation.color}
           strokeWidth={annotation.strokeWidth}
           opacity={annotation.opacity}
@@ -435,7 +487,7 @@ function renderVector(annotation: Annotation, ctx: VectorContext): React.JSX.Ele
           rx={r.width / 2}
           ry={r.height / 2}
           fill={annotation.filled ? annotation.color : 'none'}
-          fillOpacity={annotation.filled ? 0.25 : 0}
+          fillOpacity={annotation.filled ? annotation.opacity : 0}
           stroke={annotation.color}
           strokeWidth={annotation.strokeWidth}
           opacity={annotation.opacity}
@@ -626,6 +678,38 @@ interface HtmlProps {
   startResizeRect: (e: React.PointerEvent, a: RectAnnotation, corner: Corner) => void
 }
 
+const HTML_CORNERS: [Corner, React.CSSProperties][] = [
+  ['nw', { left: -4, top: -4 }],
+  ['ne', { right: -4, top: -4 }],
+  ['sw', { left: -4, bottom: -4 }],
+  ['se', { right: -4, bottom: -4 }]
+]
+
+function htmlResizeHandles(
+  annotation: RectAnnotation,
+  onStart: (e: React.PointerEvent, a: RectAnnotation, corner: Corner) => void
+): React.JSX.Element {
+  return (
+    <>
+      {HTML_CORNERS.map(([corner, pos]) => (
+        <div
+          key={corner}
+          onPointerDown={(e) => onStart(e, annotation, corner)}
+          style={{
+            position: 'absolute',
+            width: 8,
+            height: 8,
+            background: '#3b82f6',
+            cursor: 'nwse-resize',
+            pointerEvents: 'auto',
+            ...pos
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
 function HtmlAnnotation({
   annotation,
   viewport,
@@ -635,7 +719,8 @@ function HtmlAnnotation({
   docId,
   onPointerDown,
   onPointerMove,
-  onPointerUp
+  onPointerUp,
+  startResizeRect
 }: HtmlProps): React.JSX.Element | null {
   if (annotation.type === 'text') {
     const r = pageRectToScreen(viewport, annotation.rect)
@@ -667,6 +752,30 @@ function HtmlAnnotation({
           className="size-full resize-none border-none bg-transparent leading-tight outline-none"
           style={{ color: annotation.color, fontSize: annotation.fontSize }}
         />
+        {selected && htmlResizeHandles(annotation, startResizeRect)}
+      </div>
+    )
+  }
+
+  if (annotation.type === 'image') {
+    const r = pageRectToScreen(viewport, annotation.rect)
+    return (
+      <div
+        className="absolute"
+        style={{
+          left: r.x,
+          top: r.y,
+          width: r.width,
+          height: r.height,
+          pointerEvents: interactive ? 'auto' : 'none',
+          outline: selected ? '1px dashed #3b82f6' : 'none'
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        <img src={annotation.dataUrl} alt="" draggable={false} className="size-full select-none" />
+        {selected && htmlResizeHandles(annotation, startResizeRect)}
       </div>
     )
   }

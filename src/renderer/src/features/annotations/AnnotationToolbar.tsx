@@ -3,12 +3,14 @@ import {
   Circle,
   Eraser,
   Highlighter,
+  Image as ImageIcon,
   Minus,
   MousePointer2,
   Pencil,
   Square,
   Strikethrough,
   StickyNote,
+  TextCursorInput,
   Trash2,
   Type,
   Underline,
@@ -17,7 +19,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useToolStore, type Tool } from '@/store/toolStore'
-import { removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
+import { useViewStore } from '@/store/viewStore'
+import { addImageAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
 import { ANNOTATION_COLORS, type Annotation } from '@/lib/annotations'
 import type { DocumentTab } from '@/store/documentStore'
 
@@ -34,6 +37,7 @@ const TOOLS: { tool: Tool; label: string; Icon: typeof Square }[] = [
   { tool: 'arrow', label: 'Arrow', Icon: ArrowUpRight },
   { tool: 'text', label: 'Text box', Icon: Type },
   { tool: 'note', label: 'Sticky note', Icon: StickyNote },
+  { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput },
   { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }
 ]
 
@@ -49,6 +53,8 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   const selectedId = useToolStore((s) => s.selectedId)
   const selectedPageKey = useToolStore((s) => s.selectedPageKey)
   const clearSelection = useToolStore((s) => s.clearSelection)
+  const selectAnnotation = useToolStore((s) => s.selectAnnotation)
+  const currentPage = useViewStore((s) => s.currentPage)
 
   const selected: Annotation | undefined =
     selectedId && selectedPageKey
@@ -70,6 +76,30 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
       removeAnnotation(tab.id, selectedPageKey, selectedId)
       clearSelection()
     }
+  }
+
+  const insertImage = (): void => {
+    const pageKey = tab.pages[Math.min(currentPage, tab.pages.length) - 1]?.key
+    if (!pageKey) return
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg'
+    input.onchange = (): void => {
+      const file = input.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (): void => {
+        const dataUrl = String(reader.result)
+        const image = new Image()
+        image.onload = (): void => {
+          const id = addImageAnnotation(tab.id, pageKey, dataUrl, image.width / image.height)
+          selectAnnotation(pageKey, id)
+        }
+        image.src = dataUrl
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
   }
 
   return (
@@ -132,7 +162,10 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
         ))}
       </div>
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-0.5">
+        <Button variant="ghost" size="icon" title="Insert image" onClick={insertImage}>
+          <ImageIcon />
+        </Button>
         <Button
           variant="ghost"
           size="icon"

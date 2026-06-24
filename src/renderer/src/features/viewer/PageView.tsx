@@ -249,6 +249,8 @@ function PageViewImpl({
             pageKey={pageKey}
             viewport={pageViewport}
             annotations={annotations}
+            pdf={descriptor.pdf}
+            pageIndex={descriptor.pageIndex}
           />
         </>
       )}
