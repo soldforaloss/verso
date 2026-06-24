@@ -32,6 +32,10 @@ export type Annotation =
   | (BaseAnnotation & { type: 'note'; point: Point; text: string })
   | (BaseAnnotation & { type: 'markup'; markup: MarkupKind; quads: Rect[] })
   | (BaseAnnotation & { type: 'image'; rect: Rect; dataUrl: string })
+  // A region marked for true redaction. It renders as an opaque black box and,
+  // when applied, the affected page is rasterized so the content beneath is
+  // permanently destroyed (see lib/redaction.ts).
+  | (BaseAnnotation & { type: 'redaction'; rect: Rect })
 
 export type AnnotationType = Annotation['type']
 
@@ -65,6 +69,7 @@ export function boundsOf(annotation: Annotation): Rect {
     case 'ellipse':
     case 'text':
     case 'image':
+    case 'redaction':
       return annotation.rect
     case 'line':
       return {
@@ -94,6 +99,7 @@ export function translateAnnotation(annotation: Annotation, dx: number, dy: numb
     case 'ellipse':
     case 'text':
     case 'image':
+    case 'redaction':
       return { ...annotation, rect: moveRect(annotation.rect) }
     case 'line':
       return { ...annotation, a: move(annotation.a), b: move(annotation.b) }

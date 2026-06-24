@@ -178,6 +178,15 @@ export function AnnotationLayer({
         filled: false,
         rect: { x: p.x, y: p.y, width: 0, height: 0 }
       })
+    } else if (tool === 'redaction') {
+      setDraft({
+        id: newAnnotationId(),
+        pageKey,
+        type: 'redaction',
+        color: '#000000',
+        opacity: 1,
+        rect: { x: p.x, y: p.y, width: 0, height: 0 }
+      })
     } else if (tool === 'line' || tool === 'arrow') {
       setDraft({
         id: newAnnotationId(),
@@ -226,7 +235,7 @@ export function AnnotationLayer({
     const p = local(event)
     if (draft.type === 'ink') {
       setDraft({ ...draft, strokes: [[...draft.strokes[0]!, p]] })
-    } else if (draft.type === 'rect' || draft.type === 'ellipse') {
+    } else if (draft.type === 'rect' || draft.type === 'ellipse' || draft.type === 'redaction') {
       setDraft({
         ...draft,
         rect: normalizeRect({ x: start.x, y: start.y, width: p.x - start.x, height: p.y - start.y })
@@ -554,6 +563,26 @@ function renderVector(annotation: Annotation, ctx: VectorContext): React.JSX.Ele
             {endpointHandle(b, (e) => ctx.startResizeLine(e, annotation, 'b'))}
           </>
         )}
+      </g>
+    )
+  }
+
+  if (annotation.type === 'redaction') {
+    const r = pageRectToScreen(viewport, annotation.rect)
+    return (
+      <g key={annotation.id}>
+        <rect
+          x={r.x}
+          y={r.y}
+          width={r.width}
+          height={r.height}
+          fill="#000000"
+          stroke="#dc2626"
+          strokeWidth={1}
+          {...hitProps}
+        />
+        {selectionChrome()}
+        {selected && resizeHandles(r, (e, corner) => ctx.startResizeRect(e, annotation, corner))}
       </g>
     )
   }

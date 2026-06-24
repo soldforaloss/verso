@@ -135,6 +135,14 @@ export async function drawAnnotation(
       })
       break
     }
+    case 'redaction': {
+      // Always solid, fully opaque black — never honors the palette color. The
+      // box obscures the content visually; lib/redaction.ts then rasterizes the
+      // page so nothing remains beneath it in the content stream.
+      const { x, y, width, height } = annotation.rect
+      page.drawRectangle({ x, y, width, height, color: rgb(0, 0, 0), opacity: 1 })
+      break
+    }
     case 'markup': {
       for (const quad of annotation.quads) {
         if (annotation.markup === 'highlight') {

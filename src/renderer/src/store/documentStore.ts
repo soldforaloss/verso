@@ -74,6 +74,12 @@ interface DocumentState {
   setMetadata: (id: string, metadata: DocumentMetadata) => void
   /** Replaces a source's bytes (e.g. after OCR) and forces a re-render. */
   replaceSource: (tabId: string, sourceId: string, bytes: Uint8Array) => Promise<void>
+  /**
+   * Replaces the whole document with a single new flattened source (e.g. after
+   * applying redactions). Annotations are dropped, history is cleared, and the
+   * page list is rebuilt 1:1. The tab is marked dirty so the user can save it.
+   */
+  replaceDocument: (tabId: string, bytes: Uint8Array) => Promise<void>
   getTab: (id: string) => DocumentTab | undefined
 }
 
@@ -198,6 +204,48 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         tab.id === tabId ? { ...tab, dirty: true, sourceRevision: tab.sourceRevision + 1 } : tab
       )
     }))
+  },
+
+  replaceDocument: async (tabId, bytes) => {
+    const { id, pageCount } = await registerSource(bytes)
+    set((state) => {
+      const tab = state.tabs.find((t) => t.id === tabId)
+      if (tab) {
+        // Release every prior source the tab owned (the new one replaces them).
+        for (const previousId of tab.sourceIds) {
+          if (previousId === id) continue
+          const source = sourceCache.get(previousId)
+          if (source) {
+            void source.destroy()
+            sourceCache.delete(previousId)
+          }
+        }
+      }
+      const pages: PageRef[] = Array.from({ length: pageCount }, (_, index) => ({
+        key: pageKey(),
+        kind: 'source',
+        sourceId: id,
+        sourceIndex: index,
+        rotation: 0
+      }))
+      return {
+        tabs: state.tabs.map((t) =>
+          t.id === tabId
+            ? {
+                ...t,
+                pages,
+                sourceIds: [id],
+                annotations: {},
+                dirty: true,
+                sourceRevision: t.sourceRevision + 1
+              }
+            : t
+        )
+      }
+    })
+    // Redaction is irreversible by design — the prior history would reference
+    // page keys and content that no longer exist.
+    useHistoryStore.getState().forget(tabId)
   }
 }))
 

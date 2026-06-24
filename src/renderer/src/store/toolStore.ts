@@ -16,9 +16,10 @@ export type Tool =
   | 'strike'
   | 'squiggly'
   | 'edittext'
+  | 'redaction'
 
 export const MARKUP_TOOLS = new Set<Tool>(['highlight', 'underline', 'strike', 'squiggly'])
-export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow'])
+export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow', 'redaction'])
 export const PLACING_TOOLS = new Set<Tool>(['text', 'note'])
 
 interface ToolState {

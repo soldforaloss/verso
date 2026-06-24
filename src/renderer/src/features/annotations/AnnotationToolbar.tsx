@@ -2,6 +2,7 @@ import {
   ArrowUpRight,
   Circle,
   Eraser,
+  EyeOff,
   Highlighter,
   Image as ImageIcon,
   Minus,
@@ -38,6 +39,7 @@ const TOOLS: { tool: Tool; label: string; Icon: typeof Square }[] = [
   { tool: 'text', label: 'Text box', Icon: Type },
   { tool: 'note', label: 'Sticky note', Icon: StickyNote },
   { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput },
+  { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
   { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }
 ]
 
