@@ -1,0 +1,143 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode: toggled by adding `.dark` to <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. A calm, near-neutral palette with a single restrained blue
+ * accent so the UI stays out of the way of the document being read.
+ * Values are oklch for perceptually-even light/dark pairs.
+ */
+:root {
+  --background: oklch(0.99 0.002 250);
+  --foreground: oklch(0.21 0.02 260);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 260);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 260);
+
+  --primary: oklch(0.55 0.18 260);
+  --primary-foreground: oklch(0.99 0.005 250);
+
+  --secondary: oklch(0.97 0.004 250);
+  --secondary-foreground: oklch(0.28 0.02 260);
+
+  --muted: oklch(0.97 0.004 250);
+  --muted-foreground: oklch(0.55 0.02 260);
+
+  --accent: oklch(0.96 0.01 255);
+  --accent-foreground: oklch(0.28 0.02 260);
+
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0.005 250);
+
+  --border: oklch(0.92 0.004 255);
+  --input: oklch(0.92 0.004 255);
+  --ring: oklch(0.55 0.18 260);
+
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.18 0.012 260);
+  --foreground: oklch(0.95 0.005 250);
+
+  --card: oklch(0.22 0.014 260);
+  --card-foreground: oklch(0.95 0.005 250);
+
+  --popover: oklch(0.22 0.014 260);
+  --popover-foreground: oklch(0.95 0.005 250);
+
+  --primary: oklch(0.68 0.16 260);
+  --primary-foreground: oklch(0.18 0.012 260);
+
+  --secondary: oklch(0.27 0.014 260);
+  --secondary-foreground: oklch(0.95 0.005 250);
+
+  --muted: oklch(0.27 0.014 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+
+  --accent: oklch(0.3 0.02 262);
+  --accent-foreground: oklch(0.95 0.005 250);
+
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.98 0.005 250);
+
+  --border: oklch(0.3 0.014 260);
+  --input: oklch(0.32 0.014 260);
+  --ring: oklch(0.68 0.16 260);
+}
+
+/* Map design tokens onto Tailwind's color/radius scales. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family:
+      'Segoe UI',
+      system-ui,
+      -apple-system,
+      'Helvetica Neue',
+      Arial,
+      sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Honour the OS "reduce motion" preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
