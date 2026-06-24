@@ -36,10 +36,25 @@ jobs:
       - name: Build
         run: npm run build
 
-      # electron-builder reads `publish:` from electron-builder.yml and uploads
-      # the NSIS installer, portable exe, and latest.yml (auto-update feed) to
-      # the GitHub Release for this tag.
-      - name: Package & publish
-        run: npx electron-builder --win --publish always
+      # Package the installer, portable exe, and latest.yml (auto-update feed)
+      # WITHOUT publishing. electron-builder's GitHub publisher uploads files
+      # concurrently and can create two releases for the same tag when the
+      # release doesn't yet exist (a known race), which splits the assets.
+      - name: Package
+        run: npx electron-builder --win --publish never
+
+      # Publish everything to a single release in one atomic create — no race,
+      # one release per tag, with all assets together.
+      - name: Publish GitHub Release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          files=$(ls release/*/Verso-*.exe release/*/Verso-*.exe.blockmap release/*/latest.yml)
+          echo "Publishing assets:"
+          echo "$files"
+          gh release create "$GITHUB_REF_NAME" $files \
+            --title "Verso $GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag
