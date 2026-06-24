@@ -42,7 +42,7 @@ Verso is built milestone by milestone. Status reflects what's on `main`.
 | Foundation | Hardened Electron shell, typed/validated IPC, CI, installers            | ✅ M0  |
 | Viewer     | PDF.js rendering, text selection, zoom/pan, layouts, themes, tabs       | ✅ M1  |
 | Navigation | Thumbnails, outline/bookmarks, full-text search                         | ✅ M2  |
-| Pages      | Reorder, rotate, delete, insert, extract, merge, split + undo/redo      | ⏳ M3  |
+| Pages      | Reorder, rotate, delete, insert, extract, merge, split + undo/redo      | ✅ M3  |
 | Annotation | Highlight, ink, shapes, text/callouts, notes, stamps, signatures        | ⏳ M4  |
 | Forms      | Fill & save AcroForms (text, check, radio, dropdown, list)              | ⏳ M5  |
 | Editing    | Add/edit text, images, shapes; cover-&-replace existing text (Tier 1–2) | ⏳ M6  |

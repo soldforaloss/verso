@@ -41,17 +41,30 @@ next begins.
   and on-page **highlighting** (matches mapped to text-item rectangles), with the
   active match emphasized and scrolled into view.
 
+### ✅ M3 — Page management + undo/redo engine
+
+- A generic **command-pattern history engine** (per-document undo/redo); every
+  page edit routes through it (see [ADR-0005](./docs/decisions/0005-page-model-and-history.md)).
+- A non-destructive **logical page model**: reorder (drag in the thumbnail rail),
+  rotate, delete, duplicate, insert blank, insert/merge from another PDF, extract
+  selection, and split into one PDF per page — composing instantly without
+  re-parsing.
+- Multi-select in the thumbnail rail (click / Ctrl-click / Shift-click).
+- **Save / Save As** builds a valid PDF from the page model via `pdf-lib`
+  (rotation composed, blanks created), written atomically; dirty-state tracking
+  with a close confirmation.
+- _Crop is modeled but deferred — see Stretch._
+
 ## In progress / planned
 
-| Milestone                                   | Scope                                                                                                                                                                   |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M3 — Page management + undo/redo engine** | Command-pattern history store; reorder/rotate/delete/insert/extract/duplicate/crop/merge/split via pdf-lib; multi-select.                                               |
-| **M4 — Annotations & markup**               | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle. |
-| **M5 — Forms (AcroForm)**                   | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                     |
-| **M6 — In-place text & image editing**      | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                              |
-| **M7 — OCR**                                | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                                 |
-| **M8 — Security, metadata & export**        | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print.           |
-| **M9 — Polish, packaging & release**        | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                               |
+| Milestone                              | Scope                                                                                                                                                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M4 — Annotations & markup**          | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle. |
+| **M5 — Forms (AcroForm)**              | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                     |
+| **M6 — In-place text & image editing** | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                              |
+| **M7 — OCR**                           | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                                 |
+| **M8 — Security, metadata & export**   | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print.           |
+| **M9 — Polish, packaging & release**   | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                               |
 
 ## Stretch / future
 
@@ -59,6 +72,8 @@ next begins.
   (BSD) native addon, implementing the `ContentEditor` interface.
 - **macOS & Linux builds** — the architecture is cross-platform; package targets
   are stubbed in `electron-builder.yml`.
+- **Page cropping** — the page model carries a crop box; the rotation-aware
+  render/save implementation is deferred to its own focused pass (ADR-0005).
 - **Form field creation** — author new AcroForm fields, not just fill.
 - **PDF compare** — visual + text diff of two documents.
 - **Crash recovery** — restore unsaved edits after an unexpected exit.
