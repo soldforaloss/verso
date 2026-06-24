@@ -90,3 +90,23 @@ export type Preferences = z.infer<typeof PreferencesSchema>
 /** A partial update accepted by `setPreferences`. */
 export const PartialPreferencesSchema = PreferencesSchema.partial()
 export type PartialPreferences = z.infer<typeof PartialPreferencesSchema>
+
+// --- Saving / exporting ----------------------------------------------------
+
+export const SaveDialogRequestSchema = z.object({
+  defaultName: z.string().min(1).max(255)
+})
+export type SaveDialogRequest = z.infer<typeof SaveDialogRequestSchema>
+
+export const WriteFileRequestSchema = z.object({
+  path: z.string().min(1).max(4_096),
+  bytes: z.instanceof(Uint8Array)
+})
+export type WriteFileRequest = z.infer<typeof WriteFileRequestSchema>
+
+export const WriteInDirRequestSchema = z.object({
+  dir: z.string().min(1).max(4_096),
+  name: z.string().min(1).max(255),
+  bytes: z.instanceof(Uint8Array)
+})
+export type WriteInDirRequest = z.infer<typeof WriteInDirRequestSchema>

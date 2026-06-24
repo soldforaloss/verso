@@ -6,7 +6,10 @@ import type {
   PingRequest,
   PingResponse,
   ReadFileRequest,
-  RecentFile
+  RecentFile,
+  SaveDialogRequest,
+  WriteFileRequest,
+  WriteInDirRequest
 } from './ipc'
 
 /**
@@ -40,6 +43,15 @@ export interface VersoApi {
   getPreferences(): Promise<Preferences>
   /** Merges a partial update into preferences and returns the full set. */
   setPreferences(update: PartialPreferences): Promise<Preferences>
+
+  /** Shows the native Save dialog; resolves to a path or null if cancelled. */
+  showSaveDialog(request: SaveDialogRequest): Promise<string | null>
+  /** Shows a folder picker; resolves to a directory path or null. */
+  selectDirectory(): Promise<string | null>
+  /** Writes bytes to an absolute path (atomic). */
+  writeFile(request: WriteFileRequest): Promise<void>
+  /** Writes bytes to `<dir>/<name>` (atomic); resolves to the full path. */
+  writeFileInDir(request: WriteInDirRequest): Promise<string>
 
   /**
    * Subscribes to "open this file" requests originating outside the UI (file

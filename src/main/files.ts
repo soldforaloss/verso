@@ -28,6 +28,13 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
   await rename(tmp, target)
 }
 
+/** Writes bytes atomically (temp file, then rename over the target). */
+async function writeBytesAtomic(target: string, bytes: Uint8Array): Promise<void> {
+  const tmp = `${target}.${randomUUID()}.tmp`
+  await writeFile(tmp, bytes)
+  await rename(tmp, target)
+}
+
 async function readJson(path: string): Promise<unknown> {
   try {
     return JSON.parse(await readFile(path, 'utf8'))
@@ -109,4 +116,38 @@ export async function setPreferences(update: PartialPreferences): Promise<Prefer
   const merged = PreferencesSchema.parse({ ...current, ...update })
   await writeJsonAtomic(preferencesPath(), merged)
   return merged
+}
+
+// --- Saving / exporting ----------------------------------------------------
+
+export async function showSaveDialog(
+  window: BrowserWindow,
+  defaultName: string
+): Promise<string | null> {
+  const result = await dialog.showSaveDialog(window, {
+    title: 'Save PDF',
+    defaultPath: defaultName,
+    filters: [{ name: 'PDF Documents', extensions: ['pdf'] }]
+  })
+  return result.canceled || !result.filePath ? null : result.filePath
+}
+
+export async function selectDirectory(window: BrowserWindow): Promise<string | null> {
+  const result = await dialog.showOpenDialog(window, {
+    title: 'Choose a folder',
+    properties: ['openDirectory', 'createDirectory']
+  })
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]!
+}
+
+export async function writePdf(path: string, bytes: Uint8Array): Promise<void> {
+  await writeBytesAtomic(path, bytes)
+}
+
+export async function writePdfInDir(dir: string, name: string, bytes: Uint8Array): Promise<string> {
+  // Guard against path traversal in the supplied file name.
+  const safeName = basename(name)
+  const target = join(dir, safeName)
+  await writeBytesAtomic(target, bytes)
+  return target
 }

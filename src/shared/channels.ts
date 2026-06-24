@@ -28,6 +28,15 @@ export const IpcChannels = {
   /** Merges and persists UI preferences; returns the full updated set. */
   setPreferences: 'prefs:set',
 
+  /** Shows the native Save dialog; returns the chosen path (or null). */
+  showSaveDialog: 'dialog:save',
+  /** Shows a folder picker; returns the chosen directory (or null). */
+  selectDirectory: 'dialog:open-dir',
+  /** Writes bytes to an absolute path (atomic). */
+  writeFile: 'file:write',
+  /** Writes bytes to `<dir>/<name>` (atomic); returns the full path. */
+  writeFileInDir: 'file:write-in-dir',
+
   /**
    * Event (main → renderer): a file was opened outside the UI — via the OS file
    * association, a CLI argument, a second instance, or macOS `open-file`.

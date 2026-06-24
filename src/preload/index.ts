@@ -25,6 +25,11 @@ const api: VersoApi = {
   getPreferences: () => ipcRenderer.invoke(IpcChannels.getPreferences),
   setPreferences: (update) => ipcRenderer.invoke(IpcChannels.setPreferences, update),
 
+  showSaveDialog: (request) => ipcRenderer.invoke(IpcChannels.showSaveDialog, request),
+  selectDirectory: () => ipcRenderer.invoke(IpcChannels.selectDirectory),
+  writeFile: (request) => ipcRenderer.invoke(IpcChannels.writeFile, request),
+  writeFileInDir: (request) => ipcRenderer.invoke(IpcChannels.writeFileInDir, request),
+
   onOpenFile: (callback) => {
     const listener = (_event: Electron.IpcRendererEvent, document: OpenedDocument): void =>
       callback(document)
