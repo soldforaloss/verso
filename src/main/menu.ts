@@ -6,6 +6,7 @@ import {
   type BrowserWindow,
   type MenuItemConstructorOptions
 } from 'electron'
+import { checkForUpdatesInteractive } from './updater'
 
 const HOMEPAGE = 'https://versoeditor.com'
 const REPOSITORY = 'https://github.com/soldforaloss/verso'
@@ -110,6 +111,7 @@ export function installApplicationMenu(window: BrowserWindow): void {
           click: () => void shell.openExternal(REPOSITORY)
         },
         { type: 'separator' },
+        { label: 'Check for Updates…', click: () => checkForUpdatesInteractive(window) },
         { label: 'About Verso', click: showAbout }
       ]
     }

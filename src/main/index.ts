@@ -6,6 +6,7 @@ import { installApplicationMenu } from './menu'
 import { registerIpcHandlers } from './ipc'
 import { registerAppScheme, serveRenderer } from './protocol'
 import { readPdf } from './files'
+import { initAutoUpdater } from './updater'
 import { IpcChannels } from '@shared/channels'
 
 // Route all main-process logging to a rotating file plus the console. No data
@@ -87,6 +88,7 @@ if (!gotLock) {
 
     mainWindow = createMainWindow()
     installApplicationMenu(mainWindow)
+    initAutoUpdater(mainWindow)
 
     // Once the renderer has loaded (and registered its onOpenFile listener),
     // flush any files requested before it was ready.
