@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Info } from 'lucide-react'
+import { ImageDown, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
+import { ExportDialog } from './ExportDialog'
 import type { DocumentTab } from '@/store/documentStore'
 
 /**
@@ -11,6 +12,7 @@ import type { DocumentTab } from '@/store/documentStore'
  */
 export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <>
@@ -22,8 +24,17 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       >
         <Info />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Export as image (PNG/JPEG)"
+        onClick={() => setExportOpen(true)}
+      >
+        <ImageDown />
+      </Button>
 
       <MetadataDialog tab={tab} open={metadataOpen} onOpenChange={setMetadataOpen} />
+      <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />
     </>
   )
 }
