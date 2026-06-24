@@ -7,7 +7,7 @@
 Read beautifully. Mark up, reorganize, fill, OCR, and edit — all on your
 machine, with no account, no telemetry, and no cloud.
 
-[![CI](https://github.com/versoeditor/verso/actions/workflows/ci.yml/badge.svg)](https://github.com/versoeditor/verso/actions/workflows/ci.yml)
+[![CI](https://github.com/soldforaloss/verso/actions/workflows/ci.yml/badge.svg)](https://github.com/soldforaloss/verso/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](./LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](#install)
 [![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F.svg)](https://www.electronjs.org/)
@@ -40,7 +40,7 @@ Verso is built milestone by milestone. Status reflects what's on `main`.
 | Area       | Capability                                                              | Status |
 | ---------- | ----------------------------------------------------------------------- | ------ |
 | Foundation | Hardened Electron shell, typed/validated IPC, CI, installers            | ✅ M0  |
-| Viewer     | PDF.js rendering, text selection, zoom/pan, layouts, themes, tabs       | ⏳ M1  |
+| Viewer     | PDF.js rendering, text selection, zoom/pan, layouts, themes, tabs       | ✅ M1  |
 | Navigation | Thumbnails, outline/bookmarks, full-text search                         | ⏳ M2  |
 | Pages      | Reorder, rotate, delete, insert, extract, merge, split + undo/redo      | ⏳ M3  |
 | Annotation | Highlight, ink, shapes, text/callouts, notes, stamps, signatures        | ⏳ M4  |
@@ -61,7 +61,7 @@ See [`ROADMAP.md`](./ROADMAP.md) for the full plan, including stretch goals
 
 ```bash
 # Requires Node.js >= 20.19 (22 LTS recommended) and Git.
-git clone https://github.com/versoeditor/verso.git
+git clone https://github.com/soldforaloss/verso.git
 cd verso
 npm install
 

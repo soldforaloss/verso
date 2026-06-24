@@ -35,11 +35,11 @@ Run with the full hardening, treated as **non-negotiable invariants**:
    and (b) **do not apply `externalizeDepsPlugin` to the preload** so anything it
    imports is bundled in. In practice the preload imports only `electron` plus
    zero-dependency local source, so it stays tiny.
-2. **PDF bytes will reach the renderer via a custom privileged protocol**
-   (`protocol.handle`), not by streaming `ArrayBuffer`s over IPC and not by
-   relaxing `webSecurity`. This is also the planned transport for the renderer
-   document itself, which guarantees our CSP header is always applied (see the
-   ⚠️ note in `docs/architecture.md`). Implemented in M1.
+2. **The production renderer is served from a custom privileged `app://`
+   protocol** (`protocol.handle`), not `file://`. This gives it a real secure
+   origin so the CSP header always applies and absolute asset paths resolve.
+   Implemented in M1; see [ADR-0004](./0004-viewer-and-document-transport.md),
+   which also covers why PDF bytes use validated IPC rather than the protocol.
 
 ## Consequences
 

@@ -11,10 +11,11 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Bundled / sidecar (not npm)
 
-| Component | License                   | Notes                                                                    |
-| --------- | ------------------------- | ------------------------------------------------------------------------ |
-| qpdf      | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (added in M8). |
-| PDFium    | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).              |
+| Component                     | License                   | Notes                                                                    |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| qpdf                          | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (added in M8). |
+| PDFium                        | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).              |
+| PDF.js cMaps & standard fonts | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                         |
 
 ## Runtime dependencies
 
@@ -75,6 +76,7 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 | `typescript`                      | 6.0.3   | Apache-2.0 |
 | `typescript-eslint`               | 8.62.0  | MIT        |
 | `vite`                            | 7.3.5   | MIT        |
+| `vite-plugin-static-copy`         | 4.1.1   | MIT        |
 | `vitest`                          | 4.1.9   | MIT        |
 
 ---

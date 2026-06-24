@@ -65,20 +65,26 @@ Handlers therefore only ever see fully-typed, already-validated input. Failures
 are logged via `electron-log` and surfaced to the renderer as a generic rejected
 promise (no internal detail leaks).
 
-## Content-Security-Policy
+## Renderer transport & Content-Security-Policy
 
-The CSP is applied as a response header via `session…onHeadersReceived`
-([`src/main/window.ts`](../src/main/window.ts)). Production is strict —
-`script-src 'self' 'wasm-unsafe-eval'` (the wasm allowance is required by
-Chromium to compile WebAssembly such as the OCR engine; plain `unsafe-eval` is
-never permitted). Development additionally allows the Vite dev server, its HMR
-websocket, and the eval/inline that React Fast Refresh needs; those relaxations
-never ship.
+In **production** the renderer is served from a custom privileged **`app://verso/`
+protocol** ([`src/main/protocol.ts`](../src/main/protocol.ts)), not `file://`.
+This gives the renderer a real, secure origin, so absolute asset paths
+(`/cmaps/`, `/standard_fonts/`) resolve correctly and the strict CSP is attached
+as a response header on every asset. In **development** the renderer is served by
+Vite over http and the CSP is applied via `session…onHeadersReceived`
+([`src/main/window.ts`](../src/main/window.ts)).
 
-> ⚠️ Verify (tracked for M1): confirm the header-based CSP is enforced for the
-> top-level `file://` document in the packaged build. If not, the renderer will
-> be served over a custom privileged `app://` protocol (which also becomes the
-> transport for PDF bytes) so headers always apply. See ADR-0002.
+Production CSP is strict — `default-src 'self'`, `script-src 'self'
+'wasm-unsafe-eval'` (the wasm allowance is required by Chromium to compile
+WebAssembly such as the OCR engine; plain `unsafe-eval` is never permitted).
+Development additionally allows the Vite dev server, its HMR websocket, and the
+eval/inline that React Fast Refresh needs; those relaxations never ship.
+
+**PDF bytes** are read by the main process and transferred to the renderer as a
+`Uint8Array` over validated IPC, then handed to PDF.js — no `file://` exposure
+and no `webSecurity` relaxation. See
+[ADR-0004](./decisions/0004-viewer-and-document-transport.md).
 
 ## Security checklist (§4 hard requirements)
 

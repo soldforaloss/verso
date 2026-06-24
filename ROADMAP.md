@@ -19,19 +19,31 @@ next begins.
   component tests → build → Electron e2e.
 - ADRs for the stack, security model, and runtime versions.
 
+### ✅ M1 — Core viewer
+
+- PDF.js worker rendering with an aligned, selectable/copyable **text layer**.
+- **Lazy, virtualized** page rendering (IntersectionObserver; off-screen pages
+  released) for smooth scrolling of very large documents.
+- Open via menu, **drag-and-drop**, OS **file association**, and **CLI argument**;
+  recent-files list; **multi-document tabs**.
+- Zoom (fit-width / fit-page / custom, Ctrl+scroll), continuous / single / two-up
+  layouts, rotation, fullscreen, go-to-page, light/dark + sepia/night reading modes.
+- Production renderer served over a custom **`app://` protocol** (real origin →
+  CSP enforced, offline cMaps/fonts resolve); PDF bytes transferred via IPC.
+- Preferences (theme, layout, reading mode) persisted to disk by the main process.
+
 ## In progress / planned
 
-| Milestone                                   | Scope                                                                                                                                                                                                                                             |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M1 — Core viewer**                        | PDF.js render + text layer; open via menu/drag-drop/association/CLI; virtualization; zoom/pan; continuous/single/two-up layouts; rotate; light/dark + reading modes; recent files; multi-document tabs. PDF bytes via custom privileged protocol. |
-| **M2 — Navigation & search**                | Lazy thumbnail rail; outline/bookmarks; full-text search with match highlighting and next/prev.                                                                                                                                                   |
-| **M3 — Page management + undo/redo engine** | Command-pattern history store; reorder/rotate/delete/insert/extract/duplicate/crop/merge/split via pdf-lib; multi-select.                                                                                                                         |
-| **M4 — Annotations & markup**               | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle.                                                                           |
-| **M5 — Forms (AcroForm)**                   | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                                                                                               |
-| **M6 — In-place text & image editing**      | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                                                                                                        |
-| **M7 — OCR**                                | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                                                                                                           |
-| **M8 — Security, metadata & export**        | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print.                                                                                     |
-| **M9 — Polish, packaging & release**        | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                                                                                                         |
+| Milestone                                   | Scope                                                                                                                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M2 — Navigation & search**                | Lazy thumbnail rail; outline/bookmarks; full-text search with match highlighting and next/prev.                                                                         |
+| **M3 — Page management + undo/redo engine** | Command-pattern history store; reorder/rotate/delete/insert/extract/duplicate/crop/merge/split via pdf-lib; multi-select.                                               |
+| **M4 — Annotations & markup**               | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle. |
+| **M5 — Forms (AcroForm)**                   | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                     |
+| **M6 — In-place text & image editing**      | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                              |
+| **M7 — OCR**                                | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                                 |
+| **M8 — Security, metadata & export**        | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print.           |
+| **M9 — Polish, packaging & release**        | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                               |
 
 ## Stretch / future
 
