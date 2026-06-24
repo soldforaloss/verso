@@ -1,7 +1,14 @@
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
+
+// Absolute, posix-style path to the installed pdfjs-dist package, so the
+// cMap/font copy works regardless of the renderer's Vite root.
+const require = createRequire(import.meta.url)
+const pdfjsRoot = dirname(require.resolve('pdfjs-dist/package.json')).replace(/\\/g, '/')
 
 /**
  * electron-vite configuration.
@@ -53,7 +60,25 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      // Bundle PDF.js cMaps (CJK glyph maps) and the standard-14 font data so
+      // rendering works fully offline. Served from the app origin at
+      // /cmaps/ and /standard_fonts/ (dev: Vite middleware; prod: app://).
+      viteStaticCopy({
+        // stripBase flattens the matched files directly into dest (otherwise the
+        // plugin preserves the full source path under dest). → /cmaps, /standard_fonts.
+        targets: [
+          { src: `${pdfjsRoot}/cmaps/*`, dest: 'cmaps', rename: { stripBase: true } },
+          {
+            src: `${pdfjsRoot}/standard_fonts/*`,
+            dest: 'standard_fonts',
+            rename: { stripBase: true }
+          }
+        ]
+      })
+    ],
     build: {
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') }

@@ -77,6 +77,13 @@ export default tseslint.config(
     languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } }
   },
 
+  // Node utility scripts (fixture generation, etc.).
+  {
+    files: ['scripts/**/*.{js,mjs,ts}'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-console': 'off' }
+  },
+
   // UI primitives legitimately co-locate a component with its cva variants.
   {
     files: ['src/renderer/src/components/ui/**/*.tsx'],

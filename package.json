@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/versoeditor/verso.git"
+    "url": "https://github.com/soldforaloss/verso.git"
   },
   "main": "./out/main/index.js",
   "engines": {
@@ -33,6 +33,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "fixtures": "node scripts/generate-fixtures.mjs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -88,6 +89,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.0",
     "vite": "^7.3.5",
+    "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^4.1.9"
   }
 }
