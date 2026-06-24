@@ -14,7 +14,10 @@ test('launches and proves the secure bridge end to end', async () => {
 
   // Wait for the window to exist before inspecting it.
   const window = await app.firstWindow()
-  await expect(window.getByText('Secure bridge verified')).toBeVisible({ timeout: 30_000 })
+  // The empty state renders once the renderer has booted.
+  await expect(window.getByText('A calm place to read and edit PDFs.')).toBeVisible({
+    timeout: 30_000
+  })
 
   // The hardened security flags must actually be in effect.
   const prefs = await app.evaluate(async ({ BrowserWindow }) => {
