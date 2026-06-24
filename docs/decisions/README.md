@@ -17,3 +17,4 @@ a future contributor would otherwise have to reverse-engineer or relitigate.
 | [0003](./0003-runtime-versions.md)              | Runtime versions (React 19, TS 6, Vite 7)    | Accepted |
 | [0004](./0004-viewer-and-document-transport.md) | Viewer rendering & document transport        | Accepted |
 | [0005](./0005-page-model-and-history.md)        | Non-destructive page model & command history | Accepted |
+| [0006](./0006-annotation-model.md)              | Annotation model & flatten-on-save           | Accepted |

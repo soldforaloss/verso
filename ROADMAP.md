@@ -55,16 +55,29 @@ next begins.
   with a close confirmation.
 - _Crop is modeled but deferred — see Stretch._
 
+### ✅ M4 — Annotations & markup
+
+- An interactive annotation **overlay** above each page (preserving PDF.js's
+  canvas/text layers) with annotations stored in PDF page space so they survive
+  zoom, rotation, and page reordering ([ADR-0006](./docs/decisions/0006-annotation-model.md)).
+- Tools: **ink** (color/width) + **eraser**, **rectangle/ellipse**, **line/arrow**,
+  **text box**, **sticky note** (+ a Comments panel), and text **highlight /
+  underline / strikethrough / squiggly** over selected text.
+- Select, move, resize (handles), recolor/restyle, and delete — all **undoable**
+  through the M3 history engine.
+- On save, annotations are **flattened into the PDF** via pdf-lib, so they
+  persist and render identically everywhere.
+- _Stamps and a dedicated signature-capture modal are deferred — see Stretch._
+
 ## In progress / planned
 
-| Milestone                              | Scope                                                                                                                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M4 — Annotations & markup**          | Highlight/underline/strike/squiggly; ink; shapes; text boxes/callouts; sticky notes; stamps; signatures. Real PDF annotations where possible, flatten-on-export toggle. |
-| **M5 — Forms (AcroForm)**              | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                                     |
-| **M6 — In-place text & image editing** | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                              |
-| **M7 — OCR**                           | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                                 |
-| **M8 — Security, metadata & export**   | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print.           |
-| **M9 — Polish, packaging & release**   | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                               |
+| Milestone                              | Scope                                                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M5 — Forms (AcroForm)**              | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                           |
+| **M6 — In-place text & image editing** | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                    |
+| **M7 — OCR**                           | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                       |
+| **M8 — Security, metadata & export**   | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |
+| **M9 — Polish, packaging & release**   | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                     |
 
 ## Stretch / future
 
@@ -74,6 +87,11 @@ next begins.
   are stubbed in `electron-builder.yml`.
 - **Page cropping** — the page model carries a crop box; the rotation-aware
   render/save implementation is deferred to its own focused pass (ADR-0005).
+- **Stamps & signature capture** — annotation types are in place; a stamp gallery
+  and a draw/type/import signature modal are a follow-up (ADR-0006). Users can
+  sign today by drawing (ink) or typing (text box).
+- **Live (re-editable) PDF annotations** — Verso flattens annotations on save;
+  round-trippable annotation objects need appearance-stream authoring or PDFium.
 - **Form field creation** — author new AcroForm fields, not just fill.
 - **PDF compare** — visual + text diff of two documents.
 - **Crash recovery** — restore unsaved edits after an unexpected exit.
