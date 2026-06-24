@@ -53,28 +53,29 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
   }, [matches])
 
   const pages = tab.pages
-  // Stable render descriptors: rebuilt only when the page model or view rotation
-  // changes, so scrolling/search don't re-render every page.
-  const descriptors = useMemo<(RenderDescriptor | null)[]>(
-    () =>
-      pages.map((ref) => {
-        const userRotation = addRotation(ref.rotation, viewRotation)
-        if (ref.kind === 'blank') {
-          return { kind: 'blank', width: ref.width, height: ref.height, userRotation }
-        }
-        const source = getSource(ref.sourceId)
-        return source
-          ? {
-              kind: 'source',
-              pdf: source.pdf,
-              sourceId: ref.sourceId,
-              pageIndex: ref.sourceIndex,
-              userRotation
-            }
-          : null
-      }),
-    [pages, viewRotation]
-  )
+  const sourceRevision = tab.sourceRevision
+  // Stable render descriptors: rebuilt only when the page model, view rotation,
+  // or a source's bytes (e.g. after OCR) change, so scrolling/search don't
+  // re-render every page.
+  const descriptors = useMemo<(RenderDescriptor | null)[]>(() => {
+    void sourceRevision // a source replacement must rebuild descriptors
+    return pages.map((ref) => {
+      const userRotation = addRotation(ref.rotation, viewRotation)
+      if (ref.kind === 'blank') {
+        return { kind: 'blank', width: ref.width, height: ref.height, userRotation }
+      }
+      const source = getSource(ref.sourceId)
+      return source
+        ? {
+            kind: 'source',
+            pdf: source.pdf,
+            sourceId: ref.sourceId,
+            pageIndex: ref.sourceIndex,
+            userRotation
+          }
+        : null
+    })
+  }, [pages, viewRotation, sourceRevision])
 
   const ratiosRef = useRef<Map<number, number>>(new Map())
   const rafRef = useRef<number | null>(null)

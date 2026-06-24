@@ -11,17 +11,19 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Bundled / sidecar (not npm)
 
-| Component                     | License                   | Notes                                                                    |
-| ----------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| qpdf                          | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (added in M8). |
-| PDFium                        | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).              |
-| PDF.js cMaps & standard fonts | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                         |
+| Component                             | License                   | Notes                                                           |
+| ------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| qpdf                                  | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8). |
+| PDFium                                | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).     |
+| PDF.js cMaps & standard fonts         | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                |
+| tesseract.js wasm core & English data | Apache-2.0                | Bundled for offline OCR.                                        |
 
 ## Runtime dependencies
 
 | Package                    | Version | License    |
 | -------------------------- | ------- | ---------- |
 | `@pdf-lib/fontkit`         | 1.1.1   | MIT        |
+| `@tesseract.js-data/eng`   | 1.0.0   | MIT        |
 | `class-variance-authority` | 0.7.1   | Apache-2.0 |
 | `clsx`                     | 2.1.1   | MIT        |
 | `electron-log`             | 5.4.4   | MIT        |
@@ -31,6 +33,7 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 | `pdf-lib`                  | 1.17.1  | MIT        |
 | `pdfjs-dist`               | 6.0.227 | Apache-2.0 |
 | `tailwind-merge`           | 3.6.0   | MIT        |
+| `tesseract.js`             | 7.0.0   | Apache-2.0 |
 | `zod`                      | 4.4.3   | MIT        |
 | `zustand`                  | 5.0.14  | MIT        |
 
@@ -78,8 +81,3 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 | `vite`                            | 7.3.5   | MIT        |
 | `vite-plugin-static-copy`         | 4.1.1   | MIT        |
 | `vitest`                          | 4.1.9   | MIT        |
-
----
-
-To regenerate this table, re-run the script in this commit's history or use a
-tool such as `license-checker`. Report any inaccuracy via an issue.

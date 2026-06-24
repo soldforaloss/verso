@@ -89,11 +89,20 @@ next begins.
 - A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
   (PDFium) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
 
+### ✅ M7 — OCR
+
+- **tesseract.js** runs in its own worker (UI never blocks), fully **offline** —
+  the worker, wasm cores, and English data are bundled and served from the app
+  origin ([ADR-0009](./docs/decisions/0009-ocr.md)).
+- OCR **embeds an invisible text layer into the PDF**, so the recognized text is
+  immediately **selectable**, **searchable**, and **persists on save** through
+  the existing machinery (no parallel layer).
+- Live progress; English bundled (more languages via `@tesseract.js-data/<lang>`).
+
 ## In progress / planned
 
 | Milestone                            | Scope                                                                                                                                                         |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M7 — OCR**                         | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                       |
 | **M8 — Security, metadata & export** | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |
 | **M9 — Polish, packaging & release** | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                     |
 

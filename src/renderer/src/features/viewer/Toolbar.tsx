@@ -33,6 +33,7 @@ import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
 import { useFormStore } from '@/store/formStore'
 import { selectCanRedo, selectCanUndo, useHistoryStore } from '@/store/historyStore'
+import { OcrControls } from '@/features/ocr/OcrControls'
 import type { DocumentTab } from '@/store/documentStore'
 import type { LayoutMode, ReadingMode } from '@shared/ipc'
 
@@ -281,6 +282,7 @@ export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
       </div>
 
       <div className="ml-auto flex items-center gap-0.5">
+        <OcrControls tab={tab} />
         <Button
           variant={searchOpen ? 'secondary' : 'ghost'}
           size="icon"

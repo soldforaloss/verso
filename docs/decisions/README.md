@@ -20,3 +20,4 @@ a future contributor would otherwise have to reverse-engineer or relitigate.
 | [0006](./0006-annotation-model.md)              | Annotation model & flatten-on-save           | Accepted |
 | [0007](./0007-forms.md)                         | AcroForm filling & save strategy             | Accepted |
 | [0008](./0008-in-place-editing.md)              | In-place editing tiers & ContentEditor       | Accepted |
+| [0009](./0009-ocr.md)                           | OCR (tesseract.js) & invisible text layer    | Accepted |
