@@ -63,6 +63,8 @@ interface DocumentState {
   setPageAnnotations: (id: string, pageKey: string, annotations: Annotation[]) => void
   /** Records a successful save: clears dirty and updates path/name. */
   markSaved: (id: string, path: string, name: string) => void
+  /** Marks a tab dirty (e.g. when a form field changes). */
+  markDirty: (id: string) => void
   getTab: (id: string) => DocumentTab | undefined
 }
 
@@ -163,6 +165,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   markSaved: (id, path, name) =>
     set((state) => ({
       tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, path, name, dirty: false } : tab))
+    })),
+
+  markDirty: (id) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) => (tab.id === id && !tab.dirty ? { ...tab, dirty: true } : tab))
     }))
 }))
 

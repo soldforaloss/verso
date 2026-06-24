@@ -64,7 +64,13 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
         }
         const source = getSource(ref.sourceId)
         return source
-          ? { kind: 'source', pdf: source.pdf, pageIndex: ref.sourceIndex, userRotation }
+          ? {
+              kind: 'source',
+              pdf: source.pdf,
+              sourceId: ref.sourceId,
+              pageIndex: ref.sourceIndex,
+              userRotation
+            }
           : null
       }),
     [pages, viewRotation]

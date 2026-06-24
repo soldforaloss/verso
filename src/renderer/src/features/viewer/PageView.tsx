@@ -12,10 +12,11 @@ import { normalizeRotation, type PageSize } from '@/lib/geometry'
 import { cn } from '@/lib/utils'
 import type { Annotation } from '@/lib/annotations'
 import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
+import { FormLayer } from '@/features/forms/FormLayer'
 
 /** Normalized render instruction for one logical page (built by the Viewer). */
 export type RenderDescriptor =
-  | { kind: 'source'; pdf: PdfDocument; pageIndex: number; userRotation: number }
+  | { kind: 'source'; pdf: PdfDocument; sourceId: string; pageIndex: number; userRotation: number }
   | { kind: 'blank'; width: number; height: number; userRotation: number }
 
 interface PageViewProps {
@@ -235,12 +236,21 @@ function PageViewImpl({
       )}
       <div ref={textRef} className="textLayer" />
       {descriptor.kind === 'source' && pageViewport && (
-        <AnnotationLayer
-          docId={docId}
-          pageKey={pageKey}
-          viewport={pageViewport}
-          annotations={annotations}
-        />
+        <>
+          <FormLayer
+            docId={docId}
+            sourceId={descriptor.sourceId}
+            pdf={descriptor.pdf}
+            pageIndex={descriptor.pageIndex}
+            viewport={pageViewport}
+          />
+          <AnnotationLayer
+            docId={docId}
+            pageKey={pageKey}
+            viewport={pageViewport}
+            annotations={annotations}
+          />
+        </>
       )}
       {descriptor.kind === 'blank' && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-neutral-300">
