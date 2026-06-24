@@ -78,14 +78,24 @@ next begins.
   filled form. See [ADR-0007](./docs/decisions/0007-forms.md).
 - _Field creation and signature fields are out of scope (see Stretch)._
 
+### ✅ M6 — In-place text & image editing
+
+- **Tier 1** — add **text, shapes, and images** (PNG/JPEG) and freely move /
+  resize / restyle / delete them; flattened into the PDF on save.
+- **Tier 2** — **cover-&-replace** editing of existing text: click a run, it's
+  covered with a background-sampled box and a pre-filled editable text box drops
+  in at the same position/size. Honest about its limits (no reflow, best-effort
+  font/background).
+- A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
+  (PDFium) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
+
 ## In progress / planned
 
-| Milestone                              | Scope                                                                                                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M6 — In-place text & image editing** | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                    |
-| **M7 — OCR**                           | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                       |
-| **M8 — Security, metadata & export**   | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |
-| **M9 — Polish, packaging & release**   | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                     |
+| Milestone                            | Scope                                                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M7 — OCR**                         | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                       |
+| **M8 — Security, metadata & export** | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |
+| **M9 — Polish, packaging & release** | Keyboard map + cheat-sheet; error boundaries; app icon; `.pdf` association; auto-update; screenshots + demo GIF; tagged-release pipeline.                     |
 
 ## Stretch / future
 
