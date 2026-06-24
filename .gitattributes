@@ -1,0 +1,21 @@
+# Normalize line endings: text files are stored and checked out as LF on every
+# platform. Without this, Windows CI checks out CRLF and Prettier (endOfLine:lf)
+# flags every file. Keep this in sync with .prettierrc.json.
+* text=auto eol=lf
+
+# Binary assets — never normalize or diff.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.bcmap binary
+*.pfb binary
+*.exe binary

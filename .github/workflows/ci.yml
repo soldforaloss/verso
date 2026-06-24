@@ -50,6 +50,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Electron downloads its binary on first use; fetch it up front (cached
+      # across runs) so the Playwright launch doesn't race its own download.
+      - name: Prepare Electron binary
+        run: node node_modules/electron/install.js
+
       - name: End-to-end tests (Electron)
         run: npm run test:e2e
 
