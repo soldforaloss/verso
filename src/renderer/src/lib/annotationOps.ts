@@ -1,6 +1,6 @@
 import { useDocumentStore } from '@/store/documentStore'
 import { useHistoryStore } from '@/store/historyStore'
-import type { Annotation } from '@/lib/annotations'
+import { newAnnotationId, type Annotation } from '@/lib/annotations'
 
 function pageAnnotations(docId: string, pageKey: string): Annotation[] {
   return useDocumentStore.getState().getTab(docId)?.annotations[pageKey] ?? []
@@ -23,6 +23,13 @@ export function addAnnotation(docId: string, annotation: Annotation): void {
   ])
 }
 
+/** Adds several annotations to one page as a single undoable command. */
+export function addAnnotations(docId: string, annotations: Annotation[], label = 'Edit'): void {
+  if (annotations.length === 0) return
+  const pageKey = annotations[0]!.pageKey
+  commit(docId, pageKey, label, [...pageAnnotations(docId, pageKey), ...annotations])
+}
+
 export function updateAnnotation(
   docId: string,
   annotation: Annotation,
@@ -32,6 +39,28 @@ export function updateAnnotation(
     existing.id === annotation.id ? annotation : existing
   )
   commit(docId, annotation.pageKey, label, next)
+}
+
+/** Places an image annotation (Tier 1) near the top of the given page. */
+export function addImageAnnotation(
+  docId: string,
+  pageKey: string,
+  dataUrl: string,
+  aspect: number
+): string {
+  const width = 220
+  const height = Math.round(width / (aspect > 0 ? aspect : 1))
+  const annotation: Annotation = {
+    id: newAnnotationId(),
+    pageKey,
+    type: 'image',
+    color: '#000000',
+    opacity: 1,
+    dataUrl,
+    rect: { x: 72, y: 540, width, height }
+  }
+  addAnnotation(docId, annotation)
+  return annotation.id
 }
 
 export function removeAnnotation(docId: string, pageKey: string, id: string): void {

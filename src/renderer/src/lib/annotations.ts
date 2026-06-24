@@ -31,6 +31,7 @@ export type Annotation =
   | (BaseAnnotation & { type: 'text'; rect: Rect; text: string; fontSize: number })
   | (BaseAnnotation & { type: 'note'; point: Point; text: string })
   | (BaseAnnotation & { type: 'markup'; markup: MarkupKind; quads: Rect[] })
+  | (BaseAnnotation & { type: 'image'; rect: Rect; dataUrl: string })
 
 export type AnnotationType = Annotation['type']
 
@@ -63,6 +64,7 @@ export function boundsOf(annotation: Annotation): Rect {
     case 'rect':
     case 'ellipse':
     case 'text':
+    case 'image':
       return annotation.rect
     case 'line':
       return {
@@ -91,6 +93,7 @@ export function translateAnnotation(annotation: Annotation, dx: number, dy: numb
     case 'rect':
     case 'ellipse':
     case 'text':
+    case 'image':
       return { ...annotation, rect: moveRect(annotation.rect) }
     case 'line':
       return { ...annotation, a: move(annotation.a), b: move(annotation.b) }

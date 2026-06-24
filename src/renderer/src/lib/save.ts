@@ -108,7 +108,7 @@ async function buildFromModel(
       page = copied
     }
     for (const annotation of annotationsByKey[ref.key] ?? []) {
-      drawAnnotation(page, font, annotation)
+      await drawAnnotation(out, page, font, annotation)
     }
   }
 
@@ -146,12 +146,15 @@ async function buildPristine(
   await fillForm(doc, formValues, false)
 
   const pages = doc.getPages()
-  tab.pages.forEach((ref, index) => {
+  for (let index = 0; index < tab.pages.length; index += 1) {
+    const ref = tab.pages[index]!
     const page = pages[index]
-    if (!page) return
+    if (!page) continue
     if (ref.rotation) page.setRotation(degrees((page.getRotation().angle + ref.rotation) % 360))
-    for (const annotation of tab.annotations[ref.key] ?? []) drawAnnotation(page, font, annotation)
-  })
+    for (const annotation of tab.annotations[ref.key] ?? []) {
+      await drawAnnotation(doc, page, font, annotation)
+    }
+  }
 
   return toArrayBufferBytes(await doc.save())
 }

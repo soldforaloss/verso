@@ -1,5 +1,12 @@
-import { degrees, rgb, type Color, type PDFFont, type PDFPage } from 'pdf-lib'
+import { degrees, rgb, type Color, type PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
 import type { Annotation, Point } from '@/lib/annotations'
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
 
 function hexToRgb(hex: string): Color {
   const value = hex.replace('#', '')
@@ -15,7 +22,12 @@ function hexToRgb(hex: string): Color {
  * origin — the same space annotations are stored in). Called during save to
  * flatten annotations so they persist and render identically everywhere.
  */
-export function drawAnnotation(page: PDFPage, font: PDFFont, annotation: Annotation): void {
+export async function drawAnnotation(
+  doc: PDFDocument,
+  page: PDFPage,
+  font: PDFFont,
+  annotation: Annotation
+): Promise<void> {
   const color = hexToRgb(annotation.color)
 
   switch (annotation.type) {
@@ -44,7 +56,7 @@ export function drawAnnotation(page: PDFPage, font: PDFFont, annotation: Annotat
         borderColor: color,
         borderWidth: annotation.strokeWidth,
         borderOpacity: annotation.opacity,
-        ...(annotation.filled ? { color, opacity: 0.25 } : {})
+        ...(annotation.filled ? { color, opacity: annotation.opacity } : {})
       })
       break
     }
@@ -58,7 +70,7 @@ export function drawAnnotation(page: PDFPage, font: PDFFont, annotation: Annotat
         borderColor: color,
         borderWidth: annotation.strokeWidth,
         borderOpacity: annotation.opacity,
-        ...(annotation.filled ? { color, opacity: 0.25 } : {})
+        ...(annotation.filled ? { color, opacity: annotation.opacity } : {})
       })
       break
     }
@@ -106,6 +118,20 @@ export function drawAnnotation(page: PDFPage, font: PDFFont, annotation: Annotat
         height: 12,
         color,
         opacity: 0.9
+      })
+      break
+    }
+    case 'image': {
+      const [meta = '', data = ''] = annotation.dataUrl.split(',')
+      const bytes = base64ToBytes(data)
+      const image = meta.includes('image/png')
+        ? await doc.embedPng(bytes)
+        : await doc.embedJpg(bytes)
+      page.drawImage(image, {
+        x: annotation.rect.x,
+        y: annotation.rect.y,
+        width: annotation.rect.width,
+        height: annotation.rect.height
       })
       break
     }
