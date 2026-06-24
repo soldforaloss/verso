@@ -11,24 +11,32 @@ test.afterEach(async () => {
   await app?.close()
 })
 
-test('page operations are undoable and Save As writes a valid PDF', async () => {
+test('draw a rectangle annotation, save it into a valid PDF, then undo', async () => {
   app = await launchVerso([FIXTURE_PDF])
   const window = await app.firstWindow()
   await expect(window.getByText('/ 8')).toBeVisible({ timeout: 30_000 })
+  await expect(window.locator('[data-page-number="1"] canvas')).toBeVisible({ timeout: 20_000 })
 
-  // Delete the current page → 7 pages (exact title avoids the annotation
-  // toolbar's "Delete selected annotation" button).
-  await window.getByTitle('Delete', { exact: true }).click()
-  await expect(window.getByText('/ 7')).toBeVisible()
+  // Pick the rectangle tool and drag a box on page 1.
+  await window.getByTitle('Rectangle').click()
+  const box = await window.locator('[data-page-number="1"]').boundingBox()
+  expect(box).not.toBeNull()
+  const x = box!.x + 60
+  const y = box!.y + 60
+  await window.mouse.move(x, y)
+  await window.mouse.down()
+  await window.mouse.move(x + 140, y + 100, { steps: 8 })
+  await window.mouse.up()
 
-  // Stub the native Save dialog to a temp path, then Save As (Ctrl+Shift+S).
-  const outPath = join(mkdtempSync(join(tmpdir(), 'verso-save-')), 'out.pdf')
+  // The annotation was committed → undo is now available.
+  await expect(window.getByTitle('Undo (Ctrl+Z)')).toBeEnabled()
+
+  // Save As (stubbed dialog) and confirm a valid PDF with the original 8 pages.
+  const outPath = join(mkdtempSync(join(tmpdir(), 'verso-annot-')), 'out.pdf')
   await app.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath })
   }, outPath)
   await window.keyboard.press('Control+Shift+S')
-
-  // The written file must be a valid 7-page PDF.
   await expect
     .poll(
       () => {
@@ -42,11 +50,9 @@ test('page operations are undoable and Save As writes a valid PDF', async () => 
     )
     .toBeGreaterThan(0)
   const saved = await PDFDocument.load(readFileSync(outPath))
-  expect(saved.getPageCount()).toBe(7)
+  expect(saved.getPageCount()).toBe(8)
 
-  // Undo restores 8 pages; redo returns to 7.
+  // Undo removes the annotation.
   await window.getByTitle('Undo (Ctrl+Z)').click()
-  await expect(window.getByText('/ 8')).toBeVisible()
-  await window.getByTitle('Redo (Ctrl+Y)').click()
-  await expect(window.getByText('/ 7')).toBeVisible()
+  await expect(window.getByTitle('Undo (Ctrl+Z)')).toBeDisabled()
 })
