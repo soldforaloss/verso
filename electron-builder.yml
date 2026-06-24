@@ -78,6 +78,6 @@ npmRebuild: false
 
 publish:
   provider: github
-  owner: versoeditor
+  owner: soldforaloss
   repo: verso
   releaseType: release

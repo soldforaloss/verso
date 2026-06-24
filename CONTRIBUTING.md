@@ -10,7 +10,7 @@ also need the Visual Studio Build Tools if you later work on the optional native
 PDFium addon (not required for the JS/TS app).
 
 ```bash
-git clone https://github.com/versoeditor/verso.git
+git clone https://github.com/soldforaloss/verso.git
 cd verso
 npm install        # also installs Husky git hooks
 npm run dev        # launch with hot reload

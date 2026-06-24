@@ -5,7 +5,7 @@
 If you discover a security vulnerability in Verso, please report it
 **privately** so it can be fixed before public disclosure.
 
-- Use GitHub's **[Report a vulnerability](https://github.com/versoeditor/verso/security/advisories/new)**
+- Use GitHub's **[Report a vulnerability](https://github.com/soldforaloss/verso/security/advisories/new)**
   (Security → Advisories) to open a private report, **or**
 - email **security@versoeditor.com**.
 

@@ -8,7 +8,7 @@ import {
 } from 'electron'
 
 const HOMEPAGE = 'https://versoeditor.com'
-const REPOSITORY = 'https://github.com/versoeditor/verso'
+const REPOSITORY = 'https://github.com/soldforaloss/verso'
 
 /**
  * Builds and installs the native application menu.
