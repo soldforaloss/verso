@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { loadPdfDocument, type PdfDocument } from '@/lib/pdf'
 import { pageKey, type PageRef } from '@/lib/pageModel'
+import type { Annotation } from '@/lib/annotations'
 import { useHistoryStore } from './historyStore'
 import type { OpenedDocument } from '@shared/ipc'
 
@@ -19,6 +20,8 @@ export interface DocumentTab {
   pages: PageRef[]
   /** Source documents this tab references (primary + inserted/merged). */
   sourceIds: string[]
+  /** Annotations keyed by the logical page's stable key. */
+  annotations: Record<string, Annotation[]>
 }
 
 export interface PdfSource {
@@ -56,6 +59,8 @@ interface DocumentState {
   setActive: (id: string) => void
   /** Replaces a tab's page list and marks it dirty (used by page commands). */
   setPages: (id: string, pages: PageRef[]) => void
+  /** Replaces one page's annotations and marks the tab dirty. */
+  setPageAnnotations: (id: string, pageKey: string, annotations: Annotation[]) => void
   /** Records a successful save: clears dirty and updates path/name. */
   markSaved: (id: string, path: string, name: string) => void
   getTab: (id: string) => DocumentTab | undefined
@@ -84,7 +89,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       error: null,
       dirty: false,
       pages: [],
-      sourceIds: [source.id]
+      sourceIds: [source.id],
+      annotations: {}
     }
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id }))
 
@@ -143,6 +149,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setPages: (id, pages) =>
     set((state) => ({
       tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, pages, dirty: true } : tab))
+    })),
+
+  setPageAnnotations: (id, pageKey, annotations) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === id
+          ? { ...tab, dirty: true, annotations: { ...tab.annotations, [pageKey]: annotations } }
+          : tab
+      )
     })),
 
   markSaved: (id, path, name) =>
