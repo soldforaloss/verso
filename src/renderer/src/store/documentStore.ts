@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { loadPdfDocument, type PdfDocument } from '@/lib/pdf'
 import { pageKey, type PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
+import type { DocumentMetadata } from '@/lib/metadata'
 import { useHistoryStore } from './historyStore'
 import type { OpenedDocument } from '@shared/ipc'
 
@@ -24,6 +25,8 @@ export interface DocumentTab {
   annotations: Record<string, Annotation[]>
   /** Bumped when a source's bytes are replaced (e.g. OCR), to force re-render. */
   sourceRevision: number
+  /** User-edited Info-dictionary metadata, applied on save (null = unchanged). */
+  metadata: DocumentMetadata | null
 }
 
 export interface PdfSource {
@@ -67,6 +70,8 @@ interface DocumentState {
   markSaved: (id: string, path: string, name: string) => void
   /** Marks a tab dirty (e.g. when a form field changes). */
   markDirty: (id: string) => void
+  /** Stores edited document metadata (applied on save) and marks the tab dirty. */
+  setMetadata: (id: string, metadata: DocumentMetadata) => void
   /** Replaces a source's bytes (e.g. after OCR) and forces a re-render. */
   replaceSource: (tabId: string, sourceId: string, bytes: Uint8Array) => Promise<void>
   getTab: (id: string) => DocumentTab | undefined
@@ -97,7 +102,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       pages: [],
       sourceIds: [source.id],
       annotations: {},
-      sourceRevision: 0
+      sourceRevision: 0,
+      metadata: null
     }
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id }))
 
@@ -175,6 +181,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   markDirty: (id) =>
     set((state) => ({
       tabs: state.tabs.map((tab) => (tab.id === id && !tab.dirty ? { ...tab, dirty: true } : tab))
+    })),
+
+  setMetadata: (id, metadata) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, metadata, dirty: true } : tab))
     })),
 
   replaceSource: async (tabId, sourceId, bytes) => {

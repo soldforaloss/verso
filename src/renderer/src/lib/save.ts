@@ -13,6 +13,7 @@ import { useFormStore, type FormValue } from '@/store/formStore'
 import type { PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import { drawAnnotation } from '@/lib/annotationDraw'
+import { applyMetadata, type DocumentMetadata } from '@/lib/metadata'
 
 function toArrayBufferBytes(saved: Uint8Array): Uint8Array<ArrayBuffer> {
   // pdf-lib types its output as Uint8Array<ArrayBufferLike>, which the IPC byte
@@ -77,7 +78,8 @@ async function fillForm(
 async function buildFromModel(
   pages: PageRef[],
   annotationsByKey: Record<string, Annotation[]>,
-  formValuesBySource: Record<string, Record<string, FormValue>>
+  formValuesBySource: Record<string, Record<string, FormValue>>,
+  metadata: DocumentMetadata | null
 ): Promise<Uint8Array<ArrayBuffer>> {
   const out = await PDFDocument.create()
   const font = await out.embedFont(StandardFonts.Helvetica)
@@ -88,7 +90,7 @@ async function buildFromModel(
     if (cached) return cached
     const source = getSource(sourceId)
     if (!source) throw new Error('A source document is no longer available.')
-    const doc = await PDFDocument.load(source.bytes)
+    const doc = await PDFDocument.load(source.bytes, { updateMetadata: false })
     await fillForm(doc, formValuesBySource[sourceId] ?? {}, true)
     sourceDocs.set(sourceId, doc)
     return doc
@@ -112,6 +114,7 @@ async function buildFromModel(
     }
   }
 
+  if (metadata) applyMetadata(out, metadata)
   return toArrayBufferBytes(await out.save())
 }
 
@@ -141,7 +144,7 @@ async function buildPristine(
   formValues: Record<string, FormValue>
 ): Promise<Uint8Array<ArrayBuffer>> {
   const source = getSource(sourceId)!
-  const doc = await PDFDocument.load(source.bytes)
+  const doc = await PDFDocument.load(source.bytes, { updateMetadata: false })
   const font = await doc.embedFont(StandardFonts.Helvetica)
   await fillForm(doc, formValues, false)
 
@@ -156,6 +159,7 @@ async function buildPristine(
     }
   }
 
+  if (tab.metadata) applyMetadata(doc, tab.metadata)
   return toArrayBufferBytes(await doc.save())
 }
 
@@ -164,7 +168,7 @@ async function buildDocumentBytes(tab: DocumentTab): Promise<Uint8Array<ArrayBuf
   const formValues = formValuesForTab(tab)
   const sourceId = pristineSourceId(tab)
   if (sourceId) return buildPristine(tab, sourceId, formValues[sourceId] ?? {})
-  return buildFromModel(tab.pages, tab.annotations, formValues)
+  return buildFromModel(tab.pages, tab.annotations, formValues, tab.metadata)
 }
 
 function baseName(path: string): string {
@@ -214,7 +218,7 @@ export async function extractPages(tab: DocumentTab, indices: number[]): Promise
     .map((index) => tab.pages[index])
     .filter((page): page is PageRef => Boolean(page))
   if (subset.length === 0) return false
-  const bytes = await buildFromModel(subset, tab.annotations, formValuesForTab(tab))
+  const bytes = await buildFromModel(subset, tab.annotations, formValuesForTab(tab), tab.metadata)
   const path = await window.api.showSaveDialog({
     defaultName: `${stripPdfExt(tab.name)}-extract.pdf`
   })
@@ -231,7 +235,12 @@ export async function splitDocument(tab: DocumentTab): Promise<number> {
   let count = 0
   const formValues = formValuesForTab(tab)
   for (let index = 0; index < tab.pages.length; index += 1) {
-    const bytes = await buildFromModel([tab.pages[index]!], tab.annotations, formValues)
+    const bytes = await buildFromModel(
+      [tab.pages[index]!],
+      tab.annotations,
+      formValues,
+      tab.metadata
+    )
     const name = `${base}-${String(index + 1).padStart(3, '0')}.pdf`
     await window.api.writeFileInDir({ dir, name, bytes })
     count += 1
