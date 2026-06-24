@@ -3,10 +3,10 @@ import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSearchStore } from '@/store/searchStore'
-import type { PdfDocument } from '@/lib/pdf'
+import type { DocumentTab } from '@/store/documentStore'
 
 /** Floating find-in-document bar with live results and next/prev navigation. */
-export function SearchBar({ pdf }: { pdf: PdfDocument }): React.JSX.Element {
+export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const query = useSearchStore((s) => s.query)
   const setQuery = useSearchStore((s) => s.setQuery)
   const run = useSearchStore((s) => s.run)
@@ -26,11 +26,11 @@ export function SearchBar({ pdf }: { pdf: PdfDocument }): React.JSX.Element {
     inputRef.current?.select()
   }, [])
 
-  // Search as the user types (debounced).
+  // Search as the user types (debounced). Re-runs if the page model changes.
   useEffect(() => {
-    const id = setTimeout(() => void run(pdf), 300)
+    const id = setTimeout(() => void run(tab), 300)
     return () => clearTimeout(id)
-  }, [query, pdf, run])
+  }, [query, tab, run])
 
   const count = matches.length
   const label =

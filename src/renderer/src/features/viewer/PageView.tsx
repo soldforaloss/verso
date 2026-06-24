@@ -11,20 +11,22 @@ import {
 import { normalizeRotation, type PageSize } from '@/lib/geometry'
 import { cn } from '@/lib/utils'
 
+/** Normalized render instruction for one logical page (built by the Viewer). */
+export type RenderDescriptor =
+  | { kind: 'source'; pdf: PdfDocument; pageIndex: number; userRotation: number }
+  | { kind: 'blank'; width: number; height: number; userRotation: number }
+
 interface PageViewProps {
-  pdf: PdfDocument
+  descriptor: RenderDescriptor
+  /** Logical 1-based page number within the document. */
   pageNumber: number
   scale: number
-  rotation: number
-  /** Scroll container used as the IntersectionObserver root. */
   scrollRoot: HTMLElement | null
-  /** Natural (scale 1, no user rotation) size used to reserve layout space. */
+  /** Natural (intrinsic-rotation, scale 1) size used to reserve layout space. */
   estimatedSize: PageSize
   onVisibility: (pageNumber: number, ratio: number) => void
   onMeasured: (pageNumber: number, size: PageSize) => void
-  /** Search matches on this page, each as the item indices it spans. */
   highlightItems?: number[][] | undefined
-  /** The currently-active search match's item indices, if it is on this page. */
   activeHighlightItems?: number[] | undefined
 }
 
@@ -37,7 +39,6 @@ interface HighlightRect {
 
 const RENDERING_CANCELLED = 'RenderingCancelledException'
 
-/** Rectangles (in canvas CSS px) for the given text items at the viewport. */
 function rectsFor(
   itemIndices: number[],
   items: readonly TextContentItem[],
@@ -55,10 +56,9 @@ function rectsFor(
 }
 
 function PageViewImpl({
-  pdf,
+  descriptor,
   pageNumber,
   scale,
-  rotation,
   scrollRoot,
   estimatedSize,
   onVisibility,
@@ -82,8 +82,6 @@ function PageViewImpl({
     active: HighlightRect[]
   }>({ normal: [], active: [] })
 
-  // Track viewport visibility (+ prefetch margin) to drive lazy rendering and
-  // current-page detection.
   useEffect(() => {
     const element = wrapperRef.current
     if (!element || !scrollRoot) return
@@ -100,24 +98,30 @@ function PageViewImpl({
     return () => observer.disconnect()
   }, [scrollRoot, pageNumber, onVisibility])
 
-  // Paint the page (canvas + text layer) while visible; release it otherwise.
   useEffect(() => {
+    if (descriptor.kind === 'blank') {
+      onMeasured(pageNumber, { width: descriptor.width, height: descriptor.height })
+      return
+    }
     if (!visible) return
     const canvas = canvasRef.current
     const textContainer = textRef.current
     if (!canvas || !textContainer) return
 
     let cancelled = false
+    const { pdf, pageIndex, userRotation } = descriptor
 
     void (async () => {
       try {
-        const page = await pdf.getPage(pageNumber)
+        const page = await pdf.getPage(pageIndex + 1)
         if (cancelled) return
         pageRef.current = page
 
         const natural = page.getViewport({ scale: 1 })
         onMeasured(pageNumber, { width: natural.width, height: natural.height })
 
+        // Compose the page's intrinsic rotation with the user-applied rotation.
+        const rotation = normalizeRotation(page.rotate + userRotation)
         const viewport = page.getViewport({ scale, rotation })
         const dpr = window.devicePixelRatio || 1
         canvas.width = Math.floor(viewport.width * dpr)
@@ -165,9 +169,8 @@ function PageViewImpl({
       pageRef.current?.cleanup()
       pageRef.current = null
     }
-  }, [visible, pdf, pageNumber, scale, rotation, onMeasured])
+  }, [visible, descriptor, scale, pageNumber, onMeasured])
 
-  // Recompute search-highlight rectangles when matches or the rendered viewport change.
   useEffect(() => {
     const info = renderInfoRef.current
     if (!info || (!highlightItems && !activeHighlightItems)) {
@@ -183,7 +186,7 @@ function PageViewImpl({
     setHighlights({ normal, active })
   }, [highlightItems, activeHighlightItems, renderTick])
 
-  const rotated = normalizeRotation(rotation)
+  const rotated = normalizeRotation(descriptor.userRotation)
   const swap = rotated === 90 || rotated === 270
   const cssWidth = (swap ? estimatedSize.height : estimatedSize.width) * scale
   const cssHeight = (swap ? estimatedSize.width : estimatedSize.height) * scale
@@ -219,17 +222,13 @@ function PageViewImpl({
         </div>
       )}
       <div ref={textRef} className="textLayer" />
-      {!visible && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
-          {pageNumber}
+      {descriptor.kind === 'blank' && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-neutral-300">
+          Blank page
         </div>
       )}
     </div>
   )
 }
 
-/**
- * Memoized so routine scrolling (which only updates the parent's current-page
- * state) does not re-render every page in a large document.
- */
 export const PageView = memo(PageViewImpl)

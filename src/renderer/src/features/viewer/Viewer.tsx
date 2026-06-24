@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getDocumentPdf, type DocumentTab } from '@/store/documentStore'
+import { getSource, type DocumentTab } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
 import { useSearchStore } from '@/store/searchStore'
 import { fitPageScale, fitWidthScale, PAGE_GAP, PAGE_MARGIN, type PageSize } from '@/lib/geometry'
+import { addRotation } from '@/lib/pageModel'
 import type { ReadingMode } from '@shared/ipc'
-import { PageView } from './PageView'
+import { PageView, type RenderDescriptor } from './PageView'
 import './textLayer.css'
 
 const DEFAULT_PAGE_SIZE: PageSize = { width: 612, height: 792 } // US Letter
@@ -17,7 +18,6 @@ const READING_FILTER: Record<ReadingMode, string> = {
 }
 
 export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
-  const pdf = getDocumentPdf(tab.id)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -26,7 +26,7 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
 
   const zoomMode = useViewStore((s) => s.zoomMode)
   const scale = useViewStore((s) => s.scale)
-  const rotation = useViewStore((s) => s.rotation)
+  const viewRotation = useViewStore((s) => s.rotation)
   const pendingScrollPage = useViewStore((s) => s.pendingScrollPage)
   const applyFitScale = useViewStore((s) => s.applyFitScale)
   const zoomIn = useViewStore((s) => s.zoomIn)
@@ -39,8 +39,6 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const matches = useSearchStore((s) => s.matches)
   const activeMatchIndex = useSearchStore((s) => s.activeIndex)
   const activeMatch = matches[activeMatchIndex]
-  // Group match item-index arrays by page (rebuilt only when matches change), so
-  // a page's highlight props stay referentially stable across next/prev.
   const matchItemsByPage = useMemo(() => {
     const map = new Map<number, number[][]>()
     for (const match of matches) {
@@ -51,10 +49,27 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     return map
   }, [matches])
 
+  const pages = tab.pages
+  // Stable render descriptors: rebuilt only when the page model or view rotation
+  // changes, so scrolling/search don't re-render every page.
+  const descriptors = useMemo<(RenderDescriptor | null)[]>(
+    () =>
+      pages.map((ref) => {
+        const userRotation = addRotation(ref.rotation, viewRotation)
+        if (ref.kind === 'blank') {
+          return { kind: 'blank', width: ref.width, height: ref.height, userRotation }
+        }
+        const source = getSource(ref.sourceId)
+        return source
+          ? { kind: 'source', pdf: source.pdf, pageIndex: ref.sourceIndex, userRotation }
+          : null
+      }),
+    [pages, viewRotation]
+  )
+
   const ratiosRef = useRef<Map<number, number>>(new Map())
   const rafRef = useRef<number | null>(null)
 
-  // Capture the scroll element and observe its size for fit calculations.
   useEffect(() => {
     const element = scrollRef.current
     setScrollRoot(element)
@@ -67,11 +82,18 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     return () => observer.disconnect()
   }, [])
 
-  // Fetch page 1's natural size up front so layout space is reserved accurately.
+  // Estimate layout size from the first page so space is reserved accurately.
   useEffect(() => {
-    if (!pdf) return
+    const first = pages[0]
+    if (!first) return
+    if (first.kind === 'blank') {
+      setEstimatedSize({ width: first.width, height: first.height })
+      return
+    }
+    const source = getSource(first.sourceId)
+    if (!source) return
     let cancelled = false
-    void pdf.getPage(1).then((page) => {
+    void source.pdf.getPage(first.sourceIndex + 1).then((page) => {
       if (cancelled) return
       const v = page.getViewport({ scale: 1 })
       setEstimatedSize({ width: v.width, height: v.height })
@@ -79,20 +101,18 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     return () => {
       cancelled = true
     }
-  }, [pdf])
+  }, [pages])
 
-  // Recompute fit scale when in a fit mode and inputs change.
   useEffect(() => {
     if (zoomMode === 'custom' || containerSize.width === 0) return
     const columns = layout === 'two-up' ? 2 : 1
     const next =
       zoomMode === 'fit-page'
-        ? fitPageScale(estimatedSize, rotation, containerSize.width, containerSize.height)
-        : fitWidthScale(estimatedSize, rotation, containerSize.width, columns)
+        ? fitPageScale(estimatedSize, viewRotation, containerSize.width, containerSize.height)
+        : fitWidthScale(estimatedSize, viewRotation, containerSize.width, columns)
     applyFitScale(next)
-  }, [zoomMode, rotation, estimatedSize, containerSize, layout, applyFitScale])
+  }, [zoomMode, viewRotation, estimatedSize, containerSize, layout, applyFitScale])
 
-  // Ctrl+wheel to zoom (like a desktop reader).
   useEffect(() => {
     const element = scrollRef.current
     if (!element) return
@@ -106,7 +126,6 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     return () => element.removeEventListener('wheel', onWheel)
   }, [zoomIn, zoomOut])
 
-  // Determine the most-visible page (rAF-debounced) and update currentPage.
   const handleVisibility = useCallback(
     (pageNumber: number, ratio: number) => {
       ratiosRef.current.set(pageNumber, ratio)
@@ -132,17 +151,13 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
       setSizes((prev) => {
         const isDefault = size.width === estimatedSize.width && size.height === estimatedSize.height
         const current = prev.get(pageNumber)
-        // Only track pages that differ from the estimate, so uniform documents
-        // never trigger per-page re-renders while scrolling.
         if (isDefault) {
           if (!current) return prev
           const next = new Map(prev)
           next.delete(pageNumber)
           return next
         }
-        if (current && current.width === size.width && current.height === size.height) {
-          return prev
-        }
+        if (current && current.width === size.width && current.height === size.height) return prev
         const next = new Map(prev)
         next.set(pageNumber, size)
         return next
@@ -151,13 +166,11 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     [estimatedSize]
   )
 
-  // Honour "jump to page" requests from the toolbar/keyboard.
   useEffect(() => {
     if (pendingScrollPage === null) return
-    const element = scrollRef.current?.querySelector<HTMLElement>(
-      `[data-page-number="${pendingScrollPage}"]`
-    )
-    element?.scrollIntoView({ block: 'start', behavior: 'auto' })
+    scrollRef.current
+      ?.querySelector<HTMLElement>(`[data-page-number="${pendingScrollPage}"]`)
+      ?.scrollIntoView({ block: 'start', behavior: 'auto' })
     clearPendingScroll()
   }, [pendingScrollPage, clearPendingScroll, layout])
 
@@ -166,40 +179,39 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     [sizes, estimatedSize]
   )
 
-  const pageNumbers = useMemo(
-    () => Array.from({ length: tab.pageCount }, (_, index) => index + 1),
-    [tab.pageCount]
-  )
+  const pageNumbers = useMemo(() => pages.map((_, index) => index + 1), [pages])
 
-  if (!pdf) {
+  const renderPage = (pageNumber: number): React.JSX.Element => {
+    const ref = pages[pageNumber - 1]
+    const descriptor = descriptors[pageNumber - 1]
+    if (!ref || !descriptor) return <div key={pageNumber} />
+    const estimate =
+      ref.kind === 'blank' ? { width: ref.width, height: ref.height } : sizeFor(pageNumber)
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">Loading…</div>
+      <PageView
+        key={ref.key}
+        descriptor={descriptor}
+        pageNumber={pageNumber}
+        scale={scale}
+        scrollRoot={scrollRoot}
+        estimatedSize={estimate}
+        onVisibility={handleVisibility}
+        onMeasured={handleMeasured}
+        highlightItems={matchItemsByPage.get(pageNumber)}
+        activeHighlightItems={
+          activeMatch?.page === pageNumber ? activeMatch.itemIndices : undefined
+        }
+      />
     )
   }
 
-  const renderPage = (pageNumber: number): React.JSX.Element => (
-    <PageView
-      key={pageNumber}
-      pdf={pdf}
-      pageNumber={pageNumber}
-      scale={scale}
-      rotation={rotation}
-      scrollRoot={scrollRoot}
-      estimatedSize={sizeFor(pageNumber)}
-      onVisibility={handleVisibility}
-      onMeasured={handleMeasured}
-      highlightItems={matchItemsByPage.get(pageNumber)}
-      activeHighlightItems={activeMatch?.page === pageNumber ? activeMatch.itemIndices : undefined}
-    />
-  )
-
   let content: React.JSX.Element
-  if (layout === 'single') {
-    // Subscribes to currentPage in isolation so paging doesn't re-render the
-    // whole viewer.
+  if (pages.length === 0) {
+    content = <div className="text-sm text-muted-foreground">This document has no pages.</div>
+  } else if (layout === 'single') {
     content = (
       <div className="flex justify-center">
-        <SinglePage pageCount={tab.pageCount} renderPage={renderPage} />
+        <SinglePage pageCount={pages.length} renderPage={renderPage} />
       </div>
     )
   } else if (layout === 'two-up') {

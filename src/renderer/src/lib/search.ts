@@ -1,31 +1,32 @@
-import type { PdfDocument, TextContentItem } from './pdf'
+import type { TextContentItem } from './pdf'
+import type { PageRef, SourcePageRef } from './pageModel'
 
 /** A single full-text match, located by the page text items it spans. */
 export interface SearchMatch {
-  /** 1-based page number. */
+  /** 1-based **logical** page number (index into the document's page model). */
   page: number
-  /**
-   * Indices (into that page's `getTextContent().items`) of the text items the
-   * match overlaps. Indices line up with what `PageView` fetches, so it can
-   * draw highlight rectangles without re-deriving positions.
-   */
+  /** Indices into that source page's text items that the match overlaps. */
   itemIndices: number[]
 }
 
-/** Cancellation token threaded through a long search. */
 export interface SearchSignal {
   cancelled: boolean
 }
 
+/** Resolves a source page's text items (same array `PageView` renders from). */
+export type TextItemsResolver = (ref: SourcePageRef) => Promise<readonly TextContentItem[]>
+
 const itemText = (item: TextContentItem): string => ('str' in item ? item.str : '')
 
 /**
- * Searches every page of a document for `rawQuery` (case-insensitive) and
- * returns matches in reading order. Pages are scanned lazily one at a time and
- * progress is reported, so the UI can show a running count without blocking.
+ * Searches every (source) page of a document's logical page model for
+ * `rawQuery` (case-insensitive), in reading order, reporting progress. Blank
+ * pages are skipped. Match page numbers are logical, matching what the viewer
+ * renders.
  */
 export async function searchDocument(
-  pdf: PdfDocument,
+  pages: PageRef[],
+  resolve: TextItemsResolver,
   rawQuery: string,
   onProgress?: (scannedPages: number, totalPages: number, found: number) => void,
   signal?: SearchSignal
@@ -34,39 +35,39 @@ export async function searchDocument(
   const matches: SearchMatch[] = []
   if (!query) return matches
 
-  const total = pdf.numPages
-  for (let page = 1; page <= total; page += 1) {
+  const total = pages.length
+  for (let pageIndex = 0; pageIndex < total; pageIndex += 1) {
     if (signal?.cancelled) break
+    const ref = pages[pageIndex]
 
-    const content = await (await pdf.getPage(page)).getTextContent()
-    const items = content.items
+    if (ref && ref.kind === 'source') {
+      const items = await resolve(ref)
 
-    // Concatenate the page text and record where each item starts.
-    let text = ''
-    const itemStart: number[] = new Array(items.length)
-    for (let k = 0; k < items.length; k += 1) {
-      itemStart[k] = text.length
-      text += itemText(items[k]!)
-    }
-
-    const haystack = text.toLowerCase()
-    let from = 0
-    for (;;) {
-      const index = haystack.indexOf(query, from)
-      if (index === -1) break
-      const end = index + query.length
-
-      const spanned: number[] = []
+      let text = ''
+      const itemStart: number[] = new Array(items.length)
       for (let k = 0; k < items.length; k += 1) {
-        const start = itemStart[k]!
-        const stop = start + itemText(items[k]!).length
-        if (stop > index && start < end) spanned.push(k)
+        itemStart[k] = text.length
+        text += itemText(items[k]!)
       }
-      matches.push({ page, itemIndices: spanned })
-      from = end
+
+      const haystack = text.toLowerCase()
+      let from = 0
+      for (;;) {
+        const index = haystack.indexOf(query, from)
+        if (index === -1) break
+        const end = index + query.length
+        const spanned: number[] = []
+        for (let k = 0; k < items.length; k += 1) {
+          const start = itemStart[k]!
+          const stop = start + itemText(items[k]!).length
+          if (stop > index && start < end) spanned.push(k)
+        }
+        matches.push({ page: pageIndex + 1, itemIndices: spanned })
+        from = end
+      }
     }
 
-    onProgress?.(page, total, matches.length)
+    onProgress?.(pageIndex + 1, total, matches.length)
   }
 
   return matches

@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { searchDocument, type SearchMatch, type SearchSignal } from '@/lib/search'
-import type { PdfDocument } from '@/lib/pdf'
+import type { TextContentItem } from '@/lib/pdf'
+import type { SourcePageRef } from '@/lib/pageModel'
+import { getSource, type DocumentTab } from './documentStore'
 import { useViewStore } from './viewStore'
 
 type SearchStatus = 'idle' | 'searching' | 'done'
@@ -17,18 +19,24 @@ interface SearchState {
   open: () => void
   close: () => void
   setQuery: (query: string) => void
-  run: (pdf: PdfDocument) => Promise<void>
+  run: (tab: DocumentTab) => Promise<void>
   next: () => void
   prev: () => void
   reset: () => void
 }
 
-// Only one search may be in flight; a new run cancels the previous.
 let activeSignal: SearchSignal | null = null
 
 function scrollToMatch(matches: SearchMatch[], index: number): void {
   const match = matches[index]
   if (match) useViewStore.getState().requestScrollToPage(match.page)
+}
+
+async function getTextItems(ref: SourcePageRef): Promise<readonly TextContentItem[]> {
+  const source = getSource(ref.sourceId)
+  if (!source) return []
+  const page = await source.pdf.getPage(ref.sourceIndex + 1)
+  return (await page.getTextContent()).items
 }
 
 export const useSearchStore = create<SearchState>((set, get) => ({
@@ -43,40 +51,29 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   open: () => set({ isOpen: true }),
   close: () => {
     if (activeSignal) activeSignal.cancelled = true
-    // Keep the query (for quick re-open) but clear results so highlights vanish.
     set({ isOpen: false, matches: [], activeIndex: 0, status: 'idle' })
   },
   setQuery: (query) => set({ query }),
 
-  run: async (pdf) => {
+  run: async (tab) => {
     if (activeSignal) activeSignal.cancelled = true
     const signal: SearchSignal = { cancelled: false }
     activeSignal = signal
 
     const query = get().query
+    const totalPages = tab.pages.length
     if (!query.trim()) {
-      set({
-        matches: [],
-        activeIndex: 0,
-        status: 'idle',
-        scannedPages: 0,
-        totalPages: pdf.numPages
-      })
+      set({ matches: [], activeIndex: 0, status: 'idle', scannedPages: 0, totalPages })
       return
     }
 
-    set({
-      status: 'searching',
-      matches: [],
-      activeIndex: 0,
-      scannedPages: 0,
-      totalPages: pdf.numPages
-    })
+    set({ status: 'searching', matches: [], activeIndex: 0, scannedPages: 0, totalPages })
     const matches = await searchDocument(
-      pdf,
+      tab.pages,
+      getTextItems,
       query,
-      (scannedPages, totalPages) => {
-        if (!signal.cancelled) set({ scannedPages, totalPages })
+      (scannedPages, total) => {
+        if (!signal.cancelled) set({ scannedPages, totalPages: total })
       },
       signal
     )

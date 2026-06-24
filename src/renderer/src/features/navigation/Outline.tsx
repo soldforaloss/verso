@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { getDocumentPdf, type DocumentTab } from '@/store/documentStore'
+import { getSource, type DocumentTab } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
 import type { PdfDocument } from '@/lib/pdf'
 import { cn } from '@/lib/utils'
 
-type OutlineNode = Awaited<ReturnType<PdfDocument['getOutline']>>[number]
+type OutlineNode = NonNullable<Awaited<ReturnType<PdfDocument['getOutline']>>>[number]
 type Destination = OutlineNode['dest']
 
-/** Resolves an outline destination to a 1-based page number, if possible. */
-async function destinationToPage(pdf: PdfDocument, dest: Destination): Promise<number | null> {
+/** Resolves an outline destination to a 0-based page index in the source. */
+async function destinationToSourceIndex(
+  pdf: PdfDocument,
+  dest: Destination
+): Promise<number | null> {
   if (!dest) return null
   const explicit = typeof dest === 'string' ? await pdf.getDestination(dest) : dest
   if (!Array.isArray(explicit) || explicit.length === 0) return null
   try {
-    const index = await pdf.getPageIndex(explicit[0] as Parameters<PdfDocument['getPageIndex']>[0])
-    return index + 1
+    return await pdf.getPageIndex(explicit[0] as Parameters<PdfDocument['getPageIndex']>[0])
   } catch {
     return null
   }
@@ -68,17 +70,19 @@ function OutlineItem({
   )
 }
 
-/** Document outline (bookmarks) panel; click a heading to navigate. */
+/** Document outline (bookmarks) for the tab's primary source. */
 export function Outline({ tab }: { tab: DocumentTab }): React.JSX.Element {
-  const pdf = getDocumentPdf(tab.id)
   const requestScrollToPage = useViewStore((s) => s.requestScrollToPage)
   const [outline, setOutline] = useState<OutlineNode[] | null>(null)
+
+  const primarySourceId = tab.sourceIds[0]
+  const pdf = primarySourceId ? getSource(primarySourceId)?.pdf : undefined
 
   useEffect(() => {
     if (!pdf) return
     let cancelled = false
     void pdf.getOutline().then((nodes) => {
-      if (!cancelled) setOutline(nodes ?? [])
+      if (!cancelled) setOutline((nodes as OutlineNode[] | null) ?? [])
     })
     return () => {
       cancelled = true
@@ -86,9 +90,17 @@ export function Outline({ tab }: { tab: DocumentTab }): React.JSX.Element {
   }, [pdf])
 
   const onNavigate = (dest: Destination): void => {
-    if (!pdf) return
-    void destinationToPage(pdf, dest).then((page) => {
-      if (page) requestScrollToPage(page)
+    if (!pdf || !primarySourceId) return
+    void destinationToSourceIndex(pdf, dest).then((sourceIndex) => {
+      if (sourceIndex === null) return
+      // Map the source page to the current logical page (order may have changed).
+      const logical = tab.pages.findIndex(
+        (page) =>
+          page.kind === 'source' &&
+          page.sourceId === primarySourceId &&
+          page.sourceIndex === sourceIndex
+      )
+      if (logical >= 0) requestScrollToPage(logical + 1)
     })
   }
 
