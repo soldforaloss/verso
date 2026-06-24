@@ -69,11 +69,19 @@ next begins.
   persist and render identically everywhere.
 - _Stamps and a dedicated signature-capture modal are deferred — see Stretch._
 
+### ✅ M5 — Forms (AcroForm)
+
+- Detects fields with PDF.js and renders interactive controls (text, checkbox,
+  radio, dropdown, list box) positioned over the page; values stored per source.
+- **Fill, reset**, and **save** via pdf-lib. A pristine document saves with the
+  form **still editable** (values intact); a restructured document flattens the
+  filled form. See [ADR-0007](./docs/decisions/0007-forms.md).
+- _Field creation and signature fields are out of scope (see Stretch)._
+
 ## In progress / planned
 
 | Milestone                              | Scope                                                                                                                                                         |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M5 — Forms (AcroForm)**              | Detect + fill text/checkbox/radio/dropdown/listbox; validate; reset; save; flatten.                                                                           |
 | **M6 — In-place text & image editing** | Tier 1 (add new content) + Tier 2 (cover-&-replace existing text/images). `ContentEditor` abstraction prepared for Tier 3.                                    |
 | **M7 — OCR**                           | tesseract.js in a worker; searchable text layer for scans; language selection; offline.                                                                       |
 | **M8 — Security, metadata & export**   | Metadata editor; qpdf passwords/permissions/decrypt/repair/linearize; **true redaction** vs whiteout with explicit warnings; export pages to PNG/JPEG; print. |

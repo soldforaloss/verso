@@ -44,7 +44,7 @@ Verso is built milestone by milestone. Status reflects what's on `main`.
 | Navigation | Thumbnails, outline/bookmarks, full-text search                         | ✅ M2  |
 | Pages      | Reorder, rotate, delete, insert, extract, merge, split + undo/redo      | ✅ M3  |
 | Annotation | Highlight/underline/strike, ink, shapes, text boxes, sticky notes       | ✅ M4  |
-| Forms      | Fill & save AcroForms (text, check, radio, dropdown, list)              | ⏳ M5  |
+| Forms      | Fill & save AcroForms (text, check, radio, dropdown, list)              | ✅ M5  |
 | Editing    | Add/edit text, images, shapes; cover-&-replace existing text (Tier 1–2) | ⏳ M6  |
 | OCR        | Make scanned PDFs searchable (tesseract.js, offline)                    | ⏳ M7  |
 | Security   | Passwords/permissions, repair, linearize, **true redaction**, export    | ⏳ M8  |
