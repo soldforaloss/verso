@@ -1,0 +1,10 @@
+out/
+dist/
+release/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+docs/research/
+package-lock.json
+*.min.*
