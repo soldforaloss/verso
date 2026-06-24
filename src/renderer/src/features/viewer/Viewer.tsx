@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getDocumentPdf, type DocumentTab } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
+import { useSearchStore } from '@/store/searchStore'
 import { fitPageScale, fitWidthScale, PAGE_GAP, PAGE_MARGIN, type PageSize } from '@/lib/geometry'
 import type { ReadingMode } from '@shared/ipc'
 import { PageView } from './PageView'
@@ -34,6 +35,21 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const clearPendingScroll = useViewStore((s) => s.clearPendingScroll)
   const layout = usePreferencesStore((s) => s.layout)
   const readingMode = usePreferencesStore((s) => s.readingMode)
+
+  const matches = useSearchStore((s) => s.matches)
+  const activeMatchIndex = useSearchStore((s) => s.activeIndex)
+  const activeMatch = matches[activeMatchIndex]
+  // Group match item-index arrays by page (rebuilt only when matches change), so
+  // a page's highlight props stay referentially stable across next/prev.
+  const matchItemsByPage = useMemo(() => {
+    const map = new Map<number, number[][]>()
+    for (const match of matches) {
+      const existing = map.get(match.page)
+      if (existing) existing.push(match.itemIndices)
+      else map.set(match.page, [match.itemIndices])
+    }
+    return map
+  }, [matches])
 
   const ratiosRef = useRef<Map<number, number>>(new Map())
   const rafRef = useRef<number | null>(null)
@@ -172,6 +188,8 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
       estimatedSize={sizeFor(pageNumber)}
       onVisibility={handleVisibility}
       onMeasured={handleMeasured}
+      highlightItems={matchItemsByPage.get(pageNumber)}
+      activeHighlightItems={activeMatch?.page === pageNumber ? activeMatch.itemIndices : undefined}
     />
   )
 

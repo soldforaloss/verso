@@ -1,5 +1,13 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { TextLayer, type PdfDocument, type PdfPage, type RenderTask } from '@/lib/pdf'
+import { Util } from 'pdfjs-dist'
+import {
+  TextLayer,
+  type PageViewport,
+  type PdfDocument,
+  type PdfPage,
+  type RenderTask,
+  type TextContentItem
+} from '@/lib/pdf'
 import { normalizeRotation, type PageSize } from '@/lib/geometry'
 import { cn } from '@/lib/utils'
 
@@ -14,19 +22,38 @@ interface PageViewProps {
   estimatedSize: PageSize
   onVisibility: (pageNumber: number, ratio: number) => void
   onMeasured: (pageNumber: number, size: PageSize) => void
+  /** Search matches on this page, each as the item indices it spans. */
+  highlightItems?: number[][] | undefined
+  /** The currently-active search match's item indices, if it is on this page. */
+  activeHighlightItems?: number[] | undefined
+}
+
+interface HighlightRect {
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 const RENDERING_CANCELLED = 'RenderingCancelledException'
 
-/**
- * Renders a single PDF page to a canvas with an aligned, selectable text layer.
- *
- * Rendering is lazy: a page only paints when it (or its 1200px prefetch margin)
- * enters the scroll viewport, and its canvas/text are released when it scrolls
- * far away. This keeps memory bounded for very large documents while preserving
- * smooth scrolling. Until painted, the wrapper reserves space using the
- * estimated page size.
- */
+/** Rectangles (in canvas CSS px) for the given text items at the viewport. */
+function rectsFor(
+  itemIndices: number[],
+  items: readonly TextContentItem[],
+  viewport: PageViewport
+): HighlightRect[] {
+  const rects: HighlightRect[] = []
+  for (const index of itemIndices) {
+    const item = items[index]
+    if (!item || !('transform' in item)) continue
+    const m = Util.transform(viewport.transform, item.transform)
+    const height = Math.hypot(m[2], m[3])
+    rects.push({ left: m[4], top: m[5] - height, width: item.width * viewport.scale, height })
+  }
+  return rects
+}
+
 function PageViewImpl({
   pdf,
   pageNumber,
@@ -35,14 +62,25 @@ function PageViewImpl({
   scrollRoot,
   estimatedSize,
   onVisibility,
-  onMeasured
+  onMeasured,
+  highlightItems,
+  activeHighlightItems
 }: PageViewProps): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const renderTaskRef = useRef<RenderTask | null>(null)
   const pageRef = useRef<PdfPage | null>(null)
+  const renderInfoRef = useRef<{
+    viewport: PageViewport
+    items: readonly TextContentItem[]
+  } | null>(null)
   const [visible, setVisible] = useState(false)
+  const [renderTick, setRenderTick] = useState(0)
+  const [highlights, setHighlights] = useState<{
+    normal: HighlightRect[]
+    active: HighlightRect[]
+  }>({ normal: [], active: [] })
 
   // Track viewport visibility (+ prefetch margin) to drive lazy rendering and
   // current-page detection.
@@ -95,17 +133,20 @@ function PageViewImpl({
         await task.promise
         if (cancelled) return
 
-        // Selectable/copyable text overlay aligned to the canvas.
+        const textContent = await page.getTextContent()
         textContainer.replaceChildren()
         textContainer.style.width = `${Math.floor(viewport.width)}px`
         textContainer.style.height = `${Math.floor(viewport.height)}px`
         textContainer.style.setProperty('--total-scale-factor', String(viewport.scale))
         const textLayer = new TextLayer({
-          textContentSource: await page.getTextContent(),
+          textContentSource: textContent,
           container: textContainer,
           viewport
         })
         await textLayer.render()
+
+        renderInfoRef.current = { viewport, items: textContent.items }
+        setRenderTick((tick) => tick + 1)
       } catch (error) {
         if (!(error instanceof Error) || error.name !== RENDERING_CANCELLED) {
           console.error(`[viewer] failed to render page ${pageNumber}:`, error)
@@ -117,14 +158,30 @@ function PageViewImpl({
       cancelled = true
       renderTaskRef.current?.cancel()
       renderTaskRef.current = null
-      // Free GPU/CPU memory for off-screen pages (use the captured nodes).
       canvas.width = 0
       canvas.height = 0
       textContainer.replaceChildren()
+      renderInfoRef.current = null
       pageRef.current?.cleanup()
       pageRef.current = null
     }
   }, [visible, pdf, pageNumber, scale, rotation, onMeasured])
+
+  // Recompute search-highlight rectangles when matches or the rendered viewport change.
+  useEffect(() => {
+    const info = renderInfoRef.current
+    if (!info || (!highlightItems && !activeHighlightItems)) {
+      setHighlights({ normal: [], active: [] })
+      return
+    }
+    const normal = (highlightItems ?? []).flatMap((items) =>
+      rectsFor(items, info.items, info.viewport)
+    )
+    const active = activeHighlightItems
+      ? rectsFor(activeHighlightItems, info.items, info.viewport)
+      : []
+    setHighlights({ normal, active })
+  }, [highlightItems, activeHighlightItems, renderTick])
 
   const rotated = normalizeRotation(rotation)
   const swap = rotated === 90 || rotated === 270
@@ -139,6 +196,28 @@ function PageViewImpl({
       style={{ width: cssWidth, height: cssHeight }}
     >
       <canvas ref={canvasRef} className="block" />
+      {(highlights.normal.length > 0 || highlights.active.length > 0) && (
+        <div className="pointer-events-none absolute inset-0" style={{ zIndex: 1 }}>
+          {highlights.normal.map((rect, index) => (
+            <div
+              key={`n${index}`}
+              className="absolute"
+              style={{ ...rect, background: 'rgba(255, 213, 0, 0.4)' }}
+            />
+          ))}
+          {highlights.active.map((rect, index) => (
+            <div
+              key={`a${index}`}
+              className="absolute"
+              style={{
+                ...rect,
+                background: 'rgba(255, 138, 0, 0.55)',
+                outline: '1.5px solid rgba(229, 110, 0, 0.95)'
+              }}
+            />
+          ))}
+        </div>
+      )}
       <div ref={textRef} className="textLayer" />
       {!visible && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-neutral-400">

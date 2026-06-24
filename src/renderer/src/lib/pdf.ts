@@ -21,6 +21,8 @@ export type PdfDocument = Awaited<ReturnType<typeof getDocument>['promise']>
 export type PdfPage = Awaited<ReturnType<PdfDocument['getPage']>>
 export type PageViewport = ReturnType<PdfPage['getViewport']>
 export type RenderTask = ReturnType<PdfPage['render']>
+export type TextContent = Awaited<ReturnType<PdfPage['getTextContent']>>
+export type TextContentItem = TextContent['items'][number]
 
 export interface LoadedPdf {
   pdf: PdfDocument
