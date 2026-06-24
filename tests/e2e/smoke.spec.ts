@@ -1,7 +1,5 @@
-import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test'
-import { join } from 'node:path'
-
-const MAIN_ENTRY = join(__dirname, '../../out/main/index.js')
+import { test, expect, type ElectronApplication } from '@playwright/test'
+import { launchVerso } from './launch'
 
 let app: ElectronApplication
 
@@ -10,7 +8,7 @@ test.afterEach(async () => {
 })
 
 test('launches and proves the secure bridge end to end', async () => {
-  app = await electron.launch({ args: [MAIN_ENTRY] })
+  app = await launchVerso()
 
   // Wait for the window to exist before inspecting it.
   const window = await app.firstWindow()

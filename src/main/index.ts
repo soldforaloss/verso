@@ -17,6 +17,11 @@ log.info(`Verso ${app.getVersion()} starting (electron ${process.versions.electr
 
 app.setAppUserModelId('com.versoeditor.app')
 
+// Allow e2e tests to use an isolated, throwaway data directory so persisted
+// preferences/recents never leak between runs (or into the real user profile).
+const isolatedUserData = process.env['VERSO_USER_DATA']
+if (isolatedUserData) app.setPath('userData', isolatedUserData)
+
 // The custom app:// scheme must be registered as privileged before app ready.
 registerAppScheme()
 
