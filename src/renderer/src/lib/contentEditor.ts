@@ -1,4 +1,5 @@
 import { newAnnotationId, type Annotation, type Point, type Rect } from '@/lib/annotations'
+import { inferTextFontStyle } from '@/lib/textStyle'
 import type { PdfPage } from '@/lib/pdf'
 
 export interface EditTextInput {
@@ -8,6 +9,17 @@ export interface EditTextInput {
   point: Point
   /** Returns a hex color for a page-space rect, sampled from the rendered page. */
   sampleBackground: (rect: Rect) => string
+  /** Returns the run's ink (text) color, sampled from the rendered page. */
+  sampleInkColor: (rect: Rect) => string
+}
+
+/** Minimal shape of the PDF.js font object kept in `page.commonObjs`. */
+interface PdfFontObject {
+  name?: string
+}
+interface PdfObjects {
+  has(id: string): boolean
+  get(id: string): PdfFontObject | undefined
 }
 
 /**
@@ -15,9 +27,9 @@ export interface EditTextInput {
  *
  * Tier 2 ({@link OverlayContentEditor}) covers the target run with a
  * background-matched rectangle and drops an editable text box pre-filled with
- * the original string, flattening on save. A future Tier 3 (a PDFium native
- * addon) can implement this same interface with true content-stream edits —
- * this is the clean swap point.
+ * the original string — matching its color, size, and (best-effort) font face —
+ * flattening on save. A future Tier 3 (a PDFium native addon) can implement this
+ * same interface with true content-stream edits — this is the clean swap point.
  */
 export interface ContentEditor {
   /**
@@ -32,17 +44,20 @@ export interface ContentEditor {
  * Tier 2 — pragmatic "cover & replace" editing using the annotation layer.
  *
  * Honest limits (the same approach mainstream consumer editors use): the
- * background match is a single sampled pixel (imperfect on gradients/images),
- * the font is a best-effort sans-serif fallback, and there is no text reflow.
+ * background and ink colors are sampled from the rendered pixels (imperfect on
+ * gradients/images), the font face is inferred from the run's font name, and
+ * there is no text reflow.
  */
 export class OverlayContentEditor implements ContentEditor {
   async editTextRun({
     page,
     pageKey,
     point,
-    sampleBackground
+    sampleBackground,
+    sampleInkColor
   }: EditTextInput): Promise<Annotation[] | null> {
     const content = await page.getTextContent()
+    const commonObjs = (page as unknown as { commonObjs?: PdfObjects }).commonObjs
 
     for (const item of content.items) {
       if (!('transform' in item) || item.str.trim() === '') continue
@@ -63,6 +78,18 @@ export class OverlayContentEditor implements ContentEditor {
         point.y <= rect.y + rect.height
       if (!hit) continue
 
+      // Infer the original face from the run's font name (PostScript name from
+      // the loaded font object, plus the text layer's CSS family as a hint).
+      const fontName = item.fontName
+      let psName: string | undefined
+      try {
+        if (fontName && commonObjs?.has(fontName)) psName = commonObjs.get(fontName)?.name
+      } catch {
+        /* font not resolved yet — fall back to the style family */
+      }
+      const styleFamily = fontName ? content.styles?.[fontName]?.fontFamily : undefined
+      const face = inferTextFontStyle(psName, styleFamily)
+
       const cover: Annotation = {
         id: newAnnotationId(),
         pageKey,
@@ -77,9 +104,12 @@ export class OverlayContentEditor implements ContentEditor {
         id: newAnnotationId(),
         pageKey,
         type: 'text',
-        color: '#111111',
+        color: sampleInkColor(rect),
         opacity: 1,
         fontSize: Math.max(6, Math.round(fontHeight)),
+        fontFamily: face.family,
+        bold: face.bold,
+        italic: face.italic,
         text: item.str,
         rect
       }

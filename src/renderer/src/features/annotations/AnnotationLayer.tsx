@@ -24,6 +24,7 @@ import {
   screenToPage
 } from '@/lib/annotationGeometry'
 import { OverlayContentEditor } from '@/lib/contentEditor'
+import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
 
 const contentEditor = new OverlayContentEditor()
@@ -133,10 +134,41 @@ export function AnnotationLayer({
     }
   }
 
+  // Estimates the ink (text) color of a run by reading its rendered pixels and
+  // weighting them away from the sampled background — so cover-&-replace text
+  // keeps the original color instead of defaulting to black.
+  const sampleInkColor = (pageRect: Rect): string => {
+    const fallback = '#111111'
+    try {
+      const canvas = containerRef.current?.parentElement?.querySelector('canvas')
+      if (!(canvas instanceof HTMLCanvasElement)) return fallback
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return fallback
+      const screen = pageRectToScreen(viewport, pageRect)
+      const dpr = window.devicePixelRatio || 1
+      const sx = Math.max(0, Math.round(screen.x * dpr))
+      const sy = Math.max(0, Math.round(screen.y * dpr))
+      const sw = Math.min(Math.max(1, Math.round(screen.width * dpr)), canvas.width - sx)
+      const sh = Math.min(Math.max(1, Math.round(screen.height * dpr)), canvas.height - sy)
+      if (sw <= 0 || sh <= 0) return fallback
+      const background = hexToRgbTriple(sampleBackground(pageRect))
+      const { data } = ctx.getImageData(sx, sy, sw, sh)
+      return estimateInkColor(data, background) ?? fallback
+    } catch {
+      return fallback
+    }
+  }
+
   // Tier 2 cover-&-replace: edit the existing text run under the click.
   const editTextRunAt = async (point: Point): Promise<void> => {
     const page = await pdf.getPage(pageIndex + 1)
-    const created = await contentEditor.editTextRun({ page, pageKey, point, sampleBackground })
+    const created = await contentEditor.editTextRun({
+      page,
+      pageKey,
+      point,
+      sampleBackground,
+      sampleInkColor
+    })
     if (!created) return
     addAnnotations(docId, created, 'Edit text')
     const textAnnotation = created[created.length - 1]
@@ -779,7 +811,13 @@ function HtmlAnnotation({
             }
           }}
           className="size-full resize-none border-none bg-transparent leading-tight outline-none"
-          style={{ color: annotation.color, fontSize: annotation.fontSize }}
+          style={{
+            color: annotation.color,
+            fontSize: annotation.fontSize,
+            fontFamily: annotation.fontFamily ?? 'sans-serif',
+            fontWeight: annotation.bold ? 'bold' : 'normal',
+            fontStyle: annotation.italic ? 'italic' : 'normal'
+          }}
         />
         {selected && htmlResizeHandles(annotation, startResizeRect)}
       </div>

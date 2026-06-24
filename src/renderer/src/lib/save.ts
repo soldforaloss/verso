@@ -82,7 +82,6 @@ async function buildFromModel(
   metadata: DocumentMetadata | null
 ): Promise<Uint8Array<ArrayBuffer>> {
   const out = await PDFDocument.create()
-  const font = await out.embedFont(StandardFonts.Helvetica)
   const sourceDocs = new Map<string, PDFDocument>()
 
   const sourceDoc = async (sourceId: string): Promise<PDFDocument> => {
@@ -110,7 +109,7 @@ async function buildFromModel(
       page = copied
     }
     for (const annotation of annotationsByKey[ref.key] ?? []) {
-      await drawAnnotation(out, page, font, annotation)
+      await drawAnnotation(out, page, annotation)
     }
   }
 
@@ -145,7 +144,6 @@ async function buildPristine(
 ): Promise<Uint8Array<ArrayBuffer>> {
   const source = getSource(sourceId)!
   const doc = await PDFDocument.load(source.bytes, { updateMetadata: false })
-  const font = await doc.embedFont(StandardFonts.Helvetica)
   await fillForm(doc, formValues, false)
 
   const pages = doc.getPages()
@@ -155,7 +153,7 @@ async function buildPristine(
     if (!page) continue
     if (ref.rotation) page.setRotation(degrees((page.getRotation().angle + ref.rotation) % 360))
     for (const annotation of tab.annotations[ref.key] ?? []) {
-      await drawAnnotation(doc, page, font, annotation)
+      await drawAnnotation(doc, page, annotation)
     }
   }
 

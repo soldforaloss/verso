@@ -1,5 +1,61 @@
-import { degrees, rgb, type Color, type PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
-import type { Annotation, Point } from '@/lib/annotations'
+import {
+  degrees,
+  rgb,
+  StandardFonts,
+  type Color,
+  type PDFDocument,
+  type PDFFont,
+  type PDFPage
+} from 'pdf-lib'
+import type { Annotation, Point, TextFontFamily } from '@/lib/annotations'
+
+/** Maps a text annotation's face to the closest standard-14 font. */
+export function standardFontFor(
+  family: TextFontFamily,
+  bold: boolean,
+  italic: boolean
+): StandardFonts {
+  if (family === 'serif') {
+    if (bold && italic) return StandardFonts.TimesRomanBoldItalic
+    if (bold) return StandardFonts.TimesRomanBold
+    if (italic) return StandardFonts.TimesRomanItalic
+    return StandardFonts.TimesRoman
+  }
+  if (family === 'monospace') {
+    if (bold && italic) return StandardFonts.CourierBoldOblique
+    if (bold) return StandardFonts.CourierBold
+    if (italic) return StandardFonts.CourierOblique
+    return StandardFonts.Courier
+  }
+  if (bold && italic) return StandardFonts.HelveticaBoldOblique
+  if (bold) return StandardFonts.HelveticaBold
+  if (italic) return StandardFonts.HelveticaOblique
+  return StandardFonts.Helvetica
+}
+
+// Embedded standard fonts are cached per document so repeated text annotations
+// don't add duplicate font dictionaries.
+const fontCache = new WeakMap<PDFDocument, Map<StandardFonts, Promise<PDFFont>>>()
+
+function resolveTextFont(
+  doc: PDFDocument,
+  family: TextFontFamily,
+  bold: boolean,
+  italic: boolean
+): Promise<PDFFont> {
+  const name = standardFontFor(family, bold, italic)
+  let map = fontCache.get(doc)
+  if (!map) {
+    map = new Map()
+    fontCache.set(doc, map)
+  }
+  let pending = map.get(name)
+  if (!pending) {
+    pending = doc.embedFont(name)
+    map.set(name, pending)
+  }
+  return pending
+}
 
 function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64)
@@ -25,7 +81,6 @@ function hexToRgb(hex: string): Color {
 export async function drawAnnotation(
   doc: PDFDocument,
   page: PDFPage,
-  font: PDFFont,
   annotation: Annotation
 ): Promise<void> {
   const color = hexToRgb(annotation.color)
@@ -98,11 +153,17 @@ export async function drawAnnotation(
     }
     case 'text': {
       const { x, y, height } = annotation.rect
+      const textFont = await resolveTextFont(
+        doc,
+        annotation.fontFamily ?? 'sans-serif',
+        annotation.bold ?? false,
+        annotation.italic ?? false
+      )
       page.drawText(annotation.text, {
         x,
         y: y + height - annotation.fontSize,
         size: annotation.fontSize,
-        font,
+        font: textFont,
         color,
         lineHeight: annotation.fontSize * 1.2,
         maxWidth: annotation.rect.width

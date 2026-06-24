@@ -14,6 +14,9 @@ export interface Rect {
 
 export type MarkupKind = 'highlight' | 'underline' | 'strike' | 'squiggly'
 
+/** Generic font family a text annotation maps to (overlay CSS + StandardFont). */
+export type TextFontFamily = 'sans-serif' | 'serif' | 'monospace'
+
 interface BaseAnnotation {
   id: string
   /** Stable key of the logical page this annotation belongs to. */
@@ -28,7 +31,16 @@ export type Annotation =
   | (BaseAnnotation & { type: 'rect'; rect: Rect; strokeWidth: number; filled: boolean })
   | (BaseAnnotation & { type: 'ellipse'; rect: Rect; strokeWidth: number; filled: boolean })
   | (BaseAnnotation & { type: 'line'; a: Point; b: Point; strokeWidth: number; arrow: boolean })
-  | (BaseAnnotation & { type: 'text'; rect: Rect; text: string; fontSize: number })
+  | (BaseAnnotation & {
+      type: 'text'
+      rect: Rect
+      text: string
+      fontSize: number
+      /** Optional face hints (used by cover-&-replace to match existing text). */
+      fontFamily?: TextFontFamily
+      bold?: boolean
+      italic?: boolean
+    })
   | (BaseAnnotation & { type: 'note'; point: Point; text: string })
   | (BaseAnnotation & { type: 'markup'; markup: MarkupKind; quads: Rect[] })
   | (BaseAnnotation & { type: 'image'; rect: Rect; dataUrl: string })
