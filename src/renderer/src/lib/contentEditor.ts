@@ -1,5 +1,5 @@
 import { newAnnotationId, type Annotation, type Point, type Rect } from '@/lib/annotations'
-import { inferTextFontStyle } from '@/lib/textStyle'
+import { inferTextFontStyle, type TextFontStyle } from '@/lib/textStyle'
 import type { PdfPage } from '@/lib/pdf'
 
 export interface EditTextInput {
@@ -11,6 +11,8 @@ export interface EditTextInput {
   sampleBackground: (rect: Rect) => string
   /** Returns the run's ink (text) color, sampled from the rendered page. */
   sampleInkColor: (rect: Rect) => string
+  /** Measures a string's natural width (PDF points) in the substitute font. */
+  measureTextWidth: (text: string, fontSize: number, style: TextFontStyle) => number
 }
 
 /** Minimal shape of the PDF.js font object kept in `page.commonObjs`. */
@@ -54,7 +56,8 @@ export class OverlayContentEditor implements ContentEditor {
     pageKey,
     point,
     sampleBackground,
-    sampleInkColor
+    sampleInkColor,
+    measureTextWidth
   }: EditTextInput): Promise<Annotation[] | null> {
     const content = await page.getTextContent()
     const commonObjs = (page as unknown as { commonObjs?: PdfObjects }).commonObjs
@@ -89,6 +92,21 @@ export class OverlayContentEditor implements ContentEditor {
       }
       const styleFamily = fontName ? content.styles?.[fontName]?.fontFamily : undefined
       const face = inferTextFontStyle(psName, styleFamily)
+      const fontSize = Math.max(6, Math.round(fontHeight))
+
+      // Pick an initial letter-spacing so the substitute font lands on the same
+      // width as the original run (it usually has different glyph metrics).
+      let letterSpacing = 0
+      try {
+        const natural = measureTextWidth(item.str, fontSize, face)
+        const gaps = item.str.length - 1
+        if (natural > 0 && gaps > 0) {
+          const raw = (item.width - natural) / gaps
+          letterSpacing = Math.max(-fontSize * 0.3, Math.min(fontSize * 0.6, raw))
+        }
+      } catch {
+        /* measurement unavailable — leave spacing at 0 */
+      }
 
       const cover: Annotation = {
         id: newAnnotationId(),
@@ -106,10 +124,11 @@ export class OverlayContentEditor implements ContentEditor {
         type: 'text',
         color: sampleInkColor(rect),
         opacity: 1,
-        fontSize: Math.max(6, Math.round(fontHeight)),
+        fontSize,
         fontFamily: face.family,
         bold: face.bold,
         italic: face.italic,
+        letterSpacing,
         text: item.str,
         rect
       }

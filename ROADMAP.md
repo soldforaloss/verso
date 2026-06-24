@@ -84,8 +84,11 @@ next begins.
   resize / restyle / delete them; flattened into the PDF on save.
 - **Tier 2** — **cover-&-replace** editing of existing text: click a run, it's
   covered with a background-sampled box and a pre-filled editable text box drops
-  in at the same position/size. Honest about its limits (no reflow, best-effort
-  font/background).
+  in, matching the original color (sampled), size, and best-effort font face,
+  with letter-spacing auto-tuned to the original width. **Manual font, size,
+  bold/italic, color, and letter-spacing controls** let you fine-tune the
+  result. Honest about its limits: substitute (standard-14) fonts can't match a
+  precisely-typeset document exactly, and there is no reflow.
 - A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
   (PDFium) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
 

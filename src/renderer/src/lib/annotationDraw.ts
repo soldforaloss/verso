@@ -159,15 +159,45 @@ export async function drawAnnotation(
         annotation.bold ?? false,
         annotation.italic ?? false
       )
-      page.drawText(annotation.text, {
-        x,
-        y: y + height - annotation.fontSize,
-        size: annotation.fontSize,
-        font: textFont,
-        color,
-        lineHeight: annotation.fontSize * 1.2,
-        maxWidth: annotation.rect.width
-      })
+      const size = annotation.fontSize
+      const baselineY = y + height - size
+      const spacing = annotation.letterSpacing ?? 0
+
+      if (spacing !== 0) {
+        // pdf-lib's drawText has no character-spacing option, so apply tracking
+        // by drawing glyph-by-glyph and advancing by each glyph's width.
+        const lineHeight = size * 1.2
+        let cursorX = x
+        let cursorY = baselineY
+        for (const ch of annotation.text) {
+          if (ch === '\n') {
+            cursorX = x
+            cursorY -= lineHeight
+            continue
+          }
+          try {
+            page.drawText(ch, { x: cursorX, y: cursorY, size, font: textFont, color })
+            cursorX += textFont.widthOfTextAtSize(ch, size) + spacing
+          } catch {
+            // Glyph the standard font can't encode — leave a gap and continue.
+            cursorX += size * 0.5 + spacing
+          }
+        }
+      } else {
+        try {
+          page.drawText(annotation.text, {
+            x,
+            y: baselineY,
+            size,
+            font: textFont,
+            color,
+            lineHeight: size * 1.2,
+            maxWidth: annotation.rect.width
+          })
+        } catch {
+          /* contains glyphs the standard font can't encode — skip rather than fail the save */
+        }
+      }
       break
     }
     case 'note': {

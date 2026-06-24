@@ -24,10 +24,22 @@ import {
   screenToPage
 } from '@/lib/annotationGeometry'
 import { OverlayContentEditor } from '@/lib/contentEditor'
-import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
+import { estimateInkColor, hexToRgbTriple, type TextFontStyle } from '@/lib/textStyle'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
 
 const contentEditor = new OverlayContentEditor()
+
+// A reused offscreen context for measuring substitute-font text widths (points).
+const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
+const measureCtx = measureCanvas?.getContext('2d') ?? null
+
+function measureTextWidth(text: string, fontSize: number, style: TextFontStyle): number {
+  if (!measureCtx) return 0
+  const weight = style.bold ? 'bold ' : ''
+  const slant = style.italic ? 'italic ' : ''
+  measureCtx.font = `${slant}${weight}${fontSize}px ${style.family}`
+  return measureCtx.measureText(text).width
+}
 
 interface Props {
   docId: string
@@ -62,6 +74,10 @@ export function AnnotationLayer({
   const color = useToolStore((s) => s.color)
   const strokeWidth = useToolStore((s) => s.strokeWidth)
   const fontSize = useToolStore((s) => s.fontSize)
+  const fontFamily = useToolStore((s) => s.fontFamily)
+  const bold = useToolStore((s) => s.bold)
+  const italic = useToolStore((s) => s.italic)
+  const letterSpacing = useToolStore((s) => s.letterSpacing)
   const selectedId = useToolStore((s) => (s.selectedPageKey === pageKey ? s.selectedId : null))
   const selectAnnotation = useToolStore((s) => s.selectAnnotation)
 
@@ -167,13 +183,15 @@ export function AnnotationLayer({
       pageKey,
       point,
       sampleBackground,
-      sampleInkColor
+      sampleInkColor,
+      measureTextWidth
     })
     if (!created) return
     addAnnotations(docId, created, 'Edit text')
     const textAnnotation = created[created.length - 1]
-    if (textAnnotation) selectAnnotation(pageKey, textAnnotation.id)
+    // setTool clears the selection, so select the new text box afterwards.
     useToolStore.getState().setTool('select')
+    if (textAnnotation) selectAnnotation(pageKey, textAnnotation.id)
   }
 
   // ---- Create gestures (container captures pointer for drawing / placing) ----
@@ -239,12 +257,16 @@ export function AnnotationLayer({
         color,
         opacity: 1,
         fontSize,
+        fontFamily,
+        bold,
+        italic,
+        letterSpacing,
         text: 'Text',
         rect: { x: p.x, y: p.y - 24, width: 160, height: 24 }
       }
       addAnnotation(docId, annotation)
-      selectAnnotation(pageKey, annotation.id)
       useToolStore.getState().setTool('select')
+      selectAnnotation(pageKey, annotation.id)
     } else if (tool === 'note') {
       const annotation: Annotation = {
         id: newAnnotationId(),
@@ -256,8 +278,8 @@ export function AnnotationLayer({
         text: ''
       }
       addAnnotation(docId, annotation)
-      selectAnnotation(pageKey, annotation.id)
       useToolStore.getState().setTool('select')
+      selectAnnotation(pageKey, annotation.id)
     }
   }
 
@@ -812,11 +834,14 @@ function HtmlAnnotation({
           }}
           className="size-full resize-none border-none bg-transparent leading-tight outline-none"
           style={{
+            // Scale point sizes by the zoom so the editable preview matches the
+            // rendered page (the overlay box is already in scaled screen px).
             color: annotation.color,
-            fontSize: annotation.fontSize,
+            fontSize: annotation.fontSize * viewport.scale,
             fontFamily: annotation.fontFamily ?? 'sans-serif',
             fontWeight: annotation.bold ? 'bold' : 'normal',
-            fontStyle: annotation.italic ? 'italic' : 'normal'
+            fontStyle: annotation.italic ? 'italic' : 'normal',
+            letterSpacing: `${(annotation.letterSpacing ?? 0) * viewport.scale}px`
           }}
         />
         {selected && htmlResizeHandles(annotation, startResizeRect)}

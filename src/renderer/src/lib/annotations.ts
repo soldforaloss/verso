@@ -40,6 +40,8 @@ export type Annotation =
       fontFamily?: TextFontFamily
       bold?: boolean
       italic?: boolean
+      /** Extra spacing between characters, in PDF points (may be negative). */
+      letterSpacing?: number
     })
   | (BaseAnnotation & { type: 'note'; point: Point; text: string })
   | (BaseAnnotation & { type: 'markup'; markup: MarkupKind; quads: Rect[] })
