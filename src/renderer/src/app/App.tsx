@@ -6,6 +6,7 @@ import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
 import { useHistoryStore } from '@/store/historyStore'
 import { useToolStore } from '@/store/toolStore'
+import { useUiStore } from '@/store/uiStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
@@ -15,6 +16,7 @@ import { AnnotationToolbar } from '@/features/annotations/AnnotationToolbar'
 import { Viewer } from '@/features/viewer/Viewer'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
+import { ShortcutsDialog } from '@/features/help/ShortcutsDialog'
 import { TabBar } from './TabBar'
 import { EmptyState } from './EmptyState'
 
@@ -74,6 +76,13 @@ function App(): React.JSX.Element {
           removeAnnotation(activeId, selectedPageKey, selectedId)
           clearSelection()
         }
+        return
+      }
+
+      // "?" opens the keyboard cheat-sheet (Shift+/ on most layouts).
+      if (event.key === '?' && !typing) {
+        event.preventDefault()
+        useUiStore.getState().openShortcuts()
         return
       }
 
@@ -137,6 +146,7 @@ function App(): React.JSX.Element {
     >
       <TabBar />
       {active ? <ActiveDocument key={active.id} /> : <EmptyState />}
+      <ShortcutsDialog />
     </div>
   )
 }

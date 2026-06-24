@@ -5,6 +5,7 @@ import {
   Columns2,
   FolderOpen,
   FormInput,
+  Keyboard,
   Maximize,
   Minimize,
   Moon,
@@ -32,6 +33,7 @@ import { usePreferencesStore } from '@/store/preferencesStore'
 import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
 import { useFormStore } from '@/store/formStore'
+import { useUiStore } from '@/store/uiStore'
 import { selectCanRedo, selectCanUndo, useHistoryStore } from '@/store/historyStore'
 import { OcrControls } from '@/features/ocr/OcrControls'
 import { DocumentTools } from '@/features/document/DocumentTools'
@@ -304,6 +306,14 @@ export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
         </Button>
         <Button variant="ghost" size="icon" title="Toggle theme" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun /> : <Moon />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Keyboard shortcuts (?)"
+          onClick={() => useUiStore.getState().openShortcuts()}
+        >
+          <Keyboard />
         </Button>
         <Button
           variant="ghost"
