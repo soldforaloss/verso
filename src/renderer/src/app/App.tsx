@@ -5,10 +5,13 @@ import { useViewStore } from '@/store/viewStore'
 import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
 import { useHistoryStore } from '@/store/historyStore'
+import { useToolStore } from '@/store/toolStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
+import { removeAnnotation } from '@/lib/annotationOps'
 import { Toolbar } from '@/features/viewer/Toolbar'
+import { AnnotationToolbar } from '@/features/annotations/AnnotationToolbar'
 import { Viewer } from '@/features/viewer/Viewer'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
@@ -53,6 +56,27 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null
+      const typing =
+        !!target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+
+      // Escape clears any annotation selection.
+      if (event.key === 'Escape') {
+        useToolStore.getState().clearSelection()
+        return
+      }
+      // Delete/Backspace removes the selected annotation (unless typing).
+      if ((event.key === 'Delete' || event.key === 'Backspace') && !typing && activeId) {
+        const { selectedId, selectedPageKey, clearSelection } = useToolStore.getState()
+        if (selectedId && selectedPageKey) {
+          event.preventDefault()
+          removeAnnotation(activeId, selectedPageKey, selectedId)
+          clearSelection()
+        }
+        return
+      }
+
       const mod = event.ctrlKey || event.metaKey
       if (!mod) return
       const key = event.key.toLowerCase()
@@ -148,6 +172,7 @@ function ActiveDocument(): React.JSX.Element {
   return (
     <>
       <Toolbar tab={tab} />
+      <AnnotationToolbar tab={tab} />
       <div className="flex min-h-0 flex-1">
         {sidebarOpen && <Sidebar tab={tab} />}
         <div className="relative min-w-0 flex-1">

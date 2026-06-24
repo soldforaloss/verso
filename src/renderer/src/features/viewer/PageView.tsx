@@ -10,6 +10,8 @@ import {
 } from '@/lib/pdf'
 import { normalizeRotation, type PageSize } from '@/lib/geometry'
 import { cn } from '@/lib/utils'
+import type { Annotation } from '@/lib/annotations'
+import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
 
 /** Normalized render instruction for one logical page (built by the Viewer). */
 export type RenderDescriptor =
@@ -28,6 +30,10 @@ interface PageViewProps {
   onMeasured: (pageNumber: number, size: PageSize) => void
   highlightItems?: number[][] | undefined
   activeHighlightItems?: number[] | undefined
+  /** Active document id + this page's stable key + annotations (for markup). */
+  docId: string
+  pageKey: string
+  annotations: Annotation[]
 }
 
 interface HighlightRect {
@@ -64,7 +70,10 @@ function PageViewImpl({
   onVisibility,
   onMeasured,
   highlightItems,
-  activeHighlightItems
+  activeHighlightItems,
+  docId,
+  pageKey,
+  annotations
 }: PageViewProps): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -77,6 +86,7 @@ function PageViewImpl({
   } | null>(null)
   const [visible, setVisible] = useState(false)
   const [renderTick, setRenderTick] = useState(0)
+  const [pageViewport, setPageViewport] = useState<PageViewport | null>(null)
   const [highlights, setHighlights] = useState<{
     normal: HighlightRect[]
     active: HighlightRect[]
@@ -150,6 +160,7 @@ function PageViewImpl({
         await textLayer.render()
 
         renderInfoRef.current = { viewport, items: textContent.items }
+        setPageViewport(viewport)
         setRenderTick((tick) => tick + 1)
       } catch (error) {
         if (!(error instanceof Error) || error.name !== RENDERING_CANCELLED) {
@@ -166,6 +177,7 @@ function PageViewImpl({
       canvas.height = 0
       textContainer.replaceChildren()
       renderInfoRef.current = null
+      setPageViewport(null)
       pageRef.current?.cleanup()
       pageRef.current = null
     }
@@ -222,6 +234,14 @@ function PageViewImpl({
         </div>
       )}
       <div ref={textRef} className="textLayer" />
+      {descriptor.kind === 'source' && pageViewport && (
+        <AnnotationLayer
+          docId={docId}
+          pageKey={pageKey}
+          viewport={pageViewport}
+          annotations={annotations}
+        />
+      )}
       {descriptor.kind === 'blank' && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-neutral-300">
           Blank page
