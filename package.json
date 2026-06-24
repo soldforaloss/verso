@@ -35,6 +35,7 @@
     "test:e2e": "playwright test",
     "fixtures": "node scripts/generate-fixtures.mjs",
     "fetch:qpdf": "node scripts/fetch-qpdf.mjs",
+    "icon": "node scripts/generate-icon.mjs",
     "prepare": "husky"
   },
   "dependencies": {

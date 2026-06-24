@@ -37,7 +37,7 @@ extraResources:
 
 win:
   executableName: Verso
-  # icon: resources/icon.ico   # added in M9 (polish)
+  icon: resources/icon.ico
   target:
     - target: nsis
     - target: portable
@@ -63,6 +63,7 @@ fileAssociations:
     name: PDF Document
     description: Portable Document Format
     role: Editor
+    icon: resources/icon.ico
 
 # macOS / Linux are roadmap targets; kept minimal so the config stays portable.
 mac:
@@ -72,6 +73,7 @@ mac:
     - zip
 linux:
   category: Office
+  icon: resources/icon.png
   target:
     - AppImage
     - deb

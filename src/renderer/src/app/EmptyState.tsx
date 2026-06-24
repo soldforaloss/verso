@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Clock, FileText, FolderOpen, Moon, Sun, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { VersoLogo } from '@/components/Logo'
 import { openPath, openViaDialog } from '@/lib/open'
 import { usePreferencesStore } from '@/store/preferencesStore'
 import type { RecentFile } from '@shared/ipc'
@@ -32,9 +33,7 @@ export function EmptyState(): React.JSX.Element {
         {theme === 'dark' ? <Sun /> : <Moon />}
       </Button>
 
-      <div className="flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <FileText className="size-8" />
-      </div>
+      <VersoLogo className="size-16" />
       <h1 className="mt-5 text-2xl font-semibold tracking-tight">Verso</h1>
       <p className="mt-1 text-sm text-muted-foreground">A calm place to read and edit PDFs.</p>
 

@@ -71,6 +71,10 @@ export function createMainWindow(): BrowserWindow {
 
   if (isDev) installDevCsp()
 
+  // Packaged builds get their icon from the executable (electron-builder); in
+  // dev we point the window at the source PNG so the taskbar shows the mark.
+  const devIcon = join(__dirname, '../../resources/icon.png')
+
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -80,6 +84,7 @@ export function createMainWindow(): BrowserWindow {
     backgroundColor: '#0b0d12',
     autoHideMenuBar: false,
     title: 'Verso',
+    ...(isDev ? { icon: devIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
