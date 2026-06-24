@@ -1,0 +1,83 @@
+# electron-builder configuration for Verso.
+# Identity is derived from the owned domain versoeditor.com (reverse-DNS appId).
+appId: com.versoeditor.app
+productName: Verso
+copyright: Copyright © 2026 Verso contributors
+
+directories:
+  # Build-time assets (icons, installer scripts). Not packaged into the app.
+  buildResources: resources
+  output: release/${version}
+
+# Everything is packaged by default except the source/dev files excluded below.
+# Production `dependencies` from node_modules are bundled automatically.
+files:
+  - 'out/**'
+  - 'package.json'
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!tests/*'
+  - '!docs/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,eslint.config.mjs,.prettierignore,.prettierrc,.prettierrc.json,commitlint.config.cjs,dev-app-update.yml}'
+  - '!{.env,.env.*,.npmrc}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{playwright.config.ts,vitest.config.ts,vitest.setup.ts}'
+
+asarUnpack:
+  - resources/**
+
+# NOTE (M8): the qpdf sidecar binary will be added here once it is integrated:
+# extraResources:
+#   - from: resources/bin
+#     to: bin
+#     filter: ['**/*']
+
+win:
+  executableName: Verso
+  # icon: resources/icon.ico   # added in M9 (polish)
+  target:
+    - target: nsis
+    - target: portable
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Verso
+  # .pdf association is presented as an opt-in choice during install.
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: ${productName}-${version}-${arch}-portable.${ext}
+
+# Opt-in file association for .pdf (the installer lets users decline).
+fileAssociations:
+  - ext: pdf
+    name: PDF Document
+    description: Portable Document Format
+    role: Editor
+
+# macOS / Linux are roadmap targets; kept minimal so the config stays portable.
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+linux:
+  category: Office
+  target:
+    - AppImage
+    - deb
+
+npmRebuild: false
+
+publish:
+  provider: github
+  owner: versoeditor
+  repo: verso
+  releaseType: release
