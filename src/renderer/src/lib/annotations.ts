@@ -42,6 +42,8 @@ export type Annotation =
       italic?: boolean
       /** Extra spacing between characters, in PDF points (may be negative). */
       letterSpacing?: number
+      /** Bundled metric-compatible font to embed (see lib/fonts), if matched. */
+      fontKey?: string
     })
   | (BaseAnnotation & { type: 'note'; point: Point; text: string })
   | (BaseAnnotation & { type: 'markup'; markup: MarkupKind; quads: Rect[] })

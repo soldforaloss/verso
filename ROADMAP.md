@@ -84,13 +84,16 @@ next begins.
   resize / restyle / delete them; flattened into the PDF on save.
 - **Tier 2** — **cover-&-replace** editing of existing text: click a run, it's
   covered with a background-sampled box and a pre-filled editable text box drops
-  in, matching the original color (sampled), size, and best-effort font face,
-  with letter-spacing auto-tuned to the original width. **Manual font, size,
-  bold/italic, color, and letter-spacing controls** let you fine-tune the
-  result. Honest about its limits: substitute (standard-14) fonts can't match a
-  precisely-typeset document exactly, and there is no reflow.
+  in, matching the original color (sampled), size, and font face. Documents in
+  the common office fonts get **metric-compatible substitutes** — bundled
+  **Carlito** (≈ Calibri) and **Caladea** (≈ Cambria), embedded on save, with
+  Helvetica/Times/Courier covering Arial/Times/Courier — so the layout is
+  preserved exactly. **Manual font, size, bold/italic, color, and
+  letter-spacing controls** let you fine-tune anything else.
+- Honest about its limits: an unbundled custom font falls back to a standard
+  substitute (best-effort metrics, auto-tuned spacing), and there is no reflow.
 - A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
-  (PDFium) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
+  (PDFium, BSD-licensed) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
 
 ### ✅ M7 — OCR
 

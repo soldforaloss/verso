@@ -11,6 +11,7 @@ import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
 import { removeAnnotation } from '@/lib/annotationOps'
+import { preloadBundledFonts } from '@/lib/fonts'
 import { Toolbar } from '@/features/viewer/Toolbar'
 import { AnnotationToolbar } from '@/features/annotations/AnnotationToolbar'
 import { Viewer } from '@/features/viewer/Viewer'
@@ -32,6 +33,9 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     void window.api.getPreferences().then(hydrate)
+    // Load the bundled metric-compatible fonts so the editor renders and
+    // measures text in them straight away.
+    void preloadBundledFonts()
   }, [hydrate])
 
   useEffect(() => {

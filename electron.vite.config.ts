@@ -14,6 +14,8 @@ const pdfjsRoot = pkgDir('pdfjs-dist')
 const tesseractRoot = pkgDir('tesseract.js')
 const tesseractCoreRoot = pkgDir('tesseract.js-core')
 const tessLangRoot = pkgDir('@tesseract.js-data/eng')
+// Bundled metric-compatible fonts (Carlito/Caladea) live in the repo.
+const fontsRoot = resolve('resources/fonts').replace(/\\/g, '/')
 
 /**
  * electron-vite configuration.
@@ -92,7 +94,9 @@ export default defineConfig({
             src: `${tessLangRoot}/4.0.0/eng.traineddata.gz`,
             dest: 'tessdata',
             rename: { stripBase: true }
-          }
+          },
+          // Metric-compatible substitute fonts, served at /fonts/ for the editor.
+          { src: `${fontsRoot}/*.ttf`, dest: 'fonts', rename: { stripBase: true } }
         ]
       })
     ],

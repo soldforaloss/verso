@@ -7,7 +7,9 @@ import {
   type PDFFont,
   type PDFPage
 } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
 import type { Annotation, Point, TextFontFamily } from '@/lib/annotations'
+import { bundledFontByKey, bundledFontFile } from '@/lib/fonts'
 
 /** Maps a text annotation's face to the closest standard-14 font. */
 export function standardFontFor(
@@ -33,28 +35,80 @@ export function standardFontFor(
   return StandardFonts.Helvetica
 }
 
-// Embedded standard fonts are cached per document so repeated text annotations
-// don't add duplicate font dictionaries.
-const fontCache = new WeakMap<PDFDocument, Map<StandardFonts, Promise<PDFFont>>>()
+// Fonts are cached per document so repeated text runs reuse one embedded font
+// (and one subset). Keyed by standard-font name or bundled-font asset URL.
+const docFonts = new WeakMap<PDFDocument, Map<string, Promise<PDFFont>>>()
+const fontkitDocs = new WeakSet<PDFDocument>()
+const fontFileBytes = new Map<string, Promise<ArrayBuffer>>()
 
-function resolveTextFont(
+function docFontMap(doc: PDFDocument): Map<string, Promise<PDFFont>> {
+  let map = docFonts.get(doc)
+  if (!map) {
+    map = new Map()
+    docFonts.set(doc, map)
+  }
+  return map
+}
+
+function resolveStandardFont(
   doc: PDFDocument,
   family: TextFontFamily,
   bold: boolean,
   italic: boolean
 ): Promise<PDFFont> {
   const name = standardFontFor(family, bold, italic)
-  let map = fontCache.get(doc)
-  if (!map) {
-    map = new Map()
-    fontCache.set(doc, map)
-  }
+  const map = docFontMap(doc)
   let pending = map.get(name)
   if (!pending) {
     pending = doc.embedFont(name)
     map.set(name, pending)
   }
   return pending
+}
+
+async function embedBundledFont(doc: PDFDocument, url: string): Promise<PDFFont> {
+  if (!fontkitDocs.has(doc)) {
+    doc.registerFontkit(fontkit)
+    fontkitDocs.add(doc)
+  }
+  let bytes = fontFileBytes.get(url)
+  if (!bytes) {
+    bytes = fetch(url).then((response) => {
+      if (!response.ok) throw new Error(`Failed to load font ${url}`)
+      return response.arrayBuffer()
+    })
+    fontFileBytes.set(url, bytes)
+  }
+  // Copy per embed: the bytes cache is shared across documents.
+  return doc.embedFont((await bytes).slice(0), { subset: true })
+}
+
+/**
+ * Resolves the font for a text annotation: a bundled, metric-compatible TTF if
+ * one was matched (embedded with fontkit so glyph widths are exact), otherwise
+ * the closest standard-14 font. Falls back to the standard font if the bundled
+ * asset can't be embedded.
+ */
+function resolveAnnotationFont(
+  doc: PDFDocument,
+  annotation: Extract<Annotation, { type: 'text' }>
+): Promise<PDFFont> {
+  const bold = annotation.bold ?? false
+  const italic = annotation.italic ?? false
+  const bundled = bundledFontByKey(annotation.fontKey)
+  if (bundled) {
+    const url = bundledFontFile(bundled, bold, italic)
+    const map = docFontMap(doc)
+    let pending = map.get(url)
+    if (!pending) {
+      pending = embedBundledFont(doc, url).catch(() =>
+        resolveStandardFont(doc, bundled.generic, bold, italic)
+      )
+      map.set(url, pending)
+    }
+    return pending
+  }
+  return resolveStandardFont(doc, annotation.fontFamily ?? 'sans-serif', bold, italic)
 }
 
 function base64ToBytes(base64: string): Uint8Array {
@@ -153,12 +207,7 @@ export async function drawAnnotation(
     }
     case 'text': {
       const { x, y, height } = annotation.rect
-      const textFont = await resolveTextFont(
-        doc,
-        annotation.fontFamily ?? 'sans-serif',
-        annotation.bold ?? false,
-        annotation.italic ?? false
-      )
+      const textFont = await resolveAnnotationFont(doc, annotation)
       const size = annotation.fontSize
       const baselineY = y + height - size
       const spacing = annotation.letterSpacing ?? 0

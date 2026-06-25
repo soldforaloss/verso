@@ -24,7 +24,8 @@ import {
   screenToPage
 } from '@/lib/annotationGeometry'
 import { OverlayContentEditor } from '@/lib/contentEditor'
-import { estimateInkColor, hexToRgbTriple, type TextFontStyle } from '@/lib/textStyle'
+import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
+import { bundledFontByKey } from '@/lib/fonts'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
 
 const contentEditor = new OverlayContentEditor()
@@ -33,11 +34,17 @@ const contentEditor = new OverlayContentEditor()
 const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
 const measureCtx = measureCanvas?.getContext('2d') ?? null
 
-function measureTextWidth(text: string, fontSize: number, style: TextFontStyle): number {
+function measureTextWidth(
+  text: string,
+  fontSize: number,
+  cssFamily: string,
+  bold: boolean,
+  italic: boolean
+): number {
   if (!measureCtx) return 0
-  const weight = style.bold ? 'bold ' : ''
-  const slant = style.italic ? 'italic ' : ''
-  measureCtx.font = `${slant}${weight}${fontSize}px ${style.family}`
+  const weight = bold ? 'bold ' : ''
+  const slant = italic ? 'italic ' : ''
+  measureCtx.font = `${slant}${weight}${fontSize}px ${cssFamily}`
   return measureCtx.measureText(text).width
 }
 
@@ -838,7 +845,8 @@ function HtmlAnnotation({
             // rendered page (the overlay box is already in scaled screen px).
             color: annotation.color,
             fontSize: annotation.fontSize * viewport.scale,
-            fontFamily: annotation.fontFamily ?? 'sans-serif',
+            fontFamily:
+              bundledFontByKey(annotation.fontKey)?.family ?? annotation.fontFamily ?? 'sans-serif',
             fontWeight: annotation.bold ? 'bold' : 'normal',
             fontStyle: annotation.italic ? 'italic' : 'normal',
             letterSpacing: `${(annotation.letterSpacing ?? 0) * viewport.scale}px`

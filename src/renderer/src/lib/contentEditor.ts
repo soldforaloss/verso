@@ -1,5 +1,6 @@
 import { newAnnotationId, type Annotation, type Point, type Rect } from '@/lib/annotations'
-import { inferTextFontStyle, type TextFontStyle } from '@/lib/textStyle'
+import { inferTextFontStyle } from '@/lib/textStyle'
+import { matchBundledFont } from '@/lib/fonts'
 import type { PdfPage } from '@/lib/pdf'
 
 export interface EditTextInput {
@@ -11,8 +12,14 @@ export interface EditTextInput {
   sampleBackground: (rect: Rect) => string
   /** Returns the run's ink (text) color, sampled from the rendered page. */
   sampleInkColor: (rect: Rect) => string
-  /** Measures a string's natural width (PDF points) in the substitute font. */
-  measureTextWidth: (text: string, fontSize: number, style: TextFontStyle) => number
+  /** Measures a string's natural width (PDF points) in the given CSS font. */
+  measureTextWidth: (
+    text: string,
+    fontSize: number,
+    cssFamily: string,
+    bold: boolean,
+    italic: boolean
+  ) => number
 }
 
 /** Minimal shape of the PDF.js font object kept in `page.commonObjs`. */
@@ -94,11 +101,17 @@ export class OverlayContentEditor implements ContentEditor {
       const face = inferTextFontStyle(psName, styleFamily)
       const fontSize = Math.max(6, Math.round(fontHeight))
 
+      // If the run uses a font we ship a metric-compatible substitute for
+      // (Calibri→Carlito, Cambria→Caladea), embed that — its widths match, so
+      // no spacing correction is needed. Otherwise fall back to a standard font.
+      const bundled = matchBundledFont(`${psName ?? ''} ${styleFamily ?? ''}`)
+      const cssFamily = bundled ? bundled.family : face.family
+
       // Pick an initial letter-spacing so the substitute font lands on the same
-      // width as the original run (it usually has different glyph metrics).
+      // width as the original run (≈0 for a metric-compatible match).
       let letterSpacing = 0
       try {
-        const natural = measureTextWidth(item.str, fontSize, face)
+        const natural = measureTextWidth(item.str, fontSize, cssFamily, face.bold, face.italic)
         const gaps = item.str.length - 1
         if (natural > 0 && gaps > 0) {
           const raw = (item.width - natural) / gaps
@@ -125,12 +138,13 @@ export class OverlayContentEditor implements ContentEditor {
         color: sampleInkColor(rect),
         opacity: 1,
         fontSize,
-        fontFamily: face.family,
+        fontFamily: bundled ? bundled.generic : face.family,
         bold: face.bold,
         italic: face.italic,
         letterSpacing,
         text: item.str,
-        rect
+        rect,
+        ...(bundled ? { fontKey: bundled.key } : {})
       }
       return [cover, text]
     }

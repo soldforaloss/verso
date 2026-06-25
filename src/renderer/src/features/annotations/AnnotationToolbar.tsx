@@ -105,7 +105,12 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   }
   const applyFontFamily = (next: typeof fontFamily): void => {
     setFontFamily(next)
-    applyTextChange({ fontFamily: next })
+    // Choosing a generic family overrides any matched bundled font.
+    if (selectedText) {
+      const updated: Extract<Annotation, { type: 'text' }> = { ...selectedText, fontFamily: next }
+      delete updated.fontKey
+      updateAnnotation(tab.id, updated, 'Restyle text')
+    }
   }
   const applyBold = (): void => {
     const next = !curBold
