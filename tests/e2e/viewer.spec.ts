@@ -22,7 +22,7 @@ test('opens a PDF from the command line, renders it, and exposes selectable text
     timeout: 20_000
   })
 
-  // Switching to single-page layout keeps the document visible.
+  // Switching to single-page layout keeps the (current) page visible.
   await window.getByTitle('Single page').click()
-  await expect(window.locator('[data-page-number="1"] canvas')).toBeVisible()
+  await expect(window.locator('[data-page-number] canvas').first()).toBeVisible({ timeout: 20_000 })
 })

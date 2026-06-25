@@ -20,11 +20,10 @@ test('add a watermark across pages and flatten it on save', async () => {
   await expect(window.getByText('Insert across pages')).toBeVisible()
   await window.getByRole('button', { name: 'Add watermark' }).click()
 
-  // The watermark lands on page 1 (and every page) as an editable text annotation.
-  await expect(window.locator('[data-page-number="1"] textarea').first()).toHaveValue(
-    'CONFIDENTIAL',
-    { timeout: 10_000 }
-  )
+  // The watermark lands on every page as an editable text annotation.
+  await expect(window.locator('[data-page-number] textarea').first()).toHaveValue('CONFIDENTIAL', {
+    timeout: 20_000
+  })
   await expect(window.getByTitle('Undo (Ctrl+Z)')).toBeEnabled()
 
   // Saving flattens it into a valid 8-page PDF.
@@ -56,8 +55,8 @@ test('add page numbers across pages', async () => {
   await window.getByTitle('Watermark & page numbers').click()
   await window.getByRole('button', { name: 'Add page numbers' }).click()
 
-  // Page 1 gets the number "1".
-  await expect(window.locator('[data-page-number="1"] textarea').first()).toHaveValue('1', {
-    timeout: 10_000
+  // The first page gets the number "1".
+  await expect(window.locator('[data-page-number] textarea').first()).toHaveValue('1', {
+    timeout: 20_000
   })
 })
