@@ -1,16 +1,19 @@
 import type { TextFontFamily } from '@/lib/annotations'
 
 /**
- * Bundled, permissively-licensed fonts that are **metric-compatible** with the
- * common proprietary office fonts. Substituting a metric-compatible font keeps
- * each glyph's width identical, so an edited run lands on the original layout
- * exactly — unlike the standard-14 fonts, which have different metrics.
+ * Bundled, permissively-licensed fonts used to substitute a document's font
+ * when editing. Two kinds:
  *
- * - Carlito (SIL OFL 1.1) ↔ Calibri
- * - Caladea (SIL OFL 1.1) ↔ Cambria
+ * - **Metric-compatible** substitutes whose glyph widths match a proprietary
+ *   original exactly, so an edited run keeps the original layout:
+ *   Liberation Sans ↔ Arial · Liberation Serif ↔ Times New Roman ·
+ *   Liberation Mono ↔ Courier New (SIL OFL) · Carlito ↔ Calibri ·
+ *   Caladea ↔ Cambria (SIL OFL).
+ * - **Real open fonts** that documents use directly, so the match is the actual
+ *   font: Lato (SIL OFL).
  *
- * Arial/Times/Courier are already served well by the standard-14
- * Helvetica/Times/Courier, so only the modern Office defaults are bundled here.
+ * Adding a family is data-only: the overlay, measurement, embedding-on-save, and
+ * FontFace preload all read this registry.
  */
 export interface BundledFont {
   key: string
@@ -23,28 +26,36 @@ export interface BundledFont {
 
 const DIR = '/fonts'
 
+function variants(prefix: string): BundledFont['files'] {
+  return {
+    regular: `${DIR}/${prefix}-Regular.ttf`,
+    bold: `${DIR}/${prefix}-Bold.ttf`,
+    italic: `${DIR}/${prefix}-Italic.ttf`,
+    boldItalic: `${DIR}/${prefix}-BoldItalic.ttf`
+  }
+}
+
 export const BUNDLED_FONTS: BundledFont[] = [
+  { key: 'carlito', family: 'Carlito', generic: 'sans-serif', files: variants('Carlito') },
+  { key: 'caladea', family: 'Caladea', generic: 'serif', files: variants('Caladea') },
+  { key: 'lato', family: 'Lato', generic: 'sans-serif', files: variants('Lato') },
   {
-    key: 'carlito',
-    family: 'Carlito',
+    key: 'liberation-sans',
+    family: 'Liberation Sans',
     generic: 'sans-serif',
-    files: {
-      regular: `${DIR}/Carlito-Regular.ttf`,
-      bold: `${DIR}/Carlito-Bold.ttf`,
-      italic: `${DIR}/Carlito-Italic.ttf`,
-      boldItalic: `${DIR}/Carlito-BoldItalic.ttf`
-    }
+    files: variants('LiberationSans')
   },
   {
-    key: 'caladea',
-    family: 'Caladea',
+    key: 'liberation-serif',
+    family: 'Liberation Serif',
     generic: 'serif',
-    files: {
-      regular: `${DIR}/Caladea-Regular.ttf`,
-      bold: `${DIR}/Caladea-Bold.ttf`,
-      italic: `${DIR}/Caladea-Italic.ttf`,
-      boldItalic: `${DIR}/Caladea-BoldItalic.ttf`
-    }
+    files: variants('LiberationSerif')
+  },
+  {
+    key: 'liberation-mono',
+    family: 'Liberation Mono',
+    generic: 'monospace',
+    files: variants('LiberationMono')
   }
 ]
 
@@ -54,11 +65,24 @@ export function bundledFontByKey(key: string | undefined | null): BundledFont | 
   return key ? BY_KEY.get(key) : undefined
 }
 
+// Document font name → bundled key. Specific names first; metric-compatible
+// substitutes map their proprietary original (and the substitute's own name).
+const MATCHERS: [RegExp, string][] = [
+  [/calibri|carlito/, 'carlito'],
+  [/cambria|caladea/, 'caladea'],
+  [/lato/, 'lato'],
+  [/arial|helvetica|arimo|liberation\s*sans/, 'liberation-sans'],
+  [/times|tinos|liberation\s*serif/, 'liberation-serif'],
+  [/courier|cousine|consol|liberation\s*mono/, 'liberation-mono']
+]
+
 /** Maps a PDF font name (PostScript name / CSS family) to a bundled font, if any. */
 export function matchBundledFont(name: string | null | undefined): BundledFont | undefined {
   const n = (name ?? '').toLowerCase()
-  if (/calibri|carlito/.test(n)) return BY_KEY.get('carlito')
-  if (/cambria|caladea/.test(n)) return BY_KEY.get('caladea')
+  if (!n) return undefined
+  for (const [pattern, key] of MATCHERS) {
+    if (pattern.test(n)) return BY_KEY.get(key)
+  }
   return undefined
 }
 

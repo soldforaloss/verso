@@ -11,14 +11,16 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Bundled / sidecar (not npm)
 
-| Component                             | License                   | Notes                                                            |
-| ------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
-| qpdf                                  | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8).  |
-| PDFium                                | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).      |
-| PDF.js cMaps & standard fonts         | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                 |
-| tesseract.js wasm core & English data | Apache-2.0                | Bundled for offline OCR.                                         |
-| Carlito font (≈ Calibri)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing. |
-| Caladea font (≈ Cambria)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing. |
+| Component                             | License                   | Notes                                                                   |
+| ------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| qpdf                                  | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8).         |
+| PDFium                                | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).             |
+| PDF.js cMaps & standard fonts         | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                        |
+| tesseract.js wasm core & English data | Apache-2.0                | Bundled for offline OCR.                                                |
+| Carlito font (≈ Calibri)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.        |
+| Caladea font (≈ Cambria)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.        |
+| Liberation Sans/Serif/Mono            | SIL OFL 1.1               | Bundled — metric-compatible with Arial / Times New Roman / Courier New. |
+| Lato font                             | SIL OFL 1.1               | Bundled — a common open font used directly by many documents.           |
 
 ## Runtime dependencies
 

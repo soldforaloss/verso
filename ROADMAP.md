@@ -85,11 +85,11 @@ next begins.
 - **Tier 2** — **cover-&-replace** editing of existing text: click a run, it's
   covered with a background-sampled box and a pre-filled editable text box drops
   in, matching the original color (sampled), size, and font face. Documents in
-  the common office fonts get **metric-compatible substitutes** — bundled
-  **Carlito** (≈ Calibri) and **Caladea** (≈ Cambria), embedded on save, with
-  Helvetica/Times/Courier covering Arial/Times/Courier — so the layout is
-  preserved exactly. **Manual font, size, bold/italic, color, and
-  letter-spacing controls** let you fine-tune anything else.
+  the common fonts get **metric-compatible substitutes** embedded on save, so
+  the layout is preserved exactly: **Liberation Sans/Serif/Mono** (Arial / Times
+  New Roman / Courier New), **Carlito** (Calibri), **Caladea** (Cambria), plus
+  **Lato** used directly — all SIL OFL. **Manual font, size, bold/italic, color,
+  and letter-spacing controls** let you fine-tune anything else.
 - Honest about its limits: an unbundled custom font falls back to a standard
   substitute (best-effort metrics, auto-tuned spacing), and there is no reflow.
 - **Fast workflow:** select text and act from a floating popover (highlight,
