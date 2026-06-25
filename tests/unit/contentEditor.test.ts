@@ -65,3 +65,55 @@ describe('OverlayContentEditor', () => {
     expect(result).toBeNull()
   })
 })
+
+// A line of several runs plus a far-right run that should NOT merge in.
+function pageWithLine(): PdfPage {
+  return {
+    getTextContent: async () => ({
+      items: [
+        { str: 'Chandler, AZ ', width: 60, transform: [10, 0, 0, 10, 40, 700], fontName: 'f1' },
+        { str: '· ', width: 6, transform: [10, 0, 0, 10, 102, 700], fontName: 'f1' },
+        { str: '(480) 310-0323', width: 70, transform: [10, 0, 0, 10, 110, 700], fontName: 'f1' },
+        { str: 'Right', width: 30, transform: [10, 0, 0, 10, 300, 700], fontName: 'f1' }
+      ],
+      styles: { f1: { fontFamily: 'sans-serif' } }
+    }),
+    commonObjs: { has: () => false, get: () => undefined }
+  } as unknown as PdfPage
+}
+
+describe('OverlayContentEditor line merge', () => {
+  const editor = new OverlayContentEditor()
+  const input = {
+    pageKey: 'p',
+    sampleBackground: (): string => '#ffffff',
+    sampleInkColor: (): string => '#111111',
+    measureTextWidth: (): number => 50
+  }
+
+  it('merges contiguous runs on the same line into one edit box', async () => {
+    const result = await editor.editTextRun({
+      page: pageWithLine(),
+      point: { x: 140, y: 702 },
+      ...input
+    })
+    const text = result?.[1]
+    if (text?.type !== 'text') throw new Error('expected text annotation')
+    expect(text.text).toBe('Chandler, AZ · (480) 310-0323')
+    expect(text.text).not.toContain('Right')
+    // The box spans the merged line (x 40 → 180).
+    expect(text.rect.x).toBeCloseTo(40, 1)
+    expect(text.rect.width).toBeCloseTo(140, 1)
+  })
+
+  it('does not merge a run separated by a wide gap', async () => {
+    const result = await editor.editTextRun({
+      page: pageWithLine(),
+      point: { x: 312, y: 702 },
+      ...input
+    })
+    const text = result?.[1]
+    if (text?.type !== 'text') throw new Error('expected text annotation')
+    expect(text.text).toBe('Right')
+  })
+})

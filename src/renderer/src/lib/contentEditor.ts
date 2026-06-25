@@ -49,13 +49,34 @@ export interface ContentEditor {
   editTextRun(input: EditTextInput): Promise<Annotation[] | null>
 }
 
+/** A laid-out text run from PDF.js, in page space. */
+interface Run {
+  str: string
+  x: number
+  baseline: number
+  width: number
+  fontHeight: number
+  fontName?: string
+}
+
+function runRect(run: Run): Rect {
+  return {
+    x: run.x,
+    y: run.baseline - run.fontHeight * 0.25,
+    width: run.width,
+    height: run.fontHeight * 1.25
+  }
+}
+
 /**
  * Tier 2 — pragmatic "cover & replace" editing using the annotation layer.
  *
- * Honest limits (the same approach mainstream consumer editors use): the
- * background and ink colors are sampled from the rendered pixels (imperfect on
- * gradients/images), the font face is inferred from the run's font name, and
- * there is no text reflow.
+ * Editing targets the **whole line**: the run under the click plus the
+ * contiguous runs sharing its baseline are merged into one editable box, so a
+ * line like "City · phone · email" edits as a single piece rather than a
+ * fragment. Honest limits (the same approach mainstream consumer editors use):
+ * the box takes one font/colour/size (sampled where you clicked), background and
+ * ink colours come from the rendered pixels, and there is no reflow.
  */
 export class OverlayContentEditor implements ContentEditor {
   async editTextRun({
@@ -69,86 +90,121 @@ export class OverlayContentEditor implements ContentEditor {
     const content = await page.getTextContent()
     const commonObjs = (page as unknown as { commonObjs?: PdfObjects }).commonObjs
 
+    const runs: Run[] = []
     for (const item of content.items) {
-      if (!('transform' in item) || item.str.trim() === '') continue
-      const transform = item.transform
-      const fontHeight = Math.hypot(transform[2], transform[3]) || 12
-      const x = transform[4]
-      const baseline = transform[5]
-      const rect: Rect = {
-        x,
-        y: baseline - fontHeight * 0.25,
+      if (!('transform' in item) || item.str === '') continue
+      const t = item.transform
+      runs.push({
+        str: item.str,
+        x: t[4],
+        baseline: t[5],
         width: item.width,
-        height: fontHeight * 1.25
-      }
-      const hit =
-        point.x >= rect.x &&
-        point.x <= rect.x + rect.width &&
-        point.y >= rect.y &&
-        point.y <= rect.y + rect.height
-      if (!hit) continue
-
-      // Infer the original face from the run's font name (PostScript name from
-      // the loaded font object, plus the text layer's CSS family as a hint).
-      const fontName = item.fontName
-      let psName: string | undefined
-      try {
-        if (fontName && commonObjs?.has(fontName)) psName = commonObjs.get(fontName)?.name
-      } catch {
-        /* font not resolved yet — fall back to the style family */
-      }
-      const styleFamily = fontName ? content.styles?.[fontName]?.fontFamily : undefined
-      const face = inferTextFontStyle(psName, styleFamily)
-      const fontSize = Math.max(6, Math.round(fontHeight))
-
-      // If the run uses a font we ship a metric-compatible substitute for
-      // (Calibri→Carlito, Cambria→Caladea), embed that — its widths match, so
-      // no spacing correction is needed. Otherwise fall back to a standard font.
-      const bundled = matchBundledFont(`${psName ?? ''} ${styleFamily ?? ''}`)
-      const cssFamily = bundled ? bundled.family : face.family
-
-      // Pick an initial letter-spacing so the substitute font lands on the same
-      // width as the original run (≈0 for a metric-compatible match).
-      let letterSpacing = 0
-      try {
-        const natural = measureTextWidth(item.str, fontSize, cssFamily, face.bold, face.italic)
-        const gaps = item.str.length - 1
-        if (natural > 0 && gaps > 0) {
-          const raw = (item.width - natural) / gaps
-          letterSpacing = Math.max(-fontSize * 0.3, Math.min(fontSize * 0.6, raw))
-        }
-      } catch {
-        /* measurement unavailable — leave spacing at 0 */
-      }
-
-      const cover: Annotation = {
-        id: newAnnotationId(),
-        pageKey,
-        type: 'rect',
-        color: sampleBackground(rect),
-        opacity: 1,
-        strokeWidth: 0,
-        filled: true,
-        rect: { x: rect.x - 1, y: rect.y - 1, width: rect.width + 2, height: rect.height + 2 }
-      }
-      const text: Annotation = {
-        id: newAnnotationId(),
-        pageKey,
-        type: 'text',
-        color: sampleInkColor(rect),
-        opacity: 1,
-        fontSize,
-        fontFamily: bundled ? bundled.generic : face.family,
-        bold: face.bold,
-        italic: face.italic,
-        letterSpacing,
-        text: item.str,
-        rect,
-        ...(bundled ? { fontKey: bundled.key } : {})
-      }
-      return [cover, text]
+        fontHeight: Math.hypot(t[2], t[3]) || 12,
+        fontName: item.fontName
+      })
     }
 
-    return null
+    const hit = runs.find((run) => {
+      if (run.str.trim() === '') return false
+      const r = runRect(run)
+      return (
+        point.x >= r.x && point.x <= r.x + r.width && point.y >= r.y && point.y <= r.y + r.height
+      )
+    })
+    if (!hit) return null
+
+    // Expand to the contiguous runs on the same baseline (a "line"). A gap wider
+    // than ~1em ends the line, so separate columns/blocks are not merged in.
+    const tol = hit.fontHeight * 0.4
+    const line = runs
+      .filter((run) => Math.abs(run.baseline - hit.baseline) <= tol)
+      .sort((a, b) => a.x - b.x)
+    const maxGap = hit.fontHeight
+    let lo = line.indexOf(hit)
+    let hi = lo
+    while (lo > 0 && line[lo].x - (line[lo - 1].x + line[lo - 1].width) <= maxGap) lo -= 1
+    while (hi < line.length - 1 && line[hi + 1].x - (line[hi].x + line[hi].width) <= maxGap) hi += 1
+    const merged = line.slice(lo, hi + 1)
+
+    // Reconstruct the line text, inserting a space where runs are gapped but
+    // neither side already carries whitespace.
+    let mergedText = ''
+    for (let i = 0; i < merged.length; i += 1) {
+      const run = merged[i]
+      if (i > 0) {
+        const prev = merged[i - 1]
+        const gap = run.x - (prev.x + prev.width)
+        if (gap > run.fontHeight * 0.2 && !/\s$/.test(mergedText) && !/^\s/.test(run.str)) {
+          mergedText += ' '
+        }
+      }
+      mergedText += run.str
+    }
+
+    const left = merged[0].x
+    const right = Math.max(...merged.map((run) => run.x + run.width))
+    const fontHeight = hit.fontHeight
+    const rect: Rect = {
+      x: left,
+      y: hit.baseline - fontHeight * 0.25,
+      width: right - left,
+      height: fontHeight * 1.25
+    }
+
+    // Style comes from the clicked run (PostScript name + the text layer family).
+    let psName: string | undefined
+    try {
+      if (hit.fontName && commonObjs?.has(hit.fontName)) psName = commonObjs.get(hit.fontName)?.name
+    } catch {
+      /* font not resolved yet — fall back to the style family */
+    }
+    const styleFamily = hit.fontName ? content.styles?.[hit.fontName]?.fontFamily : undefined
+    const face = inferTextFontStyle(psName, styleFamily)
+    const fontSize = Math.max(6, Math.round(fontHeight))
+
+    // Embed a metric-compatible substitute when we have one; else a standard font.
+    const bundled = matchBundledFont(`${psName ?? ''} ${styleFamily ?? ''}`)
+    const cssFamily = bundled ? bundled.family : face.family
+
+    // Letter-spacing so the substitute lands on the original line width.
+    let letterSpacing = 0
+    try {
+      const natural = measureTextWidth(mergedText, fontSize, cssFamily, face.bold, face.italic)
+      const gaps = mergedText.length - 1
+      if (natural > 0 && gaps > 0) {
+        const raw = (rect.width - natural) / gaps
+        letterSpacing = Math.max(-fontSize * 0.3, Math.min(fontSize * 0.6, raw))
+      }
+    } catch {
+      /* measurement unavailable — leave spacing at 0 */
+    }
+
+    const cover: Annotation = {
+      id: newAnnotationId(),
+      pageKey,
+      type: 'rect',
+      color: sampleBackground(rect),
+      opacity: 1,
+      strokeWidth: 0,
+      filled: true,
+      rect: { x: rect.x - 1, y: rect.y - 1, width: rect.width + 2, height: rect.height + 2 }
+    }
+    const text: Annotation = {
+      id: newAnnotationId(),
+      pageKey,
+      type: 'text',
+      // Colour sampled where the user clicked, so it tracks that run.
+      color: sampleInkColor(runRect(hit)),
+      opacity: 1,
+      fontSize,
+      fontFamily: bundled ? bundled.generic : face.family,
+      bold: face.bold,
+      italic: face.italic,
+      letterSpacing,
+      text: mergedText,
+      rect,
+      ...(bundled ? { fontKey: bundled.key } : {})
+    }
+    return [cover, text]
   }
 }

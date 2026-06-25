@@ -82,9 +82,11 @@ next begins.
 
 - **Tier 1** — add **text, shapes, and images** (PNG/JPEG) and freely move /
   resize / restyle / delete them; flattened into the PDF on save.
-- **Tier 2** — **cover-&-replace** editing of existing text: click a run, it's
-  covered with a background-sampled box and a pre-filled editable text box drops
-  in, matching the original color (sampled), size, and font face. Documents in
+- **Tier 2** — **cover-&-replace** editing of existing text: click a line and
+  the **whole line** (the contiguous runs sharing its baseline) is covered with
+  a background-sampled box and a pre-filled editable text box, so "City · phone ·
+  email" edits as one piece instead of a fragment — matching the original color
+  (sampled), size, and font face. Documents in
   the common fonts get **metric-compatible substitutes** embedded on save, so
   the layout is preserved exactly: **Liberation Sans/Serif/Mono** (Arial / Times
   New Roman / Courier New), **Carlito** (Calibri), **Caladea** (Cambria), plus
