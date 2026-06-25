@@ -85,22 +85,16 @@ export function trimToContent(canvas: HTMLCanvasElement): SignatureImage | null 
   return { dataUrl: out.toDataURL('image/png'), width: w, height: h }
 }
 
-/** Renders a typed name in a handwriting font to a trimmed transparent PNG. */
-export function renderTypedSignature(
-  text: string,
-  family: string,
-  color: string
-): SignatureImage | null {
-  const value = text.trim()
-  if (!value) return null
-  const fontSize = 96
-  const font = `${fontSize}px "${family}", cursive`
+const SIGNATURE_FONT_SIZE = 96
 
+function renderWith(value: string, fontShorthand: string, color: string): SignatureImage | null {
   const measureCtx = document.createElement('canvas').getContext('2d')
   if (!measureCtx) return null
-  measureCtx.font = font
-  const width = Math.ceil(measureCtx.measureText(value).width) + 60
-  const height = Math.ceil(fontSize * 1.8)
+  measureCtx.font = fontShorthand
+  // A generous, floored width so the glyphs always fit even if measurement is
+  // unreliable (e.g. a webfont still loading on a headless runner).
+  const width = Math.max(Math.ceil(measureCtx.measureText(value).width) + 60, 240)
+  const height = Math.ceil(SIGNATURE_FONT_SIZE * 1.8)
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -108,8 +102,26 @@ export function renderTypedSignature(
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
   ctx.fillStyle = color
-  ctx.font = font
+  ctx.font = fontShorthand
   ctx.textBaseline = 'middle'
   ctx.fillText(value, 30, height / 2)
   return trimToContent(canvas)
+}
+
+/**
+ * Renders a typed name in a handwriting font to a trimmed transparent PNG.
+ * Falls back to a plain sans-serif if the handwriting font produced nothing
+ * (so this never yields an empty image for non-empty text).
+ */
+export function renderTypedSignature(
+  text: string,
+  family: string,
+  color: string
+): SignatureImage | null {
+  const value = text.trim()
+  if (!value) return null
+  return (
+    renderWith(value, `${SIGNATURE_FONT_SIZE}px "${family}", cursive`, color) ??
+    renderWith(value, `${SIGNATURE_FONT_SIZE}px sans-serif`, color)
+  )
 }

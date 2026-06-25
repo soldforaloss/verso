@@ -84,13 +84,16 @@ export function SignatureDialog({
   }
   const clear = (): void => canvasRef.current?.getContext('2d')?.clearRect(0, 0, CANVAS_W, CANVAS_H)
 
-  const insert = (): void => {
-    const image =
-      mode === 'draw'
-        ? canvasRef.current
-          ? trimToContent(canvasRef.current)
-          : null
-        : renderTypedSignature(typed, fontFamily, ink)
+  const insert = async (): Promise<void> => {
+    let image
+    if (mode === 'draw') {
+      image = canvasRef.current ? trimToContent(canvasRef.current) : null
+    } else {
+      // Ensure the handwriting font is loaded so the typed signature renders in
+      // it (and never as invisible/loading text on slow/headless environments).
+      await loadSignatureFonts()
+      image = renderTypedSignature(typed, fontFamily, ink)
+    }
     if (!image) return
     onInsert(image)
     onOpenChange(false)
@@ -201,7 +204,7 @@ export function SignatureDialog({
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
-          <Button onClick={insert} disabled={mode === 'type' && typed.trim() === ''}>
+          <Button onClick={() => void insert()} disabled={mode === 'type' && typed.trim() === ''}>
             Insert signature
           </Button>
         </DialogFooter>
