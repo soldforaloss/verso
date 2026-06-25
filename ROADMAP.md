@@ -71,7 +71,8 @@ next begins.
   drop it onto the page as a movable, resizable image that flattens on save.
 - **Watermark & page numbers**: stamp a centered watermark or a running page
   number across every page in one undoable command (flattened on save).
-- _A stamp gallery is deferred — see Stretch._
+- **Stamps**: a preset gallery (APPROVED / DRAFT / REVIEWED / CONFIDENTIAL /
+  FINAL / date) dropped onto the page as a movable, flattenable image.
 
 ### ✅ M5 — Forms (AcroForm)
 

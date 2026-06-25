@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { EyeOff, ImageDown, Info, Lock, PenTool, Printer, Stamp } from 'lucide-react'
+import { BadgeCheck, EyeOff, ImageDown, Info, Lock, PenTool, Printer, Stamp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
 import { SignatureDialog } from './SignatureDialog'
+import { StampDialog } from './StampDialog'
 import { InsertDialog } from './InsertDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
@@ -26,6 +27,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [securityOpen, setSecurityOpen] = useState(false)
   const [redactionOpen, setRedactionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
+  const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
   const hasRedactions = redactedPageNumbers(tab).length > 0
@@ -40,7 +42,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
     }
   }
 
-  const placeSignature = (image: SignatureImage): void => {
+  const placeImage = (image: SignatureImage): void => {
     const currentPage = useViewStore.getState().currentPage
     const pageKey = tab.pages[Math.min(currentPage, tab.pages.length) - 1]?.key
     if (!pageKey) return
@@ -70,6 +72,9 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       </Button>
       <Button variant="ghost" size="icon" title="Add signature" onClick={() => setSignOpen(true)}>
         <PenTool />
+      </Button>
+      <Button variant="ghost" size="icon" title="Add stamp" onClick={() => setStampOpen(true)}>
+        <BadgeCheck />
       </Button>
       <Button
         variant="ghost"
@@ -112,7 +117,8 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
-      <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeSignature} />
+      <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeImage} />
+      <StampDialog open={stampOpen} onOpenChange={setStampOpen} onInsert={placeImage} />
       <InsertDialog tab={tab} open={insertOpen} onOpenChange={setInsertOpen} />
     </>
   )
