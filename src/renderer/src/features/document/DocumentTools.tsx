@@ -1,25 +1,30 @@
 import { useState } from 'react'
-import { EyeOff, ImageDown, Info, Lock, Printer } from 'lucide-react'
+import { EyeOff, ImageDown, Info, Lock, PenTool, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
+import { SignatureDialog } from './SignatureDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
+import { addImageAnnotation } from '@/lib/annotationOps'
+import { useViewStore } from '@/store/viewStore'
+import { useToolStore } from '@/store/toolStore'
+import type { SignatureImage } from '@/lib/signature'
 import type { DocumentTab } from '@/store/documentStore'
 
 /**
- * Toolbar group for document-level tools introduced in M8: metadata, image
- * export, security (qpdf), redaction, and printing. Each opens its own dialog;
- * dialog open state is local so the rest of the toolbar never re-renders on
- * toggle.
+ * Toolbar group for document-level tools: metadata, image export, security
+ * (qpdf), redaction, printing, and signatures. Each opens its own dialog; dialog
+ * open state is local so the rest of the toolbar never re-renders on toggle.
  */
 export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
   const [redactionOpen, setRedactionOpen] = useState(false)
+  const [signOpen, setSignOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
   const hasRedactions = redactedPageNumbers(tab).length > 0
 
@@ -31,6 +36,16 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
     } finally {
       setPrinting(false)
     }
+  }
+
+  const placeSignature = (image: SignatureImage): void => {
+    const currentPage = useViewStore.getState().currentPage
+    const pageKey = tab.pages[Math.min(currentPage, tab.pages.length) - 1]?.key
+    if (!pageKey) return
+    const aspect = image.height > 0 ? image.width / image.height : 1
+    const id = addImageAnnotation(tab.id, pageKey, image.dataUrl, aspect)
+    useToolStore.getState().setTool('select')
+    useToolStore.getState().selectAnnotation(pageKey, id)
   }
 
   return (
@@ -50,6 +65,9 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
         onClick={() => setExportOpen(true)}
       >
         <ImageDown />
+      </Button>
+      <Button variant="ghost" size="icon" title="Add signature" onClick={() => setSignOpen(true)}>
+        <PenTool />
       </Button>
       <Button
         variant="ghost"
@@ -84,6 +102,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
+      <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeSignature} />
     </>
   )
 }

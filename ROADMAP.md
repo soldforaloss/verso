@@ -67,7 +67,9 @@ next begins.
   through the M3 history engine.
 - On save, annotations are **flattened into the PDF** via pdf-lib, so they
   persist and render identically everywhere.
-- _Stamps and a dedicated signature-capture modal are deferred — see Stretch._
+- **Signatures**: draw or type a signature (bundled OFL handwriting fonts) and
+  drop it onto the page as a movable, resizable image that flattens on save.
+- _A stamp gallery is deferred — see Stretch._
 
 ### ✅ M5 — Forms (AcroForm)
 

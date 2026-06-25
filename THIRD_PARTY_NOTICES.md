@@ -21,6 +21,7 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 | Caladea font (≈ Cambria)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.        |
 | Liberation Sans/Serif/Mono            | SIL OFL 1.1               | Bundled — metric-compatible with Arial / Times New Roman / Courier New. |
 | Lato font                             | SIL OFL 1.1               | Bundled — a common open font used directly by many documents.           |
+| Great Vibes & Caveat fonts            | SIL OFL 1.1               | Bundled — used to render typed signatures to an image.                  |
 
 ## Runtime dependencies
 
