@@ -27,22 +27,33 @@ import { addImageAnnotation, removeAnnotation, updateAnnotation } from '@/lib/an
 import { ANNOTATION_COLORS, type Annotation, type TextFontFamily } from '@/lib/annotations'
 import type { DocumentTab } from '@/store/documentStore'
 
-const TOOLS: { tool: Tool; label: string; Icon: typeof Square }[] = [
-  { tool: 'select', label: 'Select / edit', Icon: MousePointer2 },
-  { tool: 'highlight', label: 'Highlight text', Icon: Highlighter },
-  { tool: 'underline', label: 'Underline text', Icon: Underline },
-  { tool: 'strike', label: 'Strikethrough text', Icon: Strikethrough },
-  { tool: 'squiggly', label: 'Squiggly text', Icon: Waves },
-  { tool: 'ink', label: 'Freehand draw', Icon: Pencil },
-  { tool: 'rect', label: 'Rectangle', Icon: Square },
-  { tool: 'ellipse', label: 'Ellipse', Icon: Circle },
-  { tool: 'line', label: 'Line', Icon: Minus },
-  { tool: 'arrow', label: 'Arrow', Icon: ArrowUpRight },
-  { tool: 'text', label: 'Text box', Icon: Type },
-  { tool: 'note', label: 'Sticky note', Icon: StickyNote },
-  { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput },
-  { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
-  { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }
+// Tools grouped by purpose (select · markup · draw · text · destructive) so the
+// toolbar reads as clusters rather than one long row. Markup and edit are also
+// reachable from the floating selection popover.
+const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
+  [{ tool: 'select', label: 'Select / edit', Icon: MousePointer2 }],
+  [
+    { tool: 'highlight', label: 'Highlight text', Icon: Highlighter },
+    { tool: 'underline', label: 'Underline text', Icon: Underline },
+    { tool: 'strike', label: 'Strikethrough text', Icon: Strikethrough },
+    { tool: 'squiggly', label: 'Squiggly text', Icon: Waves }
+  ],
+  [
+    { tool: 'ink', label: 'Freehand draw', Icon: Pencil },
+    { tool: 'rect', label: 'Rectangle', Icon: Square },
+    { tool: 'ellipse', label: 'Ellipse', Icon: Circle },
+    { tool: 'line', label: 'Line', Icon: Minus },
+    { tool: 'arrow', label: 'Arrow', Icon: ArrowUpRight }
+  ],
+  [
+    { tool: 'text', label: 'Text box', Icon: Type },
+    { tool: 'note', label: 'Sticky note', Icon: StickyNote },
+    { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput }
+  ],
+  [
+    { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
+    { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }
+  ]
 ]
 
 const WIDTHS = [1, 2, 4, 8]
@@ -168,20 +179,25 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   return (
     <div className="flex flex-wrap items-center gap-1 border-b bg-card px-2 py-1">
       <div className="flex items-center gap-0.5">
-        {TOOLS.map(({ tool: t, label, Icon }) => (
-          <button
-            key={t}
-            type="button"
-            title={label}
-            aria-pressed={tool === t}
-            onClick={() => setTool(t)}
-            className={cn(
-              'flex size-8 items-center justify-center rounded-md transition-colors',
-              tool === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-            )}
-          >
-            <Icon className="size-4" />
-          </button>
+        {TOOL_GROUPS.map((group, groupIndex) => (
+          <div key={group[0]!.tool} className="flex items-center gap-0.5">
+            {groupIndex > 0 && <span className="mx-0.5 h-5 w-px bg-border" />}
+            {group.map(({ tool: t, label, Icon }) => (
+              <button
+                key={t}
+                type="button"
+                title={label}
+                aria-pressed={tool === t}
+                onClick={() => setTool(t)}
+                className={cn(
+                  'flex size-8 items-center justify-center rounded-md transition-colors',
+                  tool === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                )}
+              >
+                <Icon className="size-4" />
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 

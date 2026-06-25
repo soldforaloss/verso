@@ -92,6 +92,9 @@ next begins.
   letter-spacing controls** let you fine-tune anything else.
 - Honest about its limits: an unbundled custom font falls back to a standard
   substitute (best-effort metrics, auto-tuned spacing), and there is no reflow.
+- **Fast workflow:** select text and act from a floating popover (highlight,
+  underline, strikethrough, **edit**, copy), or **double-click a run** to edit
+  it — no need to pick a tool first.
 - A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
   (PDFium, BSD-licensed) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
 

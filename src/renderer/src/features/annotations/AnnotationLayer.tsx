@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Copy, Highlighter, Strikethrough, TextCursorInput, Underline } from 'lucide-react'
 import { DRAWING_TOOLS, MARKUP_TOOLS, PLACING_TOOLS, useToolStore } from '@/store/toolStore'
 import {
   addAnnotation,
@@ -91,6 +92,7 @@ export function AnnotationLayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState<Annotation | null>(null)
   const [live, setLive] = useState<Annotation | null>(null)
+  const [selectionBox, setSelectionBox] = useState<{ centerX: number; top: number } | null>(null)
   const createStart = useRef<Point | null>(null)
   const gestureRef = useRef<Gesture | null>(null)
 
@@ -106,38 +108,78 @@ export function AnnotationLayer({
     return screenToPage(viewport, event.clientX - rect.left, event.clientY - rect.top)
   }
 
-  // ---- Markup from text selection (highlight / underline / strike / squiggly) ----
+  // Builds markup quads from the current text selection and adds the annotation.
+  const applyMarkup = (markup: MarkupKind): void => {
+    const selection = window.getSelection()
+    const container = containerRef.current
+    if (!selection || selection.isCollapsed || !container) return
+    // The text layer is a sibling of this overlay, so test against the page.
+    if (!container.parentElement?.contains(selection.anchorNode)) return
+    const base = container.getBoundingClientRect()
+    const quads: Rect[] = []
+    for (const r of Array.from(selection.getRangeAt(0).getClientRects())) {
+      if (r.width <= 0) continue
+      const p1 = screenToPage(viewport, r.left - base.left, r.top - base.top)
+      const p2 = screenToPage(viewport, r.right - base.left, r.bottom - base.top)
+      quads.push(normalizeRect({ x: p1.x, y: p1.y, width: p2.x - p1.x, height: p2.y - p1.y }))
+    }
+    if (quads.length === 0) return
+    addAnnotation(docId, {
+      id: newAnnotationId(),
+      pageKey,
+      type: 'markup',
+      markup,
+      color,
+      opacity: markup === 'highlight' ? 0.4 : 1,
+      quads
+    })
+    selection.removeAllRanges()
+    setSelectionBox(null)
+  }
+
+  // With a markup tool active, selecting text immediately applies that markup.
   useEffect(() => {
     if (!isMarkup) return
-    const onMouseUp = (): void => {
-      const selection = window.getSelection()
-      const container = containerRef.current
-      if (!selection || selection.isCollapsed || !container) return
-      if (!container.contains(selection.anchorNode)) return
-      const base = container.getBoundingClientRect()
-      const quads: Rect[] = []
-      for (const r of Array.from(selection.getRangeAt(0).getClientRects())) {
-        const p1 = screenToPage(viewport, r.left - base.left, r.top - base.top)
-        const p2 = screenToPage(viewport, r.right - base.left, r.bottom - base.top)
-        quads.push(normalizeRect({ x: p1.x, y: p1.y, width: p2.x - p1.x, height: p2.y - p1.y }))
-      }
-      if (quads.length > 0) {
-        const markup = tool as MarkupKind
-        addAnnotation(docId, {
-          id: newAnnotationId(),
-          pageKey,
-          type: 'markup',
-          markup,
-          color,
-          opacity: markup === 'highlight' ? 0.4 : 1,
-          quads
-        })
-        selection.removeAllRanges()
-      }
-    }
+    const onMouseUp = (): void => applyMarkup(tool as MarkupKind)
     document.addEventListener('mouseup', onMouseUp)
     return () => document.removeEventListener('mouseup', onMouseUp)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMarkup, tool, color, viewport, docId, pageKey])
+
+  // In select mode, a text selection raises a floating action popover so you can
+  // highlight or start editing without first picking a tool.
+  useEffect(() => {
+    if (tool !== 'select') {
+      setSelectionBox(null)
+      return
+    }
+    const update = (): void => {
+      const selection = window.getSelection()
+      const container = containerRef.current
+      if (
+        !selection ||
+        selection.isCollapsed ||
+        selection.rangeCount === 0 ||
+        !container ||
+        !container.parentElement?.contains(selection.anchorNode)
+      ) {
+        setSelectionBox(null)
+        return
+      }
+      const rects = Array.from(selection.getRangeAt(0).getClientRects()).filter((r) => r.width > 0)
+      if (rects.length === 0) {
+        setSelectionBox(null)
+        return
+      }
+      const base = container.getBoundingClientRect()
+      const left = Math.min(...rects.map((r) => r.left)) - base.left
+      const right = Math.max(...rects.map((r) => r.right)) - base.left
+      const top = Math.min(...rects.map((r) => r.top)) - base.top
+      setSelectionBox({ centerX: (left + right) / 2, top })
+    }
+    document.addEventListener('selectionchange', update)
+    return () => document.removeEventListener('selectionchange', update)
+  }, [tool])
 
   // Samples a hex background color from the rendered page canvas for a page rect.
   const sampleBackground = (pageRect: Rect): string => {
@@ -200,6 +242,61 @@ export function AnnotationLayer({
     useToolStore.getState().setTool('select')
     if (textAnnotation) selectAnnotation(pageKey, textAnnotation.id)
   }
+
+  // Starts a cover-&-replace edit on the run under the current text selection.
+  const editSelection = (): void => {
+    const selection = window.getSelection()
+    const container = containerRef.current
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0 || !container) return
+    const first = Array.from(selection.getRangeAt(0).getClientRects()).find((r) => r.width > 0)
+    if (!first) return
+    const base = container.getBoundingClientRect()
+    const point = screenToPage(
+      viewport,
+      (first.left + first.right) / 2 - base.left,
+      (first.top + first.bottom) / 2 - base.top
+    )
+    selection.removeAllRanges()
+    setSelectionBox(null)
+    void editTextRunAt(point)
+  }
+
+  const copySelection = (): void => {
+    const text = window.getSelection()?.toString() ?? ''
+    if (text) void navigator.clipboard?.writeText(text).catch(() => {})
+    setSelectionBox(null)
+  }
+
+  // Double-clicking a run in select mode edits it directly (fastest path).
+  const editTextRunRef = useRef(editTextRunAt)
+  useEffect(() => {
+    editTextRunRef.current = editTextRunAt
+  })
+  useEffect(() => {
+    if (tool !== 'select') return
+    const onDoubleClick = (event: MouseEvent): void => {
+      const container = containerRef.current
+      const target = event.target as HTMLElement | null
+      // Ignore double-clicks on existing annotations / their editors.
+      if (!container || target?.closest('textarea, input, svg')) return
+      const base = container.getBoundingClientRect()
+      if (
+        event.clientX < base.left ||
+        event.clientX > base.right ||
+        event.clientY < base.top ||
+        event.clientY > base.bottom
+      ) {
+        return
+      }
+      window.getSelection()?.removeAllRanges()
+      setSelectionBox(null)
+      void editTextRunRef.current(
+        screenToPage(viewport, event.clientX - base.left, event.clientY - base.top)
+      )
+    }
+    document.addEventListener('dblclick', onDoubleClick)
+    return () => document.removeEventListener('dblclick', onDoubleClick)
+  }, [tool, viewport])
 
   // ---- Create gestures (container captures pointer for drawing / placing) ----
   const onContainerDown = (event: React.PointerEvent): void => {
@@ -418,6 +515,48 @@ export function AnnotationLayer({
       onPointerMove={onContainerMove}
       onPointerUp={onContainerUp}
     >
+      {selectionBox && tool === 'select' && (
+        <div
+          className="absolute z-20 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md border bg-card p-0.5 shadow-md"
+          style={{ left: selectionBox.centerX, top: selectionBox.top - 8, pointerEvents: 'auto' }}
+          onPointerDown={(event) => event.preventDefault()}
+        >
+          {(
+            [
+              { title: 'Highlight', icon: Highlighter, onClick: () => applyMarkup('highlight') },
+              { title: 'Underline', icon: Underline, onClick: () => applyMarkup('underline') },
+              { title: 'Strikethrough', icon: Strikethrough, onClick: () => applyMarkup('strike') }
+            ] as const
+          ).map(({ title, icon: Icon, onClick }) => (
+            <button
+              key={title}
+              type="button"
+              title={title}
+              onClick={onClick}
+              className="flex size-7 items-center justify-center rounded hover:bg-accent"
+            >
+              <Icon className="size-4" />
+            </button>
+          ))}
+          <div className="mx-0.5 h-5 w-px bg-border" />
+          <button
+            type="button"
+            title="Edit text"
+            onClick={editSelection}
+            className="flex size-7 items-center justify-center rounded hover:bg-accent"
+          >
+            <TextCursorInput className="size-4" />
+          </button>
+          <button
+            type="button"
+            title="Copy"
+            onClick={copySelection}
+            className="flex size-7 items-center justify-center rounded hover:bg-accent"
+          >
+            <Copy className="size-4" />
+          </button>
+        </div>
+      )}
       <svg width={width} height={height} className="absolute inset-0 overflow-visible">
         {all.map((annotation) =>
           renderVector(annotation, {
