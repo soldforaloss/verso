@@ -30,6 +30,37 @@ export function addAnnotations(docId: string, annotations: Annotation[], label =
   commit(docId, pageKey, label, [...pageAnnotations(docId, pageKey), ...annotations])
 }
 
+/**
+ * Adds annotations to many pages at once as a single undoable command (used by
+ * batch inserts like watermarks and page numbers).
+ */
+export function addAnnotationsAcrossPages(
+  docId: string,
+  byPageKey: Record<string, Annotation[]>,
+  label: string
+): void {
+  const tab = useDocumentStore.getState().getTab(docId)
+  if (!tab) return
+  const keys = Object.keys(byPageKey).filter((key) => (byPageKey[key] ?? []).length > 0)
+  if (keys.length === 0) return
+
+  const before: Record<string, Annotation[]> = {}
+  const after: Record<string, Annotation[]> = {}
+  for (const key of keys) {
+    before[key] = tab.annotations[key] ?? []
+    after[key] = [...before[key]!, ...byPageKey[key]!]
+  }
+  const apply = (state: Record<string, Annotation[]>): void => {
+    const store = useDocumentStore.getState()
+    for (const key of keys) store.setPageAnnotations(docId, key, state[key]!)
+  }
+  useHistoryStore.getState().execute(docId, {
+    label,
+    redo: () => apply(after),
+    undo: () => apply(before)
+  })
+}
+
 export function updateAnnotation(
   docId: string,
   annotation: Annotation,

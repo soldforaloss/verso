@@ -69,6 +69,8 @@ next begins.
   persist and render identically everywhere.
 - **Signatures**: draw or type a signature (bundled OFL handwriting fonts) and
   drop it onto the page as a movable, resizable image that flattens on save.
+- **Watermark & page numbers**: stamp a centered watermark or a running page
+  number across every page in one undoable command (flattened on save).
 - _A stamp gallery is deferred — see Stretch._
 
 ### ✅ M5 — Forms (AcroForm)

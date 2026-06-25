@@ -225,7 +225,14 @@ export async function drawAnnotation(
             continue
           }
           try {
-            page.drawText(ch, { x: cursorX, y: cursorY, size, font: textFont, color })
+            page.drawText(ch, {
+              x: cursorX,
+              y: cursorY,
+              size,
+              font: textFont,
+              color,
+              opacity: annotation.opacity
+            })
             cursorX += textFont.widthOfTextAtSize(ch, size) + spacing
           } catch {
             // Glyph the standard font can't encode — leave a gap and continue.
@@ -240,6 +247,7 @@ export async function drawAnnotation(
             size,
             font: textFont,
             color,
+            opacity: annotation.opacity,
             lineHeight: size * 1.2,
             maxWidth: annotation.rect.width
           })

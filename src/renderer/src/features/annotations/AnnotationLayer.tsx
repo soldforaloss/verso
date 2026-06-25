@@ -983,6 +983,7 @@ function HtmlAnnotation({
             // Scale point sizes by the zoom so the editable preview matches the
             // rendered page (the overlay box is already in scaled screen px).
             color: annotation.color,
+            opacity: annotation.opacity,
             fontSize: annotation.fontSize * viewport.scale,
             fontFamily:
               bundledFontByKey(annotation.fontKey)?.family ?? annotation.fontFamily ?? 'sans-serif',

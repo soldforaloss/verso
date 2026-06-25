@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { EyeOff, ImageDown, Info, Lock, PenTool, Printer } from 'lucide-react'
+import { EyeOff, ImageDown, Info, Lock, PenTool, Printer, Stamp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
 import { SignatureDialog } from './SignatureDialog'
+import { InsertDialog } from './InsertDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
 import { addImageAnnotation } from '@/lib/annotationOps'
@@ -25,6 +26,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [securityOpen, setSecurityOpen] = useState(false)
   const [redactionOpen, setRedactionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
+  const [insertOpen, setInsertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
   const hasRedactions = redactedPageNumbers(tab).length > 0
 
@@ -72,6 +74,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <Button
         variant="ghost"
         size="icon"
+        title="Watermark & page numbers"
+        onClick={() => setInsertOpen(true)}
+      >
+        <Stamp />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         title="Security & optimization"
         onClick={() => setSecurityOpen(true)}
       >
@@ -103,6 +113,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeSignature} />
+      <InsertDialog tab={tab} open={insertOpen} onOpenChange={setInsertOpen} />
     </>
   )
 }
