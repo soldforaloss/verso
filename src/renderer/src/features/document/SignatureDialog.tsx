@@ -89,9 +89,13 @@ export function SignatureDialog({
     if (mode === 'draw') {
       image = canvasRef.current ? trimToContent(canvasRef.current) : null
     } else {
-      // Ensure the handwriting font is loaded so the typed signature renders in
-      // it (and never as invisible/loading text on slow/headless environments).
-      await loadSignatureFonts()
+      // Give the handwriting font a moment to load (it was kicked off on open),
+      // but never block: renderTypedSignature falls back to a plain face so it
+      // always yields an image.
+      await Promise.race([
+        loadSignatureFonts(),
+        new Promise<void>((resolve) => setTimeout(resolve, 1200))
+      ])
       image = renderTypedSignature(typed, fontFamily, ink)
     }
     if (!image) return

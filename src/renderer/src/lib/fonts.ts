@@ -94,26 +94,30 @@ export function bundledFontFile(font: BundledFont, bold: boolean, italic: boolea
   return font.files.regular
 }
 
+const loadedFontKeys = new Set<string>()
+
 /**
- * Registers every bundled face with the document via the FontFace API so the
- * edit overlay and width measurement render in the real substitute font. Safe
- * to call once at startup; failures are swallowed (the overlay then falls back
- * to a generic family).
+ * Registers one bundled face's variants with the document via the FontFace API,
+ * **lazily** — only when that font is actually used by an annotation — so the
+ * overlay and width measurement render in it. Loading all families eagerly at
+ * startup saturates the asset fetches and slows first paint, so this is called
+ * on demand. The browser re-renders text automatically once the face loads;
+ * failures are swallowed (a generic family is used until/instead).
  */
-export async function preloadBundledFonts(): Promise<void> {
+export async function ensureBundledFontLoaded(font: BundledFont): Promise<void> {
+  if (loadedFontKeys.has(font.key)) return
   if (typeof document === 'undefined' || !document.fonts || typeof FontFace === 'undefined') return
+  loadedFontKeys.add(font.key)
   await Promise.all(
-    BUNDLED_FONTS.flatMap((font) =>
-      (Object.keys(font.files) as (keyof BundledFont['files'])[]).map(async (variant) => {
-        const weight = variant === 'bold' || variant === 'boldItalic' ? 'bold' : 'normal'
-        const style = variant === 'italic' || variant === 'boldItalic' ? 'italic' : 'normal'
-        try {
-          const face = new FontFace(font.family, `url(${font.files[variant]})`, { weight, style })
-          document.fonts.add(await face.load())
-        } catch {
-          /* asset missing — generic fallback is used */
-        }
-      })
-    )
+    (Object.keys(font.files) as (keyof BundledFont['files'])[]).map(async (variant) => {
+      const weight = variant === 'bold' || variant === 'boldItalic' ? 'bold' : 'normal'
+      const style = variant === 'italic' || variant === 'boldItalic' ? 'italic' : 'normal'
+      try {
+        const face = new FontFace(font.family, `url(${font.files[variant]})`, { weight, style })
+        document.fonts.add(await face.load())
+      } catch {
+        /* asset missing — generic fallback is used */
+      }
+    })
   )
 }

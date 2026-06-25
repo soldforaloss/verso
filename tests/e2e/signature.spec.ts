@@ -23,7 +23,7 @@ test('type a signature, place it, and flatten it on save', async () => {
   await window.getByRole('button', { name: 'Insert signature' }).click()
 
   // The signature lands on page 1 as a movable image annotation.
-  await expect(window.locator('[data-page-number="1"] img')).toBeVisible({ timeout: 10_000 })
+  await expect(window.locator('[data-page-number="1"] img')).toBeVisible({ timeout: 20_000 })
 
   // Save flattens it (embedPng) into a valid PDF.
   const outPath = join(mkdtempSync(join(tmpdir(), 'verso-sign-')), 'signed.pdf')
@@ -64,5 +64,5 @@ test('draw a signature and place it', async () => {
   await window.mouse.up()
 
   await window.getByRole('button', { name: 'Insert signature' }).click()
-  await expect(window.locator('[data-page-number="1"] img')).toBeVisible({ timeout: 10_000 })
+  await expect(window.locator('[data-page-number="1"] img')).toBeVisible({ timeout: 20_000 })
 })

@@ -26,7 +26,7 @@ import {
 } from '@/lib/annotationGeometry'
 import { OverlayContentEditor } from '@/lib/contentEditor'
 import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
-import { bundledFontByKey } from '@/lib/fonts'
+import { bundledFontByKey, ensureBundledFontLoaded } from '@/lib/fonts'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
 
 const contentEditor = new OverlayContentEditor()
@@ -180,6 +180,17 @@ export function AnnotationLayer({
     document.addEventListener('selectionchange', update)
     return () => document.removeEventListener('selectionchange', update)
   }, [tool])
+
+  // Lazily load the bundled face used by any text annotation on this page, so
+  // the overlay renders in it (the browser re-renders once the font arrives).
+  useEffect(() => {
+    for (const annotation of annotations) {
+      if (annotation.type === 'text' && annotation.fontKey) {
+        const font = bundledFontByKey(annotation.fontKey)
+        if (font) void ensureBundledFontLoaded(font)
+      }
+    }
+  }, [annotations])
 
   // Samples a hex background color from the rendered page canvas for a page rect.
   const sampleBackground = (pageRect: Rect): string => {
