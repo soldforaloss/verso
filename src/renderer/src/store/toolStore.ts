@@ -22,6 +22,32 @@ export const MARKUP_TOOLS = new Set<Tool>(['highlight', 'underline', 'strike', '
 export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow', 'redaction'])
 export const PLACING_TOOLS = new Set<Tool>(['text', 'note'])
 
+/**
+ * Single-key shortcuts for the most-used tools (the single source of truth for
+ * the keydown handler, toolbar tooltips, and the cheat-sheet). The destructive
+ * tools — redaction and eraser — are intentionally left without a single key.
+ */
+export const TOOL_SHORTCUTS: { key: string; tool: Tool; label: string }[] = [
+  { key: 'v', tool: 'select', label: 'Select / edit' },
+  { key: 'h', tool: 'highlight', label: 'Highlight' },
+  { key: 'u', tool: 'underline', label: 'Underline' },
+  { key: 's', tool: 'strike', label: 'Strikethrough' },
+  { key: 'p', tool: 'ink', label: 'Draw (pencil)' },
+  { key: 'r', tool: 'rect', label: 'Rectangle' },
+  { key: 'o', tool: 'ellipse', label: 'Ellipse' },
+  { key: 'l', tool: 'line', label: 'Line' },
+  { key: 'a', tool: 'arrow', label: 'Arrow' },
+  { key: 't', tool: 'text', label: 'Text box' },
+  { key: 'n', tool: 'note', label: 'Sticky note' },
+  { key: 'e', tool: 'edittext', label: 'Edit text' }
+]
+
+export const toolForKey = (key: string): Tool | undefined =>
+  TOOL_SHORTCUTS.find((shortcut) => shortcut.key === key)?.tool
+
+export const keyForTool = (tool: Tool): string | undefined =>
+  TOOL_SHORTCUTS.find((shortcut) => shortcut.tool === tool)?.key
+
 interface ToolState {
   tool: Tool
   color: string

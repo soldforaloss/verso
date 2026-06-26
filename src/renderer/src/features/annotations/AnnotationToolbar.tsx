@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useToolStore, type Tool } from '@/store/toolStore'
+import { keyForTool, useToolStore, type Tool } from '@/store/toolStore'
 import { useViewStore } from '@/store/viewStore'
 import { addImageAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
 import { ANNOTATION_COLORS, type Annotation, type TextFontFamily } from '@/lib/annotations'
@@ -182,21 +182,24 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
         {TOOL_GROUPS.map((group, groupIndex) => (
           <div key={group[0]!.tool} className="flex items-center gap-0.5">
             {groupIndex > 0 && <span className="mx-0.5 h-5 w-px bg-border" />}
-            {group.map(({ tool: t, label, Icon }) => (
-              <button
-                key={t}
-                type="button"
-                title={label}
-                aria-pressed={tool === t}
-                onClick={() => setTool(t)}
-                className={cn(
-                  'flex size-8 items-center justify-center rounded-md transition-colors',
-                  tool === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-                )}
-              >
-                <Icon className="size-4" />
-              </button>
-            ))}
+            {group.map(({ tool: t, label, Icon }) => {
+              const shortcut = keyForTool(t)
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  title={shortcut ? `${label} (${shortcut.toUpperCase()})` : label}
+                  aria-pressed={tool === t}
+                  onClick={() => setTool(t)}
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-md transition-colors',
+                    tool === t ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                  )}
+                >
+                  <Icon className="size-4" />
+                </button>
+              )
+            })}
           </div>
         ))}
       </div>

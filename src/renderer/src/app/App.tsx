@@ -5,7 +5,7 @@ import { useViewStore } from '@/store/viewStore'
 import { useSearchStore } from '@/store/searchStore'
 import { useSelectionStore } from '@/store/selectionStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { useToolStore } from '@/store/toolStore'
+import { toolForKey, useToolStore } from '@/store/toolStore'
 import { useUiStore } from '@/store/uiStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
@@ -98,8 +98,8 @@ function App(): React.JSX.Element {
         return
       }
 
-      // Page navigation: Home/End jump to the first/last page; PageUp/PageDown
-      // step one page. (Plain keys, so only when the user isn't typing.)
+      // Page navigation + tool shortcuts: plain keys, so only when the user
+      // isn't typing in a field.
       if (!typing && activeId && !event.ctrlKey && !event.metaKey && !event.altKey) {
         const pageCount = useDocumentStore.getState().getTab(activeId)?.pages.length ?? 0
         if (pageCount > 0) {
@@ -124,6 +124,14 @@ function App(): React.JSX.Element {
             view.requestScrollToPage(Math.max(view.currentPage - 1, 1))
             return
           }
+        }
+
+        // Single-key markup tool shortcuts (V/H/U/S/P/R/O/L/A/T/N/E).
+        const tool = toolForKey(event.key.toLowerCase())
+        if (tool) {
+          event.preventDefault()
+          useToolStore.getState().setTool(tool)
+          return
         }
       }
 

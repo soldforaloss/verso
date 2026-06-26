@@ -6,6 +6,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { useUiStore } from '@/store/uiStore'
+import { TOOL_SHORTCUTS } from '@/store/toolStore'
 
 interface Shortcut {
   keys: string[]
@@ -38,6 +39,13 @@ const GROUPS: Group[] = [
       { keys: ['Delete'], label: 'Delete selected annotation' },
       { keys: ['Esc'], label: 'Clear selection / close tool' }
     ]
+  },
+  {
+    title: 'Markup tools',
+    shortcuts: TOOL_SHORTCUTS.map((shortcut) => ({
+      keys: [shortcut.key.toUpperCase()],
+      label: shortcut.label
+    }))
   },
   {
     title: 'View & navigate',
