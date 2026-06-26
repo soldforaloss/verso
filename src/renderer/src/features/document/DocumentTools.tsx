@@ -1,7 +1,18 @@
 import { useState } from 'react'
-import { BadgeCheck, EyeOff, ImageDown, Info, Lock, PenTool, Printer, Stamp } from 'lucide-react'
+import {
+  BadgeCheck,
+  Crop,
+  EyeOff,
+  ImageDown,
+  Info,
+  Lock,
+  PenTool,
+  Printer,
+  Stamp
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
+import { CropDialog } from './CropDialog'
 import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
@@ -23,6 +34,7 @@ import type { DocumentTab } from '@/store/documentStore'
  */
 export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [cropOpen, setCropOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
   const [redactionOpen, setRedactionOpen] = useState(false)
@@ -61,6 +73,9 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
         onClick={() => setMetadataOpen(true)}
       >
         <Info />
+      </Button>
+      <Button variant="ghost" size="icon" title="Crop pages" onClick={() => setCropOpen(true)}>
+        <Crop />
       </Button>
       <Button
         variant="ghost"
@@ -114,6 +129,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       )}
 
       <MetadataDialog tab={tab} open={metadataOpen} onOpenChange={setMetadataOpen} />
+      <CropDialog tab={tab} open={cropOpen} onOpenChange={setCropOpen} />
       <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />

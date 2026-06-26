@@ -54,7 +54,9 @@ next begins.
 - **Save / Save As** builds a valid PDF from the page model via `pdf-lib`
   (rotation composed, blanks created), written atomically; dirty-state tracking
   with a close confirmation.
-- _Crop is modeled but deferred — see Stretch._
+- **Page crop**: trim margins (per page or across the whole document) from a
+  dialog with a live preview; applied losslessly via pdf-lib `setCropBox` on save
+  and clearable at any time. Undoable.
 
 ### ✅ M4 — Annotations & markup
 
@@ -161,8 +163,8 @@ All planned milestones (M0–M9) have shipped. Future work lives below.
   (BSD) native addon, implementing the `ContentEditor` interface.
 - **macOS & Linux builds** — the architecture is cross-platform; package targets
   are stubbed in `electron-builder.yml`.
-- **Page cropping** — the page model carries a crop box; the rotation-aware
-  render/save implementation is deferred to its own focused pass (ADR-0005).
+- **Cropped-view rendering** — crop is applied on save today; showing the cropped
+  result live in the viewer (rotation-aware) is a follow-up.
 - **Stamps & signature capture** — annotation types are in place; a stamp gallery
   and a draw/type/import signature modal are a follow-up (ADR-0006). Users can
   sign today by drawing (ink) or typing (text box).

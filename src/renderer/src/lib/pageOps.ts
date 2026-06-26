@@ -5,7 +5,7 @@ import {
   type PdfSource
 } from '@/store/documentStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { pageKey, type PageRef } from '@/lib/pageModel'
+import { pageKey, type CropBox, type PageRef } from '@/lib/pageModel'
 import * as transforms from '@/lib/pageTransforms'
 
 const DEFAULT_BLANK = { width: 612, height: 792 } // US Letter
@@ -33,6 +33,30 @@ export function rotatePages(tabId: string, indices: number[], delta: number): vo
     indices.length > 1 ? 'Rotate pages' : 'Rotate page',
     transforms.rotate(pages, indices, delta)
   )
+}
+
+/**
+ * Sets (or clears, with null) the crop box on the source pages named in the map,
+ * keyed by 0-based page index. One undoable command. Per-index crops let a single
+ * "crop all pages" action apply correctly across pages of differing size.
+ */
+export function cropPages(
+  tabId: string,
+  cropByIndex: Record<number, CropBox | null>,
+  label = 'Crop pages'
+): void {
+  const pages = currentPages(tabId)
+  if (!pages) return
+  let changed = false
+  const next = pages.map((page, index) => {
+    if (!(index in cropByIndex) || page.kind !== 'source') return page
+    const crop = cropByIndex[index] ?? null
+    if ((page.crop ?? null) === null && crop === null) return page
+    changed = true
+    return { ...page, crop }
+  })
+  if (!changed) return
+  commit(tabId, label, next)
 }
 
 export function deletePages(tabId: string, indices: number[]): void {

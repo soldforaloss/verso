@@ -108,6 +108,9 @@ async function buildFromModel(
       out.addPage(copied)
       page = copied
     }
+    if (ref.kind === 'source' && ref.crop) {
+      page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
+    }
     for (const annotation of annotationsByKey[ref.key] ?? []) {
       await drawAnnotation(out, page, annotation)
     }
@@ -152,6 +155,9 @@ async function buildPristine(
     const page = pages[index]
     if (!page) continue
     if (ref.rotation) page.setRotation(degrees((page.getRotation().angle + ref.rotation) % 360))
+    if (ref.kind === 'source' && ref.crop) {
+      page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
+    }
     for (const annotation of tab.annotations[ref.key] ?? []) {
       await drawAnnotation(doc, page, annotation)
     }

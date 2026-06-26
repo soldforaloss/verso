@@ -44,8 +44,10 @@ annotation and content edits in later milestones. Capped at a sane depth.
   fixed an M1 latent bug where intrinsic page rotation was overridden.)
 - PDF.js proxies and bytes live in a module-level source cache (outside the
   reactive store), as in M1.
-- **Crop** is modeled (`crop` on `PageRef`) but its full rotation-aware
-  implementation is deferred; see ROADMAP. Everything else in M3 ships complete.
+- **Crop** (`crop` on `PageRef`) is set from a margins dialog and applied
+  losslessly via pdf-lib `setCropBox` on save (undoable). Rendering the cropped
+  result _live in the viewer_ (rotation-aware) is the remaining follow-up; see
+  ROADMAP. Everything else in M3 ships complete.
 
 ## Alternatives considered
 

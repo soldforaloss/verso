@@ -40,3 +40,32 @@ export function pageKey(): string {
 export function addRotation(current: Rotation, delta: number): Rotation {
   return ((((current + delta) % 360) + 360) % 360) as Rotation
 }
+
+/** Trim fractions (0–1) off each edge of the page. */
+export interface CropMargins {
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+
+/**
+ * Builds a crop box (unrotated PDF point space, origin bottom-left) by trimming
+ * the given fractional margins off each edge of a page of `size`. Always returns
+ * at least a 1×1 box, even for extreme margins.
+ */
+export function cropFromMargins(
+  size: { width: number; height: number },
+  margins: CropMargins
+): CropBox {
+  const left = Math.min(Math.max(margins.left, 0), 1)
+  const right = Math.min(Math.max(margins.right, 0), 1)
+  const top = Math.min(Math.max(margins.top, 0), 1)
+  const bottom = Math.min(Math.max(margins.bottom, 0), 1)
+  return {
+    x: left * size.width,
+    y: bottom * size.height,
+    width: Math.max(1, (1 - left - right) * size.width),
+    height: Math.max(1, (1 - top - bottom) * size.height)
+  }
+}
