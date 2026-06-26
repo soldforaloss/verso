@@ -6,13 +6,16 @@ import {
   PDFOptionList,
   PDFRadioGroup,
   PDFTextField,
-  StandardFonts
+  StandardFonts,
+  type PDFPage
 } from 'pdf-lib'
 import { getSource, useDocumentStore, type DocumentTab } from '@/store/documentStore'
 import { useFormStore, type FormValue } from '@/store/formStore'
 import type { PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
+import type { OutlineItem } from '@/lib/outline'
 import { drawAnnotation } from '@/lib/annotationDraw'
+import { applyOutline } from '@/lib/pdfOutline'
 import { applyMetadata, type DocumentMetadata } from '@/lib/metadata'
 
 function toArrayBufferBytes(saved: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -79,10 +82,14 @@ async function buildFromModel(
   pages: PageRef[],
   annotationsByKey: Record<string, Annotation[]>,
   formValuesBySource: Record<string, Record<string, FormValue>>,
-  metadata: DocumentMetadata | null
+  metadata: DocumentMetadata | null,
+  outline: OutlineItem[] | null
 ): Promise<Uint8Array<ArrayBuffer>> {
   const out = await PDFDocument.create()
   const sourceDocs = new Map<string, PDFDocument>()
+  // Maps each logical page's stable key to the page placed in the output, so
+  // bookmark destinations resolve correctly even though pages were rebuilt.
+  const pageByKey = new Map<string, PDFPage>()
 
   const sourceDoc = async (sourceId: string): Promise<PDFDocument> => {
     const cached = sourceDocs.get(sourceId)
@@ -111,12 +118,14 @@ async function buildFromModel(
     if (ref.kind === 'source' && ref.crop) {
       page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
     }
+    pageByKey.set(ref.key, page)
     for (const annotation of annotationsByKey[ref.key] ?? []) {
       await drawAnnotation(out, page, annotation)
     }
   }
 
   if (metadata) applyMetadata(out, metadata)
+  if (outline) applyOutline(out, outline, pageByKey)
   return toArrayBufferBytes(await out.save())
 }
 
@@ -150,6 +159,7 @@ async function buildPristine(
   await fillForm(doc, formValues, false)
 
   const pages = doc.getPages()
+  const pageByKey = new Map<string, PDFPage>()
   for (let index = 0; index < tab.pages.length; index += 1) {
     const ref = tab.pages[index]!
     const page = pages[index]
@@ -158,12 +168,16 @@ async function buildPristine(
     if (ref.kind === 'source' && ref.crop) {
       page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
     }
+    pageByKey.set(ref.key, page)
     for (const annotation of tab.annotations[ref.key] ?? []) {
       await drawAnnotation(doc, page, annotation)
     }
   }
 
   if (tab.metadata) applyMetadata(doc, tab.metadata)
+  // The pristine path keeps the source's original /Outlines; overwrite it only
+  // once the user has edited bookmarks (tab.outline !== null).
+  if (tab.outline) applyOutline(doc, tab.outline, pageByKey)
   return toArrayBufferBytes(await doc.save())
 }
 
@@ -172,7 +186,7 @@ async function buildDocumentBytes(tab: DocumentTab): Promise<Uint8Array<ArrayBuf
   const formValues = formValuesForTab(tab)
   const sourceId = pristineSourceId(tab)
   if (sourceId) return buildPristine(tab, sourceId, formValues[sourceId] ?? {})
-  return buildFromModel(tab.pages, tab.annotations, formValues, tab.metadata)
+  return buildFromModel(tab.pages, tab.annotations, formValues, tab.metadata, tab.outline)
 }
 
 function baseName(path: string): string {
@@ -222,7 +236,14 @@ export async function extractPages(tab: DocumentTab, indices: number[]): Promise
     .map((index) => tab.pages[index])
     .filter((page): page is PageRef => Boolean(page))
   if (subset.length === 0) return false
-  const bytes = await buildFromModel(subset, tab.annotations, formValuesForTab(tab), tab.metadata)
+  // Subsets don't carry the document outline (its page set differs).
+  const bytes = await buildFromModel(
+    subset,
+    tab.annotations,
+    formValuesForTab(tab),
+    tab.metadata,
+    null
+  )
   const path = await window.api.showSaveDialog({
     defaultName: `${stripPdfExt(tab.name)}-extract.pdf`
   })
@@ -243,7 +264,8 @@ export async function splitDocument(tab: DocumentTab): Promise<number> {
       [tab.pages[index]!],
       tab.annotations,
       formValues,
-      tab.metadata
+      tab.metadata,
+      null
     )
     const name = `${base}-${String(index + 1).padStart(3, '0')}.pdf`
     await window.api.writeFileInDir({ dir, name, bytes })

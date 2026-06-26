@@ -36,7 +36,11 @@ next begins.
 
 - **Thumbnail rail** (lazy-rendered) with current-page sync and click-to-jump.
 - **Outline / bookmarks** panel built from the document outline, with
-  collapsible nodes that navigate to their destination page.
+  collapsible nodes that navigate to their destination page. Bookmarks are
+  **fully editable** — add (for the current page), rename, delete, reorder, and
+  nest/un-nest — anchored to stable page keys so they survive page reordering,
+  and **written into the PDF on save** (pdf-lib `/Outlines`). Undoable; an
+  unedited document's original outline passes through untouched.
 - **Full-text search** across the whole document: live result count, next/prev,
   optional **match-case** and **whole-word** (Unicode-aware) filters, and on-page
   **highlighting** (matches mapped to text-item rectangles), with the active
@@ -165,6 +169,10 @@ All planned milestones (M0–M9) have shipped. Future work lives below.
   are stubbed in `electron-builder.yml`.
 - **Cropped-view rendering** — crop is applied on save today; showing the cropped
   result live in the viewer (rotation-aware) is a follow-up.
+- **Bookmark fidelity** — edited bookmarks save with top-of-page (`/XYZ`)
+  destinations and an always-expanded state (panel collapse is browse-only);
+  preserving exact `/Fit*` destinations and per-node open/closed state is a
+  follow-up.
 - **Stamps & signature capture** — annotation types are in place; a stamp gallery
   and a draw/type/import signature modal are a follow-up (ADR-0006). Users can
   sign today by drawing (ink) or typing (text box).

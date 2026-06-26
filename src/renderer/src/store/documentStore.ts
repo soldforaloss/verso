@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { loadPdfDocument, type PdfDocument } from '@/lib/pdf'
 import { pageKey, type PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
+import type { OutlineItem } from '@/lib/outline'
 import type { DocumentMetadata } from '@/lib/metadata'
 import { useHistoryStore } from './historyStore'
 import type { OpenedDocument } from '@shared/ipc'
@@ -27,6 +28,11 @@ export interface DocumentTab {
   sourceRevision: number
   /** User-edited Info-dictionary metadata, applied on save (null = unchanged). */
   metadata: DocumentMetadata | null
+  /**
+   * Editable bookmark tree, written on save. `null` until the user first edits
+   * bookmarks, so an untouched document's original outline passes through intact.
+   */
+  outline: OutlineItem[] | null
 }
 
 export interface PdfSource {
@@ -72,6 +78,11 @@ interface DocumentState {
   markDirty: (id: string) => void
   /** Stores edited document metadata (applied on save) and marks the tab dirty. */
   setMetadata: (id: string, metadata: DocumentMetadata) => void
+  /**
+   * Stores the edited bookmark tree (written on save) and marks the tab dirty.
+   * Accepts `null` so undoing the first edit can restore the pass-through state.
+   */
+  setOutline: (id: string, outline: OutlineItem[] | null) => void
   /** Replaces a source's bytes (e.g. after OCR) and forces a re-render. */
   replaceSource: (tabId: string, sourceId: string, bytes: Uint8Array) => Promise<void>
   /**
@@ -109,7 +120,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       sourceIds: [source.id],
       annotations: {},
       sourceRevision: 0,
-      metadata: null
+      metadata: null,
+      outline: null
     }
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id }))
 
@@ -194,6 +206,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, metadata, dirty: true } : tab))
     })),
 
+  setOutline: (id, outline) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, outline, dirty: true } : tab))
+    })),
+
   replaceSource: async (tabId, sourceId, bytes) => {
     const previous = sourceCache.get(sourceId)
     const { pdf, destroy } = await loadPdfDocument(bytes)
@@ -236,6 +253,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 pages,
                 sourceIds: [id],
                 annotations: {},
+                outline: null,
                 dirty: true,
                 sourceRevision: t.sourceRevision + 1
               }
