@@ -71,7 +71,8 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
             pdf: source.pdf,
             sourceId: ref.sourceId,
             pageIndex: ref.sourceIndex,
-            userRotation
+            userRotation,
+            crop: ref.crop ?? null
           }
         : null
     })

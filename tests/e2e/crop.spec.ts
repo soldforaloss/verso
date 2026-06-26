@@ -22,6 +22,11 @@ test('crop a page and apply it via setCropBox on save', async () => {
   await window.getByLabel('Top margin').fill('20')
   await window.getByRole('button', { name: 'Crop page' }).click()
 
+  // The crop is now visible in the viewer as a margin mask.
+  await expect(window.locator('[data-page-number="1"] [data-testid="crop-overlay"]')).toBeVisible({
+    timeout: 10_000
+  })
+
   // Save and verify the saved PDF's crop box is shorter than its media box.
   const outPath = join(mkdtempSync(join(tmpdir(), 'verso-crop-')), 'out.pdf')
   await app.evaluate(({ dialog }, filePath) => {

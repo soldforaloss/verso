@@ -59,8 +59,9 @@ next begins.
   (rotation composed, blanks created), written atomically; dirty-state tracking
   with a close confirmation.
 - **Page crop**: trim margins (per page or across the whole document) from a
-  dialog with a live preview; applied losslessly via pdf-lib `setCropBox` on save
-  and clearable at any time. Undoable.
+  dialog with a live preview; the trimmed margins are shown in the viewer as a
+  mask, and the crop is applied losslessly via pdf-lib `setCropBox` on save (and
+  clearable at any time). Undoable.
 
 ### ✅ M4 — Annotations & markup
 
@@ -167,8 +168,8 @@ All planned milestones (M0–M9) have shipped. Future work lives below.
   (BSD) native addon, implementing the `ContentEditor` interface.
 - **macOS & Linux builds** — the architecture is cross-platform; package targets
   are stubbed in `electron-builder.yml`.
-- **Cropped-view rendering** — crop is applied on save today; showing the cropped
-  result live in the viewer (rotation-aware) is a follow-up.
+- **Cropped-view rendering** — the viewer masks the trimmed margins today;
+  rendering the page at its reduced cropped size (vs. masking) is a follow-up.
 - **Bookmark fidelity** — edited bookmarks save with top-of-page (`/XYZ`)
   destinations and an always-expanded state (panel collapse is browse-only);
   preserving exact `/Fit*` destinations and per-node open/closed state is a

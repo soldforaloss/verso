@@ -11,12 +11,21 @@ import {
 import { normalizeRotation, type PageSize } from '@/lib/geometry'
 import { cn } from '@/lib/utils'
 import type { Annotation } from '@/lib/annotations'
+import type { CropBox } from '@/lib/pageModel'
 import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
 import { FormLayer } from '@/features/forms/FormLayer'
+import { CropOverlay } from './CropOverlay'
 
 /** Normalized render instruction for one logical page (built by the Viewer). */
 export type RenderDescriptor =
-  | { kind: 'source'; pdf: PdfDocument; sourceId: string; pageIndex: number; userRotation: number }
+  | {
+      kind: 'source'
+      pdf: PdfDocument
+      sourceId: string
+      pageIndex: number
+      userRotation: number
+      crop?: CropBox | null
+    }
   | { kind: 'blank'; width: number; height: number; userRotation: number }
 
 interface PageViewProps {
@@ -250,6 +259,7 @@ function PageViewImpl({
             pdf={descriptor.pdf}
             pageIndex={descriptor.pageIndex}
           />
+          {descriptor.crop && <CropOverlay viewport={pageViewport} crop={descriptor.crop} />}
         </>
       )}
       {descriptor.kind === 'blank' && (
