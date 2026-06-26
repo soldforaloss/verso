@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   boundsOf,
   duplicateAnnotation,
+  reorderAnnotations,
   translateAnnotation,
   type Annotation
 } from '@/lib/annotations'
@@ -92,6 +93,28 @@ describe('annotation geometry', () => {
       expect(clone.type === 'rect' && clone.rect).toEqual({ x: 12, y: -12, width: 100, height: 50 })
       // The original is untouched.
       expect(rect.rect).toEqual({ x: 0, y: 0, width: 100, height: 50 })
+    })
+  })
+
+  describe('reorderAnnotations', () => {
+    const mk = (id: string): Annotation => ({
+      ...base,
+      id,
+      type: 'note',
+      point: { x: 0, y: 0 },
+      text: ''
+    })
+    const ids = (list: Annotation[]): string[] => list.map((a) => a.id)
+
+    it('moves an annotation to the front (drawn last) or back (drawn first)', () => {
+      const list = [mk('a'), mk('b'), mk('c')]
+      expect(ids(reorderAnnotations(list, 'a', 'front'))).toEqual(['b', 'c', 'a'])
+      expect(ids(reorderAnnotations(list, 'c', 'back'))).toEqual(['c', 'a', 'b'])
+    })
+
+    it('returns the same list when the id is missing', () => {
+      const list = [mk('a'), mk('b')]
+      expect(reorderAnnotations(list, 'zzz', 'front')).toBe(list)
     })
   })
 })

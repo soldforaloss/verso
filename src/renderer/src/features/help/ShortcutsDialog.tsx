@@ -41,6 +41,8 @@ const GROUPS: Group[] = [
       { keys: [MOD, 'D'], label: 'Duplicate selected annotation' },
       { keys: [MOD, 'C'], label: 'Copy selected annotation' },
       { keys: [MOD, 'V'], label: 'Paste annotation (on current page)' },
+      { keys: [MOD, ']'], label: 'Bring annotation to front' },
+      { keys: [MOD, '['], label: 'Send annotation to back' },
       { keys: ['Arrows'], label: 'Nudge selected annotation' },
       { keys: ['Delete'], label: 'Delete selected annotation' },
       { keys: ['Esc'], label: 'Clear selection / close tool' }

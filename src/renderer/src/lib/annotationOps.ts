@@ -1,6 +1,6 @@
 import { useDocumentStore } from '@/store/documentStore'
 import { useHistoryStore } from '@/store/historyStore'
-import { newAnnotationId, type Annotation } from '@/lib/annotations'
+import { newAnnotationId, reorderAnnotations, type Annotation } from '@/lib/annotations'
 
 function pageAnnotations(docId: string, pageKey: string): Annotation[] {
   return useDocumentStore.getState().getTab(docId)?.annotations[pageKey] ?? []
@@ -92,6 +92,19 @@ export function addImageAnnotation(
   }
   addAnnotation(docId, annotation)
   return annotation.id
+}
+
+/** Moves an annotation to the front or back of its page's draw order (undoable). */
+export function reorderAnnotation(
+  docId: string,
+  pageKey: string,
+  id: string,
+  to: 'front' | 'back'
+): void {
+  const current = pageAnnotations(docId, pageKey)
+  const next = reorderAnnotations(current, id, to)
+  if (next === current) return
+  commit(docId, pageKey, to === 'front' ? 'Bring to front' : 'Send to back', next)
 }
 
 export function removeAnnotation(docId: string, pageKey: string, id: string): void {

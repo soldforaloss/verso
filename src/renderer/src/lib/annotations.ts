@@ -132,3 +132,18 @@ export function translateAnnotation(annotation: Annotation, dx: number, dy: numb
 export function duplicateAnnotation(annotation: Annotation, dx = 12, dy = -12): Annotation {
   return { ...translateAnnotation(annotation, dx, dy), id: newAnnotationId() }
 }
+
+/**
+ * Returns a new list with the annotation moved to the front (drawn last, on top)
+ * or the back (drawn first, behind everything). Order is the draw order.
+ */
+export function reorderAnnotations(
+  list: Annotation[],
+  id: string,
+  to: 'front' | 'back'
+): Annotation[] {
+  const target = list.find((annotation) => annotation.id === id)
+  if (!target) return list
+  const rest = list.filter((annotation) => annotation.id !== id)
+  return to === 'front' ? [...rest, target] : [target, ...rest]
+}

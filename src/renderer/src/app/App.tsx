@@ -10,7 +10,12 @@ import { useUiStore } from '@/store/uiStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
-import { addAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
+import {
+  addAnnotation,
+  removeAnnotation,
+  reorderAnnotation,
+  updateAnnotation
+} from '@/lib/annotationOps'
 import { duplicateAnnotation, translateAnnotation } from '@/lib/annotations'
 import { copyAnnotation, getCopiedAnnotation } from '@/lib/annotationClipboard'
 import { Toolbar } from '@/features/viewer/Toolbar'
@@ -232,6 +237,13 @@ function App(): React.JSX.Element {
           const clone = { ...duplicateAnnotation(copied), pageKey }
           addAnnotation(tab.id, clone)
           useToolStore.getState().selectAnnotation(pageKey, clone.id)
+        }
+      } else if ((key === ']' || key === '[') && tab) {
+        // Bring the selected annotation to the front (]) or send to back ([).
+        const { selectedId, selectedPageKey } = useToolStore.getState()
+        if (selectedId && selectedPageKey) {
+          event.preventDefault()
+          reorderAnnotation(tab.id, selectedPageKey, selectedId, key === ']' ? 'front' : 'back')
         }
       } else if (key === 'f') {
         event.preventDefault()

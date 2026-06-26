@@ -1,6 +1,7 @@
 import {
   ArrowUpRight,
   Bold,
+  BringToFront,
   Circle,
   Eraser,
   EyeOff,
@@ -10,6 +11,7 @@ import {
   Minus,
   MousePointer2,
   Pencil,
+  SendToBack,
   Square,
   Strikethrough,
   StickyNote,
@@ -23,7 +25,12 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { keyForTool, useToolStore, type Tool } from '@/store/toolStore'
 import { useViewStore } from '@/store/viewStore'
-import { addImageAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
+import {
+  addImageAnnotation,
+  removeAnnotation,
+  reorderAnnotation,
+  updateAnnotation
+} from '@/lib/annotationOps'
 import { ANNOTATION_COLORS, type Annotation, type TextFontFamily } from '@/lib/annotations'
 import type { DocumentTab } from '@/store/documentStore'
 
@@ -375,6 +382,28 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
       )}
 
       <div className="ml-auto flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Bring to front (Ctrl+])"
+          disabled={!selected}
+          onClick={() =>
+            selected && reorderAnnotation(tab.id, selected.pageKey, selected.id, 'front')
+          }
+        >
+          <BringToFront />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Send to back (Ctrl+[)"
+          disabled={!selected}
+          onClick={() =>
+            selected && reorderAnnotation(tab.id, selected.pageKey, selected.id, 'back')
+          }
+        >
+          <SendToBack />
+        </Button>
         <Button variant="ghost" size="icon" title="Insert image" onClick={insertImage}>
           <ImageIcon />
         </Button>

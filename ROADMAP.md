@@ -67,8 +67,9 @@ next begins.
   **single-key shortcut** (V/H/U/S/P/R/O/L/A/T/N/E).
 - Style controls: preset swatches **plus a full custom color picker**, stroke
   width, and an **opacity** slider (per tool and per selected annotation).
-- Select, move, resize (handles), recolor/restyle, and delete — all **undoable**
-  through the M3 history engine.
+- Select, move (drag or arrow-key nudge), resize (handles), recolor/restyle,
+  reorder (bring-to-front / send-to-back), duplicate, copy/paste across pages,
+  and delete — all **undoable** through the M3 history engine.
 - On save, annotations are **flattened into the PDF** via pdf-lib, so they
   persist and render identically everywhere.
 - **Signatures**: draw or type a signature (bundled OFL handwriting fonts) and
