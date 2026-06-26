@@ -14,8 +14,10 @@ import { useFormStore, type FormValue } from '@/store/formStore'
 import type { PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import type { OutlineItem } from '@/lib/outline'
+import type { NewFormField } from '@/lib/formFields'
 import { drawAnnotation } from '@/lib/annotationDraw'
 import { applyOutline } from '@/lib/pdfOutline'
+import { addNewFormFields } from '@/lib/pdfFormFields'
 import { applyMetadata, type DocumentMetadata } from '@/lib/metadata'
 
 function toArrayBufferBytes(saved: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -83,7 +85,8 @@ async function buildFromModel(
   annotationsByKey: Record<string, Annotation[]>,
   formValuesBySource: Record<string, Record<string, FormValue>>,
   metadata: DocumentMetadata | null,
-  outline: OutlineItem[] | null
+  outline: OutlineItem[] | null,
+  formFieldsByKey: Record<string, NewFormField[]>
 ): Promise<Uint8Array<ArrayBuffer>> {
   const out = await PDFDocument.create()
   const sourceDocs = new Map<string, PDFDocument>()
@@ -119,6 +122,8 @@ async function buildFromModel(
       page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
     }
     pageByKey.set(ref.key, page)
+    const newFields = formFieldsByKey[ref.key]
+    if (newFields?.length) addNewFormFields(out.getForm(), page, newFields)
     for (const annotation of annotationsByKey[ref.key] ?? []) {
       await drawAnnotation(out, page, annotation)
     }
@@ -169,6 +174,8 @@ async function buildPristine(
       page.setCropBox(ref.crop.x, ref.crop.y, ref.crop.width, ref.crop.height)
     }
     pageByKey.set(ref.key, page)
+    const newFields = tab.formFields[ref.key]
+    if (newFields?.length) addNewFormFields(doc.getForm(), page, newFields)
     for (const annotation of tab.annotations[ref.key] ?? []) {
       await drawAnnotation(doc, page, annotation)
     }
@@ -186,7 +193,14 @@ async function buildDocumentBytes(tab: DocumentTab): Promise<Uint8Array<ArrayBuf
   const formValues = formValuesForTab(tab)
   const sourceId = pristineSourceId(tab)
   if (sourceId) return buildPristine(tab, sourceId, formValues[sourceId] ?? {})
-  return buildFromModel(tab.pages, tab.annotations, formValues, tab.metadata, tab.outline)
+  return buildFromModel(
+    tab.pages,
+    tab.annotations,
+    formValues,
+    tab.metadata,
+    tab.outline,
+    tab.formFields
+  )
 }
 
 function baseName(path: string): string {
@@ -242,7 +256,8 @@ export async function extractPages(tab: DocumentTab, indices: number[]): Promise
     tab.annotations,
     formValuesForTab(tab),
     tab.metadata,
-    null
+    null,
+    tab.formFields
   )
   const path = await window.api.showSaveDialog({
     defaultName: `${stripPdfExt(tab.name)}-extract.pdf`
@@ -265,7 +280,8 @@ export async function splitDocument(tab: DocumentTab): Promise<number> {
       tab.annotations,
       formValues,
       tab.metadata,
-      null
+      null,
+      tab.formFields
     )
     const name = `${base}-${String(index + 1).padStart(3, '0')}.pdf`
     await window.api.writeFileInDir({ dir, name, bytes })

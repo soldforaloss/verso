@@ -27,13 +27,20 @@ so a document rebuilt from the page model loses live form fields.
     source first (the only way values survive the copy).
 - Radio on-states reported by PDF.js (`buttonValue`, often numeric indices) are
   mapped to pdf-lib option values at save time.
+- **Field creation** (text fields and checkboxes): a field tool drags a rectangle
+  to author a field, stored per logical page key (like annotations) in
+  `tab.formFields` and created on save via `createTextField`/`createCheckBox` then
+  `addToPage` — on `doc` (pristine, stays editable) or on the rebuilt `out` (which
+  gains a fresh AcroForm). Names are auto-generated unique; Helvetica is
+  auto-embedded and appearances regenerate on `save()`.
 
 ## Consequences
 
 - The common fill-and-save workflow round-trips perfectly with an editable form.
 - After page surgery, forms are flattened (values baked in, no longer editable) —
   a documented, reasonable limitation given pdf-lib's `copyPages` behavior.
-- Field creation and signature fields are out of scope (see ROADMAP).
+- Text-field and checkbox **creation** is supported (above); other field types
+  (radio/dropdown/list) and signature fields remain out of scope (see ROADMAP).
 
 ## Alternatives considered
 

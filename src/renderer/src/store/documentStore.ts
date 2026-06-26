@@ -3,6 +3,7 @@ import { loadPdfDocument, type PdfDocument } from '@/lib/pdf'
 import { pageKey, type PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import type { OutlineItem } from '@/lib/outline'
+import type { NewFormField } from '@/lib/formFields'
 import type { DocumentMetadata } from '@/lib/metadata'
 import { useHistoryStore } from './historyStore'
 import type { OpenedDocument } from '@shared/ipc'
@@ -24,6 +25,8 @@ export interface DocumentTab {
   sourceIds: string[]
   /** Annotations keyed by the logical page's stable key. */
   annotations: Record<string, Annotation[]>
+  /** User-authored form fields keyed by the logical page's stable key. */
+  formFields: Record<string, NewFormField[]>
   /** Bumped when a source's bytes are replaced (e.g. OCR), to force re-render. */
   sourceRevision: number
   /** User-edited Info-dictionary metadata, applied on save (null = unchanged). */
@@ -72,6 +75,8 @@ interface DocumentState {
   setPages: (id: string, pages: PageRef[]) => void
   /** Replaces one page's annotations and marks the tab dirty. */
   setPageAnnotations: (id: string, pageKey: string, annotations: Annotation[]) => void
+  /** Replaces one page's authored form fields and marks the tab dirty. */
+  setPageFormFields: (id: string, pageKey: string, fields: NewFormField[]) => void
   /** Records a successful save: clears dirty and updates path/name. */
   markSaved: (id: string, path: string, name: string) => void
   /** Marks a tab dirty (e.g. when a form field changes). */
@@ -119,6 +124,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       pages: [],
       sourceIds: [source.id],
       annotations: {},
+      formFields: {},
       sourceRevision: 0,
       metadata: null,
       outline: null
@@ -180,6 +186,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setPages: (id, pages) =>
     set((state) => ({
       tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, pages, dirty: true } : tab))
+    })),
+
+  setPageFormFields: (id, pageKey, fields) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === id
+          ? { ...tab, formFields: { ...tab.formFields, [pageKey]: fields }, dirty: true }
+          : tab
+      )
     })),
 
   setPageAnnotations: (id, pageKey, annotations) =>
@@ -253,6 +268,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 pages,
                 sourceIds: [id],
                 annotations: {},
+                formFields: {},
                 outline: null,
                 dirty: true,
                 sourceRevision: t.sourceRevision + 1

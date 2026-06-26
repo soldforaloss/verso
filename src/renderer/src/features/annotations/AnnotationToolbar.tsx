@@ -5,6 +5,7 @@ import {
   Circle,
   Eraser,
   EyeOff,
+  FormInput,
   Highlighter,
   Image as ImageIcon,
   Italic,
@@ -13,6 +14,7 @@ import {
   Pencil,
   SendToBack,
   Square,
+  SquareCheck,
   Strikethrough,
   StickyNote,
   TextCursorInput,
@@ -56,6 +58,10 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
     { tool: 'text', label: 'Text box', Icon: Type },
     { tool: 'note', label: 'Sticky note', Icon: StickyNote },
     { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput }
+  ],
+  [
+    { tool: 'field-text', label: 'Add text field (form)', Icon: FormInput },
+    { tool: 'field-checkbox', label: 'Add checkbox field (form)', Icon: SquareCheck }
   ],
   [
     { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
