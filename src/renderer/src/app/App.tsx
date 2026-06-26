@@ -12,6 +12,7 @@ import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
 import { addAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
 import { duplicateAnnotation, translateAnnotation } from '@/lib/annotations'
+import { copyAnnotation, getCopiedAnnotation } from '@/lib/annotationClipboard'
 import { Toolbar } from '@/features/viewer/Toolbar'
 import { AnnotationToolbar } from '@/features/annotations/AnnotationToolbar'
 import { Viewer } from '@/features/viewer/Viewer'
@@ -207,6 +208,30 @@ function App(): React.JSX.Element {
           const clone = duplicateAnnotation(annotation)
           addAnnotation(tab.id, clone)
           selectAnnotation(selectedPageKey, clone.id)
+        }
+      } else if (key === 'c' && tab && !typing) {
+        // Copy the selected annotation — but yield to a real text selection so
+        // copying page text still works.
+        const { selectedId, selectedPageKey } = useToolStore.getState()
+        const hasTextSelection = !(window.getSelection()?.isCollapsed ?? true)
+        const annotation =
+          selectedId && selectedPageKey && !hasTextSelection
+            ? tab.annotations[selectedPageKey]?.find((a) => a.id === selectedId)
+            : undefined
+        if (annotation) {
+          event.preventDefault()
+          copyAnnotation(annotation)
+        }
+      } else if (key === 'v' && tab && !typing) {
+        // Paste a clone of the copied annotation onto the page in view.
+        const copied = getCopiedAnnotation()
+        const pageKey =
+          tab.pages[Math.min(useViewStore.getState().currentPage, tab.pages.length) - 1]?.key
+        if (copied && pageKey) {
+          event.preventDefault()
+          const clone = { ...duplicateAnnotation(copied), pageKey }
+          addAnnotation(tab.id, clone)
+          useToolStore.getState().selectAnnotation(pageKey, clone.id)
         }
       } else if (key === 'f') {
         event.preventDefault()
