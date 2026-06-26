@@ -19,7 +19,10 @@ export function Sidebar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const [panel, setPanel] = useState<Panel>('thumbnails')
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r bg-card">
+    <aside
+      aria-label="Document navigation"
+      className="flex w-64 shrink-0 flex-col border-r bg-card"
+    >
       <div className="flex border-b">
         {PANELS.map(({ id, label, Icon }) => (
           <button

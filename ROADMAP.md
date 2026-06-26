@@ -139,6 +139,9 @@ next begins.
   save, zoom, rotate, layout/theme/reading modes, find, OCR, and more.
 - **Keyboard shortcuts cheat-sheet** (press `?` or the toolbar button) and a
   top-level **error boundary** with a calm, recoverable fallback.
+- **Accessibility:** landmark roles (`main`, document `tablist`, navigation
+  `complementary`) and a keyboard-focusable, named page-view region, plus full
+  keyboard page navigation (Home/End/PageUp/PageDown).
 - A code-generated **app icon** (no image-library dependency) wired into the
   window, installer, and `.pdf` file association, with a matching in-app mark.
 - **Opt-in auto-update** via electron-updater (packaged builds only; the sole

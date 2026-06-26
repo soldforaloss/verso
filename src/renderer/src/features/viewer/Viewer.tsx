@@ -284,7 +284,12 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
   return (
     <div
       ref={scrollRef}
-      className="h-full overflow-auto bg-neutral-200 dark:bg-neutral-900"
+      // Focusable + named so keyboard-only users can tab to the page view and
+      // scroll it (WCAG 2.1.1 scrollable-region requirement).
+      tabIndex={0}
+      role="region"
+      aria-label={`Page view, ${pages.length} page${pages.length === 1 ? '' : 's'}`}
+      className="h-full overflow-auto bg-neutral-200 outline-none dark:bg-neutral-900"
       style={{ padding: PAGE_MARGIN }}
       data-testid="viewer-scroll"
     >

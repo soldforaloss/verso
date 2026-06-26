@@ -230,10 +230,10 @@ function ActiveDocument(): React.JSX.Element {
       <AnnotationToolbar tab={tab} />
       <div className="flex min-h-0 flex-1">
         {sidebarOpen && <Sidebar tab={tab} />}
-        <div className="relative min-w-0 flex-1">
+        <main aria-label="Document" className="relative min-w-0 flex-1">
           {searchOpen && <SearchBar tab={tab} />}
           <Viewer tab={tab} />
-        </div>
+        </main>
       </div>
     </>
   )

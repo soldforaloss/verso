@@ -13,7 +13,11 @@ export function TabBar(): React.JSX.Element | null {
   if (tabs.length === 0) return null
 
   return (
-    <div className="flex items-stretch gap-1 overflow-x-auto border-b bg-card px-2 pt-1">
+    <div
+      role="tablist"
+      aria-label="Open documents"
+      className="flex items-stretch gap-1 overflow-x-auto border-b bg-card px-2 pt-1"
+    >
       {tabs.map((tab) => (
         <div
           key={tab.id}
