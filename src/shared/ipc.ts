@@ -83,7 +83,9 @@ export const PreferencesSchema = z.object({
   theme: ThemeModeSchema.default('system'),
   layout: LayoutModeSchema.default('continuous'),
   readingMode: ReadingModeSchema.default('normal'),
-  sidebarOpen: z.boolean().default(true)
+  sidebarOpen: z.boolean().default(true),
+  /** Tesseract language code for OCR (a bundled `best_int` model). */
+  ocrLanguage: z.string().default('eng')
 })
 export type Preferences = z.infer<typeof PreferencesSchema>
 

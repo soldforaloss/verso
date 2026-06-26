@@ -39,6 +39,7 @@ interface PreferencesState extends Preferences {
   setReadingMode: (mode: ReadingMode) => void
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
+  setOcrLanguage: (code: string) => void
 }
 
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
@@ -46,6 +47,7 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   layout: 'continuous',
   readingMode: 'normal',
   sidebarOpen: true,
+  ocrLanguage: 'eng',
   hydrated: false,
 
   hydrate: (prefs) => set({ ...prefs, hydrated: true }),
@@ -75,5 +77,9 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
     const sidebarOpen = !get().sidebarOpen
     set({ sidebarOpen })
     persist({ sidebarOpen })
+  },
+  setOcrLanguage: (ocrLanguage) => {
+    set({ ocrLanguage })
+    persist({ ocrLanguage })
   }
 }))

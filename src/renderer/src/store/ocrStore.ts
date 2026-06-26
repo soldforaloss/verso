@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { onOcrProgress, recognizePage, type OcrWord } from '@/lib/ocr'
 import { augmentSourceWithText } from '@/lib/ocrAugment'
+import { normalizeOcrLanguage } from '@/lib/ocrLanguages'
+import { usePreferencesStore } from './preferencesStore'
 import { getSource, useDocumentStore, type DocumentTab } from './documentStore'
 
 type OcrStatus = 'idle' | 'running' | 'done' | 'error'
@@ -25,6 +27,7 @@ async function run(
   targets: OcrTarget[]
 ): Promise<void> {
   if (targets.length === 0) return
+  const lang = normalizeOcrLanguage(usePreferencesStore.getState().ocrLanguage)
   set({ status: 'running', error: null, progress: 0, message: 'Starting OCR…' })
   const total = targets.length
   const wordsBySource = new Map<string, Map<number, OcrWord[]>>()
@@ -44,7 +47,7 @@ async function run(
         })
       )
       const page = await source.pdf.getPage(pageIndex + 1)
-      const { words } = await recognizePage(page)
+      const { words } = await recognizePage(page, lang)
       if (!wordsBySource.has(sourceId)) wordsBySource.set(sourceId, new Map())
       wordsBySource.get(sourceId)!.set(pageIndex, words)
       done += 1

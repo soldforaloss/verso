@@ -13,7 +13,15 @@ const pkgDir = (id: string): string =>
 const pdfjsRoot = pkgDir('pdfjs-dist')
 const tesseractRoot = pkgDir('tesseract.js')
 const tesseractCoreRoot = pkgDir('tesseract.js-core')
-const tessLangRoot = pkgDir('@tesseract.js-data/eng')
+// Bundled OCR languages. The compact `best_int` LSTM models (~1–3 MB each) keep
+// the offline language pack lean. Keep this list in sync with OCR_LANGUAGES in
+// src/renderer/src/lib/ocrLanguages.ts.
+const OCR_LANGS = ['eng', 'spa', 'fra', 'deu', 'por', 'ita', 'nld', 'rus']
+const tessLangTargets = OCR_LANGS.map((lang) => ({
+  src: `${pkgDir(`@tesseract.js-data/${lang}`)}/4.0.0_best_int/${lang}.traineddata.gz`,
+  dest: 'tessdata',
+  rename: { stripBase: true as const }
+}))
 // Bundled metric-compatible fonts (Carlito/Caladea) live in the repo.
 const fontsRoot = resolve('resources/fonts').replace(/\\/g, '/')
 
@@ -83,18 +91,14 @@ export default defineConfig({
             dest: 'standard_fonts',
             rename: { stripBase: true }
           },
-          // Offline OCR assets: tesseract worker, wasm cores, and English data.
+          // Offline OCR assets: tesseract worker, wasm cores, and language data.
           {
             src: `${tesseractRoot}/dist/worker.min.js`,
             dest: 'tesseract',
             rename: { stripBase: true }
           },
           { src: `${tesseractCoreRoot}/*`, dest: 'tesseract/core', rename: { stripBase: true } },
-          {
-            src: `${tessLangRoot}/4.0.0/eng.traineddata.gz`,
-            dest: 'tessdata',
-            rename: { stripBase: true }
-          },
+          ...tessLangTargets,
           // Metric-compatible substitute fonts, served at /fonts/ for the editor.
           { src: `${fontsRoot}/*.ttf`, dest: 'fonts', rename: { stripBase: true } }
         ]

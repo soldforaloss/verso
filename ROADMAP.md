@@ -113,7 +113,10 @@ next begins.
 - OCR **embeds an invisible text layer into the PDF**, so the recognized text is
   immediately **selectable**, **searchable**, and **persists on save** through
   the existing machinery (no parallel layer).
-- Live progress; English bundled (more languages via `@tesseract.js-data/<lang>`).
+- Live progress; a **language picker** (toolbar) chooses among eight bundled,
+  fully offline languages — English, Spanish, French, German, Portuguese,
+  Italian, Dutch, and Russian — using the compact `best_int` models (~1–3 MB
+  each). The choice persists across sessions.
 
 ### ✅ M8 — Security, metadata & export
 

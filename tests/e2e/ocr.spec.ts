@@ -48,6 +48,11 @@ test('OCRs a scanned PDF into a selectable text layer', async () => {
 
   await expect(window.locator('[data-page-number="1"] canvas')).toBeVisible({ timeout: 30_000 })
 
+  // The language picker is present and defaults to English (offline-bundled).
+  const langPicker = window.getByLabel('OCR language')
+  await expect(langPicker).toBeVisible()
+  await expect(langPicker).toHaveValue('eng')
+
   // Run OCR and wait for the button to return to its idle "OCR" state.
   await window.getByRole('button', { name: 'OCR', exact: true }).click()
   await expect(window.getByRole('button', { name: 'OCR', exact: true })).toBeEnabled({

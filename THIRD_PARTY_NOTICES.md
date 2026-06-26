@@ -11,24 +11,24 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Bundled / sidecar (not npm)
 
-| Component                             | License                   | Notes                                                                   |
-| ------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
-| qpdf                                  | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8).         |
-| PDFium                                | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).             |
-| PDF.js cMaps & standard fonts         | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                        |
-| tesseract.js wasm core & English data | Apache-2.0                | Bundled for offline OCR.                                                |
-| Carlito font (≈ Calibri)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.        |
-| Caladea font (≈ Cambria)              | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.        |
-| Liberation Sans/Serif/Mono            | SIL OFL 1.1               | Bundled — metric-compatible with Arial / Times New Roman / Courier New. |
-| Lato font                             | SIL OFL 1.1               | Bundled — a common open font used directly by many documents.           |
-| Great Vibes & Caveat fonts            | SIL OFL 1.1               | Bundled — used to render typed signatures to an image.                  |
+| Component                              | License                   | Notes                                                                                       |
+| -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| qpdf                                   | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8).                             |
+| PDFium                                 | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).                                 |
+| PDF.js cMaps & standard fonts          | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                                            |
+| tesseract.js wasm core & language data | Apache-2.0                | Bundled `best_int` models for offline OCR in 8 languages (eng/spa/fra/deu/por/ita/nld/rus). |
+| Carlito font (≈ Calibri)               | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.                            |
+| Caladea font (≈ Cambria)               | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.                            |
+| Liberation Sans/Serif/Mono             | SIL OFL 1.1               | Bundled — metric-compatible with Arial / Times New Roman / Courier New.                     |
+| Lato font                              | SIL OFL 1.1               | Bundled — a common open font used directly by many documents.                               |
+| Great Vibes & Caveat fonts             | SIL OFL 1.1               | Bundled — used to render typed signatures to an image.                                      |
 
 ## Runtime dependencies
 
 | Package                    | Version | License    |
 | -------------------------- | ------- | ---------- |
 | `@pdf-lib/fontkit`         | 1.1.1   | MIT        |
-| `@tesseract.js-data/eng`   | 1.0.0   | MIT        |
+| `@tesseract.js-data/*`     | 1.0.0   | MIT        |
 | `class-variance-authority` | 0.7.1   | Apache-2.0 |
 | `clsx`                     | 2.1.1   | MIT        |
 | `electron-log`             | 5.4.4   | MIT        |
