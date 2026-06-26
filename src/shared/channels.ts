@@ -49,7 +49,15 @@ export const IpcChannels = {
    * Event (main → renderer): a file was opened outside the UI — via the OS file
    * association, a CLI argument, a second instance, or macOS `open-file`.
    */
-  openFileEvent: 'app:open-file-event'
+  openFileEvent: 'app:open-file-event',
+
+  /**
+   * Event (main → renderer): the window is trying to close. The renderer decides
+   * whether to allow it (`allowClose`) or to prompt about unsaved work first.
+   */
+  requestCloseEvent: 'app:request-close',
+  /** Renderer → main: confirms the window may close (after any unsaved prompt). */
+  allowClose: 'app:allow-close'
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

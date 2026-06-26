@@ -44,6 +44,15 @@ const api: VersoApi = {
     }
   },
 
+  onRequestClose: (callback) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IpcChannels.requestCloseEvent, listener)
+    return () => {
+      ipcRenderer.removeListener(IpcChannels.requestCloseEvent, listener)
+    }
+  },
+  allowClose: () => ipcRenderer.invoke(IpcChannels.allowClose),
+
   getPathForFile: (file) => webUtils.getPathForFile(file)
 }
 

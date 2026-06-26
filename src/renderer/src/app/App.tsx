@@ -24,6 +24,7 @@ import { Viewer } from '@/features/viewer/Viewer'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
 import { ShortcutsDialog } from '@/features/help/ShortcutsDialog'
+import { ConfirmQuitDialog } from '@/features/help/ConfirmQuitDialog'
 import { CommandPalette } from '@/features/command/CommandPalette'
 import { TabBar } from './TabBar'
 import { EmptyState } from './EmptyState'
@@ -54,6 +55,15 @@ function App(): React.JSX.Element {
   useEffect(() => {
     return window.api.onOpenFile((document) => {
       void useDocumentStore.getState().openDocument(document)
+    })
+  }, [])
+
+  // Window-close guard: prompt before quitting if any document is unsaved.
+  useEffect(() => {
+    return window.api.onRequestClose(() => {
+      const anyDirty = useDocumentStore.getState().tabs.some((tab) => tab.dirty)
+      if (anyDirty) useUiStore.getState().setQuitConfirmOpen(true)
+      else void window.api.allowClose()
     })
   }, [])
 
@@ -298,6 +308,7 @@ function App(): React.JSX.Element {
       {active ? <ActiveDocument key={active.id} /> : <EmptyState />}
       <ShortcutsDialog />
       <CommandPalette />
+      <ConfirmQuitDialog />
     </div>
   )
 }

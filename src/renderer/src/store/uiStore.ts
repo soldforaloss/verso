@@ -10,6 +10,9 @@ interface UiState {
   commandPaletteOpen: boolean
   setCommandPaletteOpen: (open: boolean) => void
   toggleCommandPalette: () => void
+  /** Whether the "discard unsaved changes and quit?" dialog is open. */
+  quitConfirmOpen: boolean
+  setQuitConfirmOpen: (open: boolean) => void
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -18,5 +21,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   openShortcuts: () => set({ shortcutsOpen: true }),
   commandPaletteOpen: false,
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
-  toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen })
+  toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen }),
+  quitConfirmOpen: false,
+  setQuitConfirmOpen: (quitConfirmOpen) => set({ quitConfirmOpen })
 }))

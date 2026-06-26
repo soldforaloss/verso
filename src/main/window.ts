@@ -3,6 +3,8 @@ import { app, BrowserWindow, shell, session } from 'electron'
 import log from 'electron-log/main'
 import { DEV_CSP } from './csp'
 import { APP_ORIGIN } from './protocol'
+import { IpcChannels } from '@shared/channels'
+import { clearCloseConfirmed, isCloseConfirmed, isQuitting, markQuitting } from './closeGuard'
 
 /** Schemes we are willing to hand off to the OS default handler. */
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:'])
@@ -99,6 +101,19 @@ export function createMainWindow(): BrowserWindow {
   })
 
   window.once('ready-to-show', () => window.show())
+
+  // Guard against losing unsaved work: a direct window close is deferred to the
+  // renderer, which allows it (`allowClose`) or prompts the user. An explicit
+  // app quit (`before-quit`) proceeds without the guard.
+  app.once('before-quit', markQuitting)
+  window.on('close', (event) => {
+    if (isQuitting() || isCloseConfirmed(window.id)) return
+    event.preventDefault()
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IpcChannels.requestCloseEvent)
+    }
+  })
+  window.on('closed', () => clearCloseConfirmed(window.id))
 
   if (isDev && devUrl) {
     hardenNavigation(window, devUrl)

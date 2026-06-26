@@ -150,6 +150,8 @@ next begins.
   save, zoom, rotate, layout/theme/reading modes, find, OCR, and more.
 - **Keyboard shortcuts cheat-sheet** (press `?` or the toolbar button) and a
   top-level **error boundary** with a calm, recoverable fallback.
+- **Unsaved-changes guard:** closing the window with unsaved edits prompts before
+  quitting, so work isn't lost to an accidental close.
 - **Accessibility:** landmark roles (`main`, document `tablist`, navigation
   `complementary`) and a keyboard-focusable, named page-view region, plus full
   keyboard page navigation (Home/End/PageUp/PageDown).

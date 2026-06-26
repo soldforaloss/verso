@@ -71,6 +71,15 @@ export interface VersoApi {
   onOpenFile(callback: (document: OpenedDocument) => void): () => void
 
   /**
+   * Subscribes to window-close requests. The renderer must respond by calling
+   * `allowClose` (after any unsaved-changes prompt). Returns an unsubscribe fn.
+   */
+  onRequestClose(callback: () => void): () => void
+
+  /** Confirms the window may close (after the renderer has cleared unsaved work). */
+  allowClose(): Promise<void>
+
+  /**
    * Resolves the absolute path of a dropped/native `File` via Electron's
    * `webUtils` (synchronous). The renderer then calls `readFile` with it.
    */
