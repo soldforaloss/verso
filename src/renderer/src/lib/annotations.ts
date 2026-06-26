@@ -127,3 +127,8 @@ export function translateAnnotation(annotation: Annotation, dx: number, dy: numb
       return { ...annotation, strokes: annotation.strokes.map((s) => s.map(move)) }
   }
 }
+
+/** Clones an annotation with a fresh id, offset by (dx, dy) page units. */
+export function duplicateAnnotation(annotation: Annotation, dx = 12, dy = -12): Annotation {
+  return { ...translateAnnotation(annotation, dx, dy), id: newAnnotationId() }
+}

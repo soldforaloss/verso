@@ -10,7 +10,8 @@ import { useUiStore } from '@/store/uiStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
 import { saveDocument } from '@/lib/save'
-import { removeAnnotation } from '@/lib/annotationOps'
+import { addAnnotation, removeAnnotation, updateAnnotation } from '@/lib/annotationOps'
+import { duplicateAnnotation, translateAnnotation } from '@/lib/annotations'
 import { Toolbar } from '@/features/viewer/Toolbar'
 import { AnnotationToolbar } from '@/features/annotations/AnnotationToolbar'
 import { Viewer } from '@/features/viewer/Viewer'
@@ -91,6 +92,36 @@ function App(): React.JSX.Element {
         return
       }
 
+      // Arrow keys nudge the selected annotation in page space (Shift = ×10).
+      if (
+        !typing &&
+        activeId &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        (event.key === 'ArrowUp' ||
+          event.key === 'ArrowDown' ||
+          event.key === 'ArrowLeft' ||
+          event.key === 'ArrowRight')
+      ) {
+        const { selectedId, selectedPageKey } = useToolStore.getState()
+        const annotation =
+          selectedId && selectedPageKey
+            ? useDocumentStore
+                .getState()
+                .getTab(activeId)
+                ?.annotations[selectedPageKey]?.find((a) => a.id === selectedId)
+            : undefined
+        if (annotation) {
+          event.preventDefault()
+          const step = event.shiftKey ? 10 : 1
+          const dx = event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0
+          const dy = event.key === 'ArrowUp' ? step : event.key === 'ArrowDown' ? -step : 0
+          updateAnnotation(activeId, translateAnnotation(annotation, dx, dy), 'Move annotation')
+          return
+        }
+      }
+
       // "?" opens the keyboard cheat-sheet (Shift+/ on most layouts).
       if (event.key === '?' && !typing) {
         event.preventDefault()
@@ -164,6 +195,19 @@ function App(): React.JSX.Element {
         event.preventDefault()
         useSelectionStore.getState().clear()
         useHistoryStore.getState().redo(tab.id)
+      } else if (key === 'd' && tab) {
+        // Duplicate the selected annotation, offset slightly, and select it.
+        const { selectedId, selectedPageKey, selectAnnotation } = useToolStore.getState()
+        const annotation =
+          selectedId && selectedPageKey
+            ? tab.annotations[selectedPageKey]?.find((a) => a.id === selectedId)
+            : undefined
+        if (annotation && selectedPageKey) {
+          event.preventDefault()
+          const clone = duplicateAnnotation(annotation)
+          addAnnotation(tab.id, clone)
+          selectAnnotation(selectedPageKey, clone.id)
+        }
       } else if (key === 'f') {
         event.preventDefault()
         useSearchStore.getState().open()

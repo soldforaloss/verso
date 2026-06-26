@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { boundsOf, translateAnnotation, type Annotation } from '@/lib/annotations'
+import {
+  boundsOf,
+  duplicateAnnotation,
+  translateAnnotation,
+  type Annotation
+} from '@/lib/annotations'
 
 const base = { id: 'a', pageKey: 'p', color: '#000000', opacity: 1 }
 
@@ -68,6 +73,25 @@ describe('annotation geometry', () => {
       }
       const moved = translateAnnotation(ink, 5, 7)
       expect(moved.type === 'ink' && moved.strokes[0]?.[0]).toEqual({ x: 5, y: 7 })
+    })
+  })
+
+  describe('duplicateAnnotation', () => {
+    it('clones with a fresh id, offset from the original', () => {
+      const rect: Annotation = {
+        ...base,
+        type: 'rect',
+        strokeWidth: 1,
+        filled: false,
+        rect: { x: 0, y: 0, width: 100, height: 50 }
+      }
+      const clone = duplicateAnnotation(rect)
+      expect(clone.id).not.toBe(rect.id)
+      expect(clone.type).toBe('rect')
+      // Offset down-right by default (page y is up, so dy is negative).
+      expect(clone.type === 'rect' && clone.rect).toEqual({ x: 12, y: -12, width: 100, height: 50 })
+      // The original is untouched.
+      expect(rect.rect).toEqual({ x: 0, y: 0, width: 100, height: 50 })
     })
   })
 })
