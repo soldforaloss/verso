@@ -98,6 +98,35 @@ function App(): React.JSX.Element {
         return
       }
 
+      // Page navigation: Home/End jump to the first/last page; PageUp/PageDown
+      // step one page. (Plain keys, so only when the user isn't typing.)
+      if (!typing && activeId && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const pageCount = useDocumentStore.getState().getTab(activeId)?.pages.length ?? 0
+        if (pageCount > 0) {
+          const view = useViewStore.getState()
+          if (event.key === 'Home') {
+            event.preventDefault()
+            view.requestScrollToPage(1)
+            return
+          }
+          if (event.key === 'End') {
+            event.preventDefault()
+            view.requestScrollToPage(pageCount)
+            return
+          }
+          if (event.key === 'PageDown') {
+            event.preventDefault()
+            view.requestScrollToPage(Math.min(view.currentPage + 1, pageCount))
+            return
+          }
+          if (event.key === 'PageUp') {
+            event.preventDefault()
+            view.requestScrollToPage(Math.max(view.currentPage - 1, 1))
+            return
+          }
+        }
+      }
+
       const mod = event.ctrlKey || event.metaKey
       if (!mod) return
       const key = event.key.toLowerCase()

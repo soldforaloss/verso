@@ -47,6 +47,8 @@ const GROUPS: Group[] = [
       { keys: [MOD, '0'], label: 'Fit width' },
       { keys: [MOD, 'Scroll'], label: 'Zoom at cursor' },
       { keys: [MOD, 'F'], label: 'Find in document' },
+      { keys: ['PgUp', 'PgDn'], label: 'Previous / next page' },
+      { keys: ['Home', 'End'], label: 'First / last page' },
       { keys: ['F11'], label: 'Toggle fullscreen' }
     ]
   },
