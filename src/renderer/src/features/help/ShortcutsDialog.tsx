@@ -27,7 +27,9 @@ const GROUPS: Group[] = [
       { keys: [MOD, 'O'], label: 'Open PDF' },
       { keys: [MOD, 'S'], label: 'Save' },
       { keys: [MOD, 'Shift', 'S'], label: 'Save As' },
-      { keys: [MOD, 'W'], label: 'Close tab' }
+      { keys: [MOD, 'W'], label: 'Close tab' },
+      { keys: [MOD, 'Tab'], label: 'Next / previous tab' },
+      { keys: [MOD, '1-9'], label: 'Jump to tab' }
     ]
   },
   {

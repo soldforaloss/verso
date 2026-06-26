@@ -245,6 +245,23 @@ function App(): React.JSX.Element {
       } else if (key === '0') {
         event.preventDefault()
         useViewStore.getState().setZoomMode('fit-width')
+      } else if (key === 'tab') {
+        // Cycle tabs (Shift = backwards).
+        event.preventDefault()
+        const { tabs: openTabs, activeId: current, setActive } = useDocumentStore.getState()
+        if (openTabs.length > 1 && current) {
+          const i = openTabs.findIndex((t) => t.id === current)
+          const next = event.shiftKey
+            ? (i - 1 + openTabs.length) % openTabs.length
+            : (i + 1) % openTabs.length
+          setActive(openTabs[next]!.id)
+        }
+      } else if (/^[1-9]$/.test(key)) {
+        // Jump to tab N (9 = last), like a browser.
+        event.preventDefault()
+        const { tabs: openTabs, setActive } = useDocumentStore.getState()
+        const index = key === '9' ? openTabs.length - 1 : Number(key) - 1
+        if (openTabs[index]) setActive(openTabs[index]!.id)
       }
     }
     window.addEventListener('keydown', onKeyDown)
