@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import type { PageViewport } from '@/lib/pdf'
 import { pageRectToScreen, screenToPage } from '@/lib/annotationGeometry'
 import { FIELD_TOOLS, useToolStore } from '@/store/toolStore'
-import { addFormField, removeFormField } from '@/lib/formFieldOps'
+import { addFormField, removeFormField, renameFormField } from '@/lib/formFieldOps'
 import { newFieldId, newFieldName, type NewFormField } from '@/lib/formFields'
 
 interface DraftRect {
@@ -37,6 +37,8 @@ export function FieldCreateLayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const start = useRef<{ x: number; y: number } | null>(null)
   const [draft, setDraft] = useState<DraftRect | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draftName, setDraftName] = useState('')
 
   const localPoint = (event: React.PointerEvent): { x: number; y: number } => {
     const rect = containerRef.current!.getBoundingClientRect()
@@ -44,7 +46,9 @@ export function FieldCreateLayer({
   }
 
   const onPointerDown = (event: React.PointerEvent): void => {
-    if (!isFieldTool) return
+    // Only start a create-drag on empty space; clicks on an existing field
+    // preview are handled by that preview (rename / delete).
+    if (!isFieldTool || event.target !== containerRef.current) return
     event.preventDefault()
     containerRef.current?.setPointerCapture(event.pointerId)
     const p = localPoint(event)
@@ -113,18 +117,54 @@ export function FieldCreateLayer({
     >
       {fields.map((field) => {
         const r = pageRectToScreen(viewport, field.rect)
+        const editing = editingId === field.id
+        const commitRename = (): void => {
+          const next = draftName.trim()
+          setEditingId(null)
+          if (next && next !== field.name) renameFormField(docId, pageKey, field.id, next)
+        }
         return (
           <div
             key={field.id}
+            // Interactive only while a field tool is active (double-click to
+            // rename, × to delete); in select mode it is pass-through so the
+            // form/annotation layers beneath stay reachable.
             className="group absolute rounded-sm border border-dashed border-sky-500 bg-sky-500/10"
-            style={{ left: r.x, top: r.y, width: r.width, height: r.height, pointerEvents: 'none' }}
+            style={{
+              left: r.x,
+              top: r.y,
+              width: r.width,
+              height: r.height,
+              pointerEvents: isFieldTool ? 'auto' : 'none'
+            }}
+            onDoubleClick={() => {
+              if (!isFieldTool) return
+              setDraftName(field.name)
+              setEditingId(field.id)
+            }}
           >
-            <span className="pointer-events-none absolute left-0 top-0 -translate-y-full rounded-t-sm bg-sky-500 px-1 text-[10px] leading-tight text-white">
-              {field.type === 'checkbox' ? '☑ Checkbox' : '▭ Text field'}
-            </span>
-            {/* Only interactive while a field tool is active, so the z5 overlay
-                exposes no hit targets that would block the layers beneath it. */}
-            {isFieldTool && (
+            {editing ? (
+              <input
+                autoFocus
+                aria-label="Field name"
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur()
+                  else if (event.key === 'Escape') setEditingId(null)
+                }}
+                className="absolute left-0 top-0 w-40 -translate-y-full rounded-t-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+              />
+            ) : (
+              <span
+                className="pointer-events-none absolute left-0 top-0 max-w-full -translate-y-full truncate rounded-t-sm bg-sky-500 px-1 text-[10px] leading-tight text-white"
+                title={isFieldTool ? `${field.name} — double-click to rename` : field.name}
+              >
+                {field.type === 'checkbox' ? '☑' : '▭'} {field.name}
+              </span>
+            )}
+            {isFieldTool && !editing && (
               <button
                 type="button"
                 aria-label="Delete field"

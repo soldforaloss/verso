@@ -28,3 +28,12 @@ export function removeFormField(docId: string, pageKey: string, id: string): voi
     pageFields(docId, pageKey).filter((field) => field.id !== id)
   )
 }
+
+export function renameFormField(docId: string, pageKey: string, id: string, name: string): void {
+  commit(
+    docId,
+    pageKey,
+    'Rename field',
+    pageFields(docId, pageKey).map((field) => (field.id === id ? { ...field, name } : field))
+  )
+}

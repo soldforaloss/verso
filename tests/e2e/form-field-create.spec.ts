@@ -26,10 +26,15 @@ test('author a text field by dragging and write it into the PDF on save', async 
   await window.mouse.move(box.x + 280, box.y + 168, { steps: 6 })
   await window.mouse.up()
 
-  // A field preview appears.
-  await expect(page1.getByText(/Text field/)).toBeVisible({ timeout: 10_000 })
+  // A field preview appears; rename it to a meaningful field name.
+  await expect(page1.getByText(/^▭ Text_/)).toBeVisible({ timeout: 10_000 })
+  await window.mouse.dblclick(box.x + 185, box.y + 144)
+  const nameInput = window.getByLabel('Field name')
+  await nameInput.fill('email')
+  await nameInput.press('Enter')
+  await expect(page1.getByText('▭ email')).toBeVisible()
 
-  // Save and verify the saved PDF's AcroForm has a text field.
+  // Save and verify the saved PDF's AcroForm has the named text field.
   const outPath = join(mkdtempSync(join(tmpdir(), 'verso-field-')), 'out.pdf')
   await app.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath })
@@ -50,5 +55,7 @@ test('author a text field by dragging and write it into the PDF on save', async 
 
   const doc = await PDFDocument.load(readFileSync(outPath))
   const fields = doc.getForm().getFields()
-  expect(fields.some((field) => field instanceof PDFTextField)).toBe(true)
+  expect(fields.some((field) => field instanceof PDFTextField && field.getName() === 'email')).toBe(
+    true
+  )
 })

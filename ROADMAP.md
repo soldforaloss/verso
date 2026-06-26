@@ -93,8 +93,9 @@ next begins.
 - **Fill, reset**, and **save** via pdf-lib. A pristine document saves with the
   form **still editable** (values intact); a restructured document flattens the
   filled form. See [ADR-0007](./docs/decisions/0007-forms.md).
-- **Create fields**: drag to author **text fields** and **checkboxes**, written
-  into the PDF's AcroForm on save (editable on the pristine path). Undoable.
+- **Create fields**: drag to author **text fields** and **checkboxes**,
+  double-click to give them meaningful names, written into the PDF's AcroForm on
+  save (editable on the pristine path). Undoable.
 
 ### ✅ M6 — In-place text & image editing
 
