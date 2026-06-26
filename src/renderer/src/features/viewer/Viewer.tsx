@@ -77,8 +77,7 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     })
   }, [pages, viewRotation, sourceRevision])
 
-  const ratiosRef = useRef<Map<number, number>>(new Map())
-  const rafRef = useRef<number | null>(null)
+  const currentPageRaf = useRef<number | null>(null)
 
   useEffect(() => {
     const element = scrollRef.current
@@ -136,25 +135,59 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
     return () => element.removeEventListener('wheel', onWheel)
   }, [zoomIn, zoomOut])
 
-  const handleVisibility = useCallback(
-    (pageNumber: number, ratio: number) => {
-      ratiosRef.current.set(pageNumber, ratio)
-      if (rafRef.current !== null) return
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        let best = -1
-        let bestPage = 1
-        for (const [page, value] of ratiosRef.current) {
-          if (value > best) {
-            best = value
-            bestPage = page
-          }
-        }
-        if (best > 0) setCurrentPage(bestPage)
-      })
-    },
-    [setCurrentPage]
-  )
+  // Current page = the page covering a reference line a third of the way down
+  // the viewport. Computed from real geometry (not the virtualization observer's
+  // inflated ratio), so it is deterministic and never drifts off page 1 on open.
+  const updateCurrentPage = useCallback(() => {
+    const root = scrollRef.current
+    if (!root || pages.length === 0) return
+    const rootRect = root.getBoundingClientRect()
+    const referenceY = rootRect.top + rootRect.height * 0.33
+    let coveringPage = 0
+    let nearestPage = 1
+    let nearestDistance = Infinity
+    for (const element of root.querySelectorAll<HTMLElement>('[data-page-number]')) {
+      const page = Number(element.dataset.pageNumber)
+      if (!Number.isFinite(page)) continue
+      const rect = element.getBoundingClientRect()
+      if (rect.top <= referenceY && rect.bottom >= referenceY) {
+        coveringPage = page
+        break
+      }
+      const distance = referenceY < rect.top ? rect.top - referenceY : referenceY - rect.bottom
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearestPage = page
+      }
+    }
+    setCurrentPage(coveringPage || nearestPage)
+  }, [pages.length, setCurrentPage])
+
+  const scheduleCurrentPage = useCallback(() => {
+    if (currentPageRaf.current !== null) return
+    currentPageRaf.current = requestAnimationFrame(() => {
+      currentPageRaf.current = null
+      updateCurrentPage()
+    })
+  }, [updateCurrentPage])
+
+  // Track the current page on scroll, and recompute once the layout, zoom, or
+  // page measurements settle (which covers the initial open). Single-page layout
+  // renders one page at a time, so its current page is driven by navigation.
+  useEffect(() => {
+    if (layout === 'single') return
+    const element = scrollRef.current
+    if (!element) return
+    element.addEventListener('scroll', scheduleCurrentPage, { passive: true })
+    scheduleCurrentPage()
+    return () => {
+      element.removeEventListener('scroll', scheduleCurrentPage)
+      if (currentPageRaf.current !== null) {
+        cancelAnimationFrame(currentPageRaf.current)
+        currentPageRaf.current = null
+      }
+    }
+  }, [layout, scale, sizes, estimatedSize, pages.length, scheduleCurrentPage])
 
   const handleMeasured = useCallback(
     (pageNumber: number, size: PageSize) => {
@@ -205,7 +238,6 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
         scale={scale}
         scrollRoot={scrollRoot}
         estimatedSize={estimate}
-        onVisibility={handleVisibility}
         onMeasured={handleMeasured}
         highlightItems={matchItemsByPage.get(pageNumber)}
         activeHighlightItems={

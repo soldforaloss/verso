@@ -27,7 +27,6 @@ interface PageViewProps {
   scrollRoot: HTMLElement | null
   /** Natural (intrinsic-rotation, scale 1) size used to reserve layout space. */
   estimatedSize: PageSize
-  onVisibility: (pageNumber: number, ratio: number) => void
   onMeasured: (pageNumber: number, size: PageSize) => void
   highlightItems?: number[][] | undefined
   activeHighlightItems?: number[] | undefined
@@ -68,7 +67,6 @@ function PageViewImpl({
   scale,
   scrollRoot,
   estimatedSize,
-  onVisibility,
   onMeasured,
   highlightItems,
   activeHighlightItems,
@@ -96,18 +94,18 @@ function PageViewImpl({
   useEffect(() => {
     const element = wrapperRef.current
     if (!element || !scrollRoot) return
+    // This observer only drives virtualization (whether to render the page's
+    // canvas/text); current-page tracking is computed from real viewport
+    // geometry in the Viewer so the inflated rootMargin can't skew it.
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          setVisible(entry.isIntersecting)
-          onVisibility(pageNumber, entry.isIntersecting ? entry.intersectionRatio : 0)
-        }
+        for (const entry of entries) setVisible(entry.isIntersecting)
       },
-      { root: scrollRoot, rootMargin: '1200px 0px', threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] }
+      { root: scrollRoot, rootMargin: '1200px 0px', threshold: 0 }
     )
     observer.observe(element)
     return () => observer.disconnect()
-  }, [scrollRoot, pageNumber, onVisibility])
+  }, [scrollRoot, pageNumber])
 
   useEffect(() => {
     if (descriptor.kind === 'blank') {
