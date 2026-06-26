@@ -63,7 +63,10 @@ next begins.
   zoom, rotation, and page reordering ([ADR-0006](./docs/decisions/0006-annotation-model.md)).
 - Tools: **ink** (color/width) + **eraser**, **rectangle/ellipse**, **line/arrow**,
   **text box**, **sticky note** (+ a Comments panel), and text **highlight /
-  underline / strikethrough / squiggly** over selected text.
+  underline / strikethrough / squiggly** over selected text. Each tool has a
+  **single-key shortcut** (V/H/U/S/P/R/O/L/A/T/N/E).
+- Style controls: preset swatches **plus a full custom color picker**, stroke
+  width, and an **opacity** slider (per tool and per selected annotation).
 - Select, move, resize (handles), recolor/restyle, and delete — all **undoable**
   through the M3 history engine.
 - On save, annotations are **flattened into the PDF** via pdf-lib, so they

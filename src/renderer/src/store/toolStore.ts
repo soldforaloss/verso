@@ -52,6 +52,7 @@ interface ToolState {
   tool: Tool
   color: string
   strokeWidth: number
+  opacity: number
   fontSize: number
   /** Default text face/spacing for new text boxes (and tool-bar editing). */
   fontFamily: TextFontFamily
@@ -64,6 +65,7 @@ interface ToolState {
   setTool: (tool: Tool) => void
   setColor: (color: string) => void
   setStrokeWidth: (strokeWidth: number) => void
+  setOpacity: (opacity: number) => void
   setFontSize: (fontSize: number) => void
   setFontFamily: (fontFamily: TextFontFamily) => void
   setBold: (bold: boolean) => void
@@ -77,6 +79,7 @@ export const useToolStore = create<ToolState>((set) => ({
   tool: 'select',
   color: ANNOTATION_COLORS[0],
   strokeWidth: 2,
+  opacity: 1,
   fontSize: 14,
   fontFamily: 'sans-serif',
   bold: false,
@@ -88,6 +91,7 @@ export const useToolStore = create<ToolState>((set) => ({
   setTool: (tool) => set({ tool, selectedId: null, selectedPageKey: null }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
+  setOpacity: (opacity) => set({ opacity }),
   setFontSize: (fontSize) => set({ fontSize }),
   setFontFamily: (fontFamily) => set({ fontFamily }),
   setBold: (bold) => set({ bold }),

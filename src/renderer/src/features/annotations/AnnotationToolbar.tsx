@@ -71,6 +71,8 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   const setColor = useToolStore((s) => s.setColor)
   const strokeWidth = useToolStore((s) => s.strokeWidth)
   const setStrokeWidth = useToolStore((s) => s.setStrokeWidth)
+  const opacity = useToolStore((s) => s.opacity)
+  const setOpacity = useToolStore((s) => s.setOpacity)
   const fontFamily = useToolStore((s) => s.fontFamily)
   const setFontFamily = useToolStore((s) => s.setFontFamily)
   const bold = useToolStore((s) => s.bold)
@@ -101,6 +103,11 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   const curSize = selectedText?.fontSize ?? fontSize
   const curSpacing = selectedText?.letterSpacing ?? letterSpacing
 
+  // Reflect the selected annotation's style if one is selected, else the tool
+  // defaults used for the next annotation.
+  const activeColor = selected?.color ?? color
+  const activeOpacity = selected?.opacity ?? opacity
+
   const applyColor = (next: string): void => {
     setColor(next)
     if (selected) updateAnnotation(tab.id, { ...selected, color: next }, 'Recolor annotation')
@@ -110,6 +117,10 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
     if (selected && 'strokeWidth' in selected) {
       updateAnnotation(tab.id, { ...selected, strokeWidth: next }, 'Restyle annotation')
     }
+  }
+  const applyOpacity = (next: number): void => {
+    setOpacity(next)
+    if (selected) updateAnnotation(tab.id, { ...selected, opacity: next }, 'Adjust opacity')
   }
   const applyTextChange = (patch: Partial<Extract<Annotation, { type: 'text' }>>): void => {
     if (selectedText) updateAnnotation(tab.id, { ...selectedText, ...patch }, 'Restyle text')
@@ -216,13 +227,27 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
             onClick={() => applyColor(swatch)}
             className={cn(
               'size-5 rounded-full border',
-              color === swatch
+              activeColor.toLowerCase() === swatch
                 ? 'ring-2 ring-ring ring-offset-1 ring-offset-background'
                 : 'border-black/20'
             )}
             style={{ background: swatch }}
           />
         ))}
+        {/* Custom color: any hex the presets don't cover. */}
+        <label
+          title="Custom color"
+          className="relative size-5 cursor-pointer overflow-hidden rounded-full border border-black/20"
+          style={{ background: activeColor }}
+        >
+          <input
+            type="color"
+            aria-label="Custom color"
+            value={/^#[0-9a-fA-F]{6}$/.test(activeColor) ? activeColor : '#000000'}
+            onChange={(event) => applyColor(event.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
       </div>
 
       <div className="mx-1 h-5 w-px bg-border" />
@@ -243,6 +268,23 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
           </button>
         ))}
       </div>
+
+      <div className="mx-1 h-5 w-px bg-border" />
+
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Opacity">
+        <span aria-hidden>◑</span>
+        <input
+          type="range"
+          aria-label="Opacity"
+          min={0.1}
+          max={1}
+          step={0.05}
+          value={activeOpacity}
+          onChange={(event) => applyOpacity(Number.parseFloat(event.target.value))}
+          className="h-1 w-20 cursor-pointer accent-primary"
+        />
+        <span className="w-8 tabular-nums">{Math.round(activeOpacity * 100)}%</span>
+      </label>
 
       {showText && (
         <>

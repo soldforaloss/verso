@@ -81,6 +81,7 @@ export function AnnotationLayer({
   const tool = useToolStore((s) => s.tool)
   const color = useToolStore((s) => s.color)
   const strokeWidth = useToolStore((s) => s.strokeWidth)
+  const opacity = useToolStore((s) => s.opacity)
   const fontSize = useToolStore((s) => s.fontSize)
   const fontFamily = useToolStore((s) => s.fontFamily)
   const bold = useToolStore((s) => s.bold)
@@ -328,7 +329,7 @@ export function AnnotationLayer({
         pageKey,
         type: 'ink',
         color,
-        opacity: 1,
+        opacity,
         strokeWidth,
         strokes: [[p]]
       })
@@ -338,7 +339,7 @@ export function AnnotationLayer({
         pageKey,
         type: tool,
         color,
-        opacity: 1,
+        opacity,
         strokeWidth,
         filled: false,
         rect: { x: p.x, y: p.y, width: 0, height: 0 }
@@ -358,7 +359,7 @@ export function AnnotationLayer({
         pageKey,
         type: 'line',
         color,
-        opacity: 1,
+        opacity,
         strokeWidth,
         arrow: tool === 'arrow',
         a: p,
@@ -370,7 +371,7 @@ export function AnnotationLayer({
         pageKey,
         type: 'text',
         color,
-        opacity: 1,
+        opacity,
         fontSize,
         fontFamily,
         bold,
