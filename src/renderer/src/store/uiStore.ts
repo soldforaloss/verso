@@ -6,10 +6,17 @@ interface UiState {
   shortcutsOpen: boolean
   setShortcutsOpen: (open: boolean) => void
   openShortcuts: () => void
+  /** Whether the command palette is open. */
+  commandPaletteOpen: boolean
+  setCommandPaletteOpen: (open: boolean) => void
+  toggleCommandPalette: () => void
 }
 
-export const useUiStore = create<UiState>((set) => ({
+export const useUiStore = create<UiState>((set, get) => ({
   shortcutsOpen: false,
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
-  openShortcuts: () => set({ shortcutsOpen: true })
+  openShortcuts: () => set({ shortcutsOpen: true }),
+  commandPaletteOpen: false,
+  setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
+  toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen })
 }))

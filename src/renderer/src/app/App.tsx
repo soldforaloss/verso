@@ -17,6 +17,7 @@ import { Viewer } from '@/features/viewer/Viewer'
 import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
 import { ShortcutsDialog } from '@/features/help/ShortcutsDialog'
+import { CommandPalette } from '@/features/command/CommandPalette'
 import { TabBar } from './TabBar'
 import { EmptyState } from './EmptyState'
 
@@ -58,6 +59,17 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
+      // While the command palette is open it (and its dialog) owns the keyboard;
+      // only the Ctrl/Cmd+K toggle is handled here so document shortcuts don't
+      // fire behind it.
+      if (useUiStore.getState().commandPaletteOpen) {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault()
+          useUiStore.getState().toggleCommandPalette()
+        }
+        return
+      }
+
       const target = event.target as HTMLElement | null
       const typing =
         !!target &&
@@ -92,7 +104,10 @@ function App(): React.JSX.Element {
       const docs = useDocumentStore.getState()
       const tab = activeId ? docs.getTab(activeId) : undefined
 
-      if (key === 'o') {
+      if (key === 'k') {
+        event.preventDefault()
+        useUiStore.getState().toggleCommandPalette()
+      } else if (key === 'o') {
         event.preventDefault()
         void openViaDialog()
       } else if (key === 'w' && tab) {
@@ -147,6 +162,7 @@ function App(): React.JSX.Element {
       <TabBar />
       {active ? <ActiveDocument key={active.id} /> : <EmptyState />}
       <ShortcutsDialog />
+      <CommandPalette />
     </div>
   )
 }

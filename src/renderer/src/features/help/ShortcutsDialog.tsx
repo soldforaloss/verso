@@ -52,7 +52,10 @@ const GROUPS: Group[] = [
   },
   {
     title: 'Help',
-    shortcuts: [{ keys: ['?'], label: 'Show this cheat-sheet' }]
+    shortcuts: [
+      { keys: [MOD, 'K'], label: 'Command palette' },
+      { keys: ['?'], label: 'Show this cheat-sheet' }
+    ]
   }
 ]
 

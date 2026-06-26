@@ -131,6 +131,8 @@ next begins.
 
 ### ✅ M9 — Polish, packaging & release
 
+- **Command palette** (Ctrl/⌘-K): a searchable list of every action — open,
+  save, zoom, rotate, layout/theme/reading modes, find, OCR, and more.
 - **Keyboard shortcuts cheat-sheet** (press `?` or the toolbar button) and a
   top-level **error boundary** with a calm, recoverable fallback.
 - A code-generated **app icon** (no image-library dependency) wired into the
