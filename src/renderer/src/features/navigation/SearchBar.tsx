@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import { CaseSensitive, ChevronDown, ChevronUp, WholeWord, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { useSearchStore } from '@/store/searchStore'
 import type { DocumentTab } from '@/store/documentStore'
 
@@ -18,6 +19,10 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const status = useSearchStore((s) => s.status)
   const scannedPages = useSearchStore((s) => s.scannedPages)
   const totalPages = useSearchStore((s) => s.totalPages)
+  const caseSensitive = useSearchStore((s) => s.caseSensitive)
+  const wholeWord = useSearchStore((s) => s.wholeWord)
+  const toggleCaseSensitive = useSearchStore((s) => s.toggleCaseSensitive)
+  const toggleWholeWord = useSearchStore((s) => s.toggleWholeWord)
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -26,11 +31,12 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
     inputRef.current?.select()
   }, [])
 
-  // Search as the user types (debounced). Re-runs if the page model changes.
+  // Search as the user types (debounced). Re-runs if the page model or the
+  // case-sensitive / whole-word options change.
   useEffect(() => {
     const id = setTimeout(() => void run(tab), 300)
     return () => clearTimeout(id)
-  }, [query, tab, run])
+  }, [query, tab, run, caseSensitive, wholeWord])
 
   const count = matches.length
   const label =
@@ -68,6 +74,28 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
       >
         {label}
       </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Match case"
+        aria-label="Match case"
+        aria-pressed={caseSensitive}
+        className={cn(caseSensitive && 'bg-accent text-accent-foreground')}
+        onClick={toggleCaseSensitive}
+      >
+        <CaseSensitive />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Whole word"
+        aria-label="Whole word"
+        aria-pressed={wholeWord}
+        className={cn(wholeWord && 'bg-accent text-accent-foreground')}
+        onClick={toggleWholeWord}
+      >
+        <WholeWord />
+      </Button>
       <Button
         variant="ghost"
         size="icon"

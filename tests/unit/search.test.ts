@@ -64,4 +64,32 @@ describe('searchDocument', () => {
       0
     )
   })
+
+  it('matches case exactly when caseSensitive is set', async () => {
+    const { pages, resolve } = build([['Hello WORLD world']])
+    const insensitive = await searchDocument(pages, resolve, 'world')
+    expect(insensitive).toHaveLength(2)
+    const sensitive = await searchDocument(pages, resolve, 'world', undefined, undefined, {
+      caseSensitive: true
+    })
+    expect(sensitive).toHaveLength(1)
+  })
+
+  it('matches only whole words when wholeWord is set', async () => {
+    const { pages, resolve } = build([['cat scatter cat-nap concatenate']])
+    const substring = await searchDocument(pages, resolve, 'cat')
+    expect(substring).toHaveLength(4) // cat, sCATter, cat-nap, conCATenate
+    const wholeWord = await searchDocument(pages, resolve, 'cat', undefined, undefined, {
+      wholeWord: true
+    })
+    expect(wholeWord).toHaveLength(2) // "cat" and "cat"(-nap); the others are inside words
+  })
+
+  it('treats accented letters as word characters for whole-word matching', async () => {
+    const { pages, resolve } = build([['café cafés']])
+    const matches = await searchDocument(pages, resolve, 'café', undefined, undefined, {
+      wholeWord: true
+    })
+    expect(matches).toHaveLength(1) // "café" matches; "cafés" is a longer word
+  })
 })

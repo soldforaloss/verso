@@ -38,8 +38,9 @@ next begins.
 - **Outline / bookmarks** panel built from the document outline, with
   collapsible nodes that navigate to their destination page.
 - **Full-text search** across the whole document: live result count, next/prev,
-  and on-page **highlighting** (matches mapped to text-item rectangles), with the
-  active match emphasized and scrolled into view.
+  optional **match-case** and **whole-word** (Unicode-aware) filters, and on-page
+  **highlighting** (matches mapped to text-item rectangles), with the active
+  match emphasized and scrolled into view.
 
 ### ✅ M3 — Page management + undo/redo engine
 

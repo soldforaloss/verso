@@ -15,6 +15,8 @@ interface SearchState {
   status: SearchStatus
   scannedPages: number
   totalPages: number
+  caseSensitive: boolean
+  wholeWord: boolean
 
   open: () => void
   close: () => void
@@ -22,6 +24,8 @@ interface SearchState {
   run: (tab: DocumentTab) => Promise<void>
   next: () => void
   prev: () => void
+  toggleCaseSensitive: () => void
+  toggleWholeWord: () => void
   reset: () => void
 }
 
@@ -47,6 +51,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   status: 'idle',
   scannedPages: 0,
   totalPages: 0,
+  caseSensitive: false,
+  wholeWord: false,
 
   open: () => set({ isOpen: true }),
   close: () => {
@@ -75,7 +81,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       (scannedPages, total) => {
         if (!signal.cancelled) set({ scannedPages, totalPages: total })
       },
-      signal
+      signal,
+      { caseSensitive: get().caseSensitive, wholeWord: get().wholeWord }
     )
     if (signal.cancelled) return
 
@@ -97,6 +104,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     set({ activeIndex: index })
     scrollToMatch(matches, index)
   },
+
+  toggleCaseSensitive: () => set((state) => ({ caseSensitive: !state.caseSensitive })),
+  toggleWholeWord: () => set((state) => ({ wholeWord: !state.wholeWord })),
 
   reset: () => {
     if (activeSignal) activeSignal.cancelled = true
