@@ -162,7 +162,9 @@ export function FieldCreateLayer({
         const choice = fieldHasOptions(field.type)
         const isCheckbox = field.type === 'checkbox'
         const beginEdit = (): void => {
-          if (!isFieldTool) return
+          // Ignore a double-click bubbling up from inside the open editor (e.g.
+          // double-click-to-select in an input) so it can't reset the drafts.
+          if (!isFieldTool || editing) return
           cancelEdit.current = false
           setDraftName(field.name)
           setDraftOptions((field.options ?? []).join(', '))

@@ -7,6 +7,7 @@ import { fitPageScale, fitWidthScale, PAGE_GAP, PAGE_MARGIN, type PageSize } fro
 import { addRotation } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import type { NewFormField } from '@/lib/formFields'
+import type { PageLink } from '@/lib/links'
 import type { ReadingMode } from '@shared/ipc'
 import { PageView, type RenderDescriptor } from './PageView'
 import './textLayer.css'
@@ -15,6 +16,7 @@ const DEFAULT_PAGE_SIZE: PageSize = { width: 612, height: 792 } // US Letter
 // Stable empty arrays so pages without annotations/fields keep PageView memoized.
 const NO_ANNOTATIONS: Annotation[] = []
 const NO_FIELDS: NewFormField[] = []
+const NO_LINKS: PageLink[] = []
 
 const READING_FILTER: Record<ReadingMode, string> = {
   normal: 'none',
@@ -250,6 +252,7 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
         pageKey={ref.key}
         annotations={tab.annotations[ref.key] ?? NO_ANNOTATIONS}
         formFields={tab.formFields[ref.key] ?? NO_FIELDS}
+        links={tab.links[ref.key] ?? NO_LINKS}
       />
     )
   }

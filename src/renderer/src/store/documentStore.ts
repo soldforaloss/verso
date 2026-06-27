@@ -4,6 +4,7 @@ import { pageKey, type PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import type { OutlineItem } from '@/lib/outline'
 import type { NewFormField } from '@/lib/formFields'
+import type { PageLink } from '@/lib/links'
 import type { DocumentMetadata } from '@/lib/metadata'
 import { useHistoryStore } from './historyStore'
 import type { OpenedDocument } from '@shared/ipc'
@@ -27,6 +28,8 @@ export interface DocumentTab {
   annotations: Record<string, Annotation[]>
   /** User-authored form fields keyed by the logical page's stable key. */
   formFields: Record<string, NewFormField[]>
+  /** User-authored hyperlinks keyed by the logical page's stable key. */
+  links: Record<string, PageLink[]>
   /** Bumped when a source's bytes are replaced (e.g. OCR), to force re-render. */
   sourceRevision: number
   /** User-edited Info-dictionary metadata, applied on save (null = unchanged). */
@@ -77,6 +80,7 @@ interface DocumentState {
   setPageAnnotations: (id: string, pageKey: string, annotations: Annotation[]) => void
   /** Replaces one page's authored form fields and marks the tab dirty. */
   setPageFormFields: (id: string, pageKey: string, fields: NewFormField[]) => void
+  setPageLinks: (id: string, pageKey: string, links: PageLink[]) => void
   /** Records a successful save: clears dirty and updates path/name. */
   markSaved: (id: string, path: string, name: string) => void
   /** Marks a tab dirty (e.g. when a form field changes). */
@@ -125,6 +129,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       sourceIds: [source.id],
       annotations: {},
       formFields: {},
+      links: {},
       sourceRevision: 0,
       metadata: null,
       outline: null
@@ -194,6 +199,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         tab.id === id
           ? { ...tab, formFields: { ...tab.formFields, [pageKey]: fields }, dirty: true }
           : tab
+      )
+    })),
+
+  setPageLinks: (id, pageKey, links) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === id ? { ...tab, links: { ...tab.links, [pageKey]: links }, dirty: true } : tab
       )
     })),
 
@@ -269,6 +281,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 sourceIds: [id],
                 annotations: {},
                 formFields: {},
+                links: {},
                 outline: null,
                 dirty: true,
                 sourceRevision: t.sourceRevision + 1

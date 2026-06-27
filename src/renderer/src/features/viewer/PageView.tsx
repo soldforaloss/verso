@@ -13,9 +13,11 @@ import { cn } from '@/lib/utils'
 import type { Annotation } from '@/lib/annotations'
 import type { CropBox } from '@/lib/pageModel'
 import type { NewFormField } from '@/lib/formFields'
+import type { PageLink } from '@/lib/links'
 import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
 import { FormLayer } from '@/features/forms/FormLayer'
 import { FieldCreateLayer } from '@/features/forms/FieldCreateLayer'
+import { LinkCreateLayer } from '@/features/annotations/LinkCreateLayer'
 import { CropOverlay } from './CropOverlay'
 
 /** Normalized render instruction for one logical page (built by the Viewer). */
@@ -46,6 +48,7 @@ interface PageViewProps {
   pageKey: string
   annotations: Annotation[]
   formFields: NewFormField[]
+  links: PageLink[]
 }
 
 interface HighlightRect {
@@ -85,7 +88,8 @@ function PageViewImpl({
   docId,
   pageKey,
   annotations,
-  formFields
+  formFields,
+  links
 }: PageViewProps): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -270,6 +274,7 @@ function PageViewImpl({
             pageKey={pageKey}
             fields={formFields}
           />
+          <LinkCreateLayer viewport={pageViewport} docId={docId} pageKey={pageKey} links={links} />
         </>
       )}
       {descriptor.kind === 'blank' && (

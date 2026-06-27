@@ -10,6 +10,7 @@ import {
   Highlighter,
   Image as ImageIcon,
   Italic,
+  Link,
   ListChecks,
   Minus,
   MousePointer2,
@@ -69,6 +70,7 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
     { tool: 'field-optionlist', label: 'Add list field (form)', Icon: ListChecks },
     { tool: 'field-radio', label: 'Add radio group field (form)', Icon: CircleDot }
   ],
+  [{ tool: 'link', label: 'Add link (clickable hyperlink)', Icon: Link }],
   [
     { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
     { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }

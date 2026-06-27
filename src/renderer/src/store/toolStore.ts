@@ -17,6 +17,7 @@ export type Tool =
   | 'squiggly'
   | 'edittext'
   | 'redaction'
+  | 'link'
   | 'field-text'
   | 'field-checkbox'
   | 'field-dropdown'
