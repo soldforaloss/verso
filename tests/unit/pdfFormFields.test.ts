@@ -120,4 +120,49 @@ describe('addNewFormFields field properties', () => {
     ])
     expect(reloaded.getForm().getTextField('t').getText()).toBe('OK  done')
   })
+
+  it('applies read-only, multiline, and max-length to a text field', async () => {
+    const reloaded = await buildWith([
+      {
+        id: '1',
+        type: 'text',
+        name: 'notes',
+        rect: RECT,
+        readOnly: true,
+        multiline: true,
+        maxLength: 25
+      }
+    ])
+    const text = reloaded.getForm().getTextField('notes')
+    expect(text.isReadOnly()).toBe(true)
+    expect(text.isMultiline()).toBe(true)
+    expect(text.getMaxLength()).toBe(25)
+  })
+
+  it('applies read-only to non-text field types', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'checkbox', name: 'cb', rect: RECT, readOnly: true },
+      { id: '2', type: 'dropdown', name: 'dd', rect: RECT, options: ['A'], readOnly: true }
+    ])
+    expect(reloaded.getForm().getCheckBox('cb').isReadOnly()).toBe(true)
+    expect(reloaded.getForm().getDropdown('dd').isReadOnly()).toBe(true)
+  })
+
+  it('ignores a max-length below 1', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'text', name: 't', rect: RECT, maxLength: 0 }
+    ])
+    expect(reloaded.getForm().getTextField('t').getMaxLength()).toBeUndefined()
+  })
+
+  it('truncates a default longer than max-length instead of aborting the save', async () => {
+    // pdf-lib throws if a text value exceeds maxLength — the default must be
+    // clamped to the cap rather than failing (or skipping) the whole field.
+    const reloaded = await buildWith([
+      { id: '1', type: 'text', name: 't', rect: RECT, maxLength: 5, defaultValue: 'hello world' }
+    ])
+    const field = reloaded.getForm().getTextField('t')
+    expect(field.getMaxLength()).toBe(5)
+    expect(field.getText()).toBe('hello')
+  })
 })

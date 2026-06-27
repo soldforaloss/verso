@@ -35,6 +35,7 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
         const checkbox = form.createCheckBox(name)
         if (field.defaultChecked) checkbox.check()
         if (field.required) checkbox.enableRequired()
+        if (field.readOnly) checkbox.enableReadOnly()
         checkbox.addToPage(page, options)
       } else if (field.type === 'dropdown') {
         const dropdown = form.createDropdown(name)
@@ -44,6 +45,7 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
           dropdown.select(field.defaultValue)
         }
         if (field.required) dropdown.enableRequired()
+        if (field.readOnly) dropdown.enableReadOnly()
         dropdown.addToPage(page, options)
       } else if (field.type === 'optionlist') {
         const list = form.createOptionList(name)
@@ -52,6 +54,7 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
           list.select([field.defaultValue])
         }
         if (field.required) list.enableRequired()
+        if (field.readOnly) list.enableReadOnly()
         list.addToPage(page, options)
       } else if (field.type === 'radio') {
         const group = form.createRadioGroup(name)
@@ -74,11 +77,21 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
           group.select(field.defaultValue)
         }
         if (field.required) group.enableRequired()
+        if (field.readOnly) group.enableReadOnly()
       } else {
         const textField = form.createTextField(name)
-        // The default text is rendered with Helvetica → strip un-encodable chars.
-        if (field.defaultValue) textField.setText(toWinAnsi(field.defaultValue))
+        // Set the cap BEFORE the value, then truncate the (WinAnsi-stripped)
+        // default to fit — pdf-lib throws if the value exceeds the max length.
+        const maxLen =
+          field.maxLength != null && field.maxLength >= 1 ? Math.floor(field.maxLength) : 0
+        if (maxLen) textField.setMaxLength(maxLen)
+        if (field.defaultValue) {
+          const text = toWinAnsi(field.defaultValue)
+          textField.setText(maxLen ? text.slice(0, maxLen) : text)
+        }
+        if (field.multiline) textField.enableMultiline()
         if (field.required) textField.enableRequired()
+        if (field.readOnly) textField.enableReadOnly()
         textField.addToPage(page, options)
       }
     }

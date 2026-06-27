@@ -74,6 +74,9 @@ export function FieldCreateLayer({
   const [draftName, setDraftName] = useState('')
   const [draftOptions, setDraftOptions] = useState('')
   const [draftRequired, setDraftRequired] = useState(false)
+  const [draftReadOnly, setDraftReadOnly] = useState(false)
+  const [draftMultiline, setDraftMultiline] = useState(false)
+  const [draftMaxLength, setDraftMaxLength] = useState('')
   const [draftDefault, setDraftDefault] = useState('')
   const [draftChecked, setDraftChecked] = useState(false)
   // Set when Escape cancels an edit so the resulting blur doesn't commit it.
@@ -161,6 +164,7 @@ export function FieldCreateLayer({
         const editing = editingId === field.id
         const choice = fieldHasOptions(field.type)
         const isCheckbox = field.type === 'checkbox'
+        const isText = field.type === 'text'
         const beginEdit = (): void => {
           // Ignore a double-click bubbling up from inside the open editor (e.g.
           // double-click-to-select in an input) so it can't reset the drafts.
@@ -169,6 +173,9 @@ export function FieldCreateLayer({
           setDraftName(field.name)
           setDraftOptions((field.options ?? []).join(', '))
           setDraftRequired(field.required ?? false)
+          setDraftReadOnly(field.readOnly ?? false)
+          setDraftMultiline(field.multiline ?? false)
+          setDraftMaxLength(field.maxLength != null ? String(field.maxLength) : '')
           setDraftDefault(field.defaultValue ?? '')
           setDraftChecked(field.defaultChecked ?? false)
           setEditingId(field.id)
@@ -191,6 +198,13 @@ export function FieldCreateLayer({
             if (next.length && changed) patch.options = next
           }
           if (draftRequired !== (field.required ?? false)) patch.required = draftRequired
+          if (draftReadOnly !== (field.readOnly ?? false)) patch.readOnly = draftReadOnly
+          if (isText) {
+            if (draftMultiline !== (field.multiline ?? false)) patch.multiline = draftMultiline
+            const parsed = parseInt(draftMaxLength, 10)
+            const nextMax = Number.isInteger(parsed) && parsed >= 1 ? parsed : 0
+            if (nextMax !== (field.maxLength ?? 0)) patch.maxLength = nextMax
+          }
           if (isCheckbox) {
             if (draftChecked !== (field.defaultChecked ?? false))
               patch.defaultChecked = draftChecked
@@ -275,15 +289,49 @@ export function FieldCreateLayer({
                     className="border border-sky-600 px-1 text-[11px] leading-tight outline-none"
                   />
                 )}
-                <label className="flex items-center gap-1 rounded-b-sm bg-white px-1 text-[11px] leading-tight text-sky-900">
-                  <input
-                    type="checkbox"
-                    aria-label="Required"
-                    checked={draftRequired}
-                    onChange={(event) => setDraftRequired(event.target.checked)}
-                  />
-                  Required
-                </label>
+                {/* Text fields can be multi-line and length-capped. */}
+                {isText && (
+                  <div className="flex items-center gap-1 bg-white px-1 text-[11px] leading-tight text-sky-900">
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        aria-label="Multiline"
+                        checked={draftMultiline}
+                        onChange={(event) => setDraftMultiline(event.target.checked)}
+                      />
+                      Multiline
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label="Maximum length"
+                      placeholder="Max len"
+                      value={draftMaxLength}
+                      onChange={(event) => setDraftMaxLength(event.target.value)}
+                      className="ml-auto w-16 rounded-sm border border-sky-600 px-1 outline-none"
+                    />
+                  </div>
+                )}
+                <div className="flex rounded-b-sm bg-white text-[11px] leading-tight text-sky-900">
+                  <label className="flex flex-1 items-center gap-1 px-1">
+                    <input
+                      type="checkbox"
+                      aria-label="Required"
+                      checked={draftRequired}
+                      onChange={(event) => setDraftRequired(event.target.checked)}
+                    />
+                    Required
+                  </label>
+                  <label className="flex flex-1 items-center gap-1 px-1">
+                    <input
+                      type="checkbox"
+                      aria-label="Read-only"
+                      checked={draftReadOnly}
+                      onChange={(event) => setDraftReadOnly(event.target.checked)}
+                    />
+                    Read-only
+                  </label>
+                </div>
               </div>
             ) : (
               <span

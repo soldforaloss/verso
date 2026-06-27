@@ -24,6 +24,12 @@ export interface NewFormField {
   options?: string[]
   /** Marks the field required (AcroForm Ff "Required" flag). */
   required?: boolean
+  /** Marks the field read-only (filled but not user-editable). */
+  readOnly?: boolean
+  /** Allows multi-line input (`text` fields only). */
+  multiline?: boolean
+  /** Maximum character count (`text` fields only; ignored when unset or < 1). */
+  maxLength?: number
   /**
    * Default value. For `text` the default text; for `dropdown` / `optionlist` /
    * `radio` the initially-selected option/export value (ignored unless it

@@ -243,3 +243,51 @@ test('Escape from the Required checkbox discards the edit (no commit)', async ()
   await expect(page1.getByText(/^▭ Text_/)).toBeVisible()
   await expect(page1.getByText(/\*$/)).toHaveCount(0)
 })
+
+test('set multiline, max-length, and read-only on a text field', async () => {
+  app = await launchVerso([FIXTURE_PDF])
+  const window = await app.firstWindow()
+  const page1 = window.locator('[data-page-number="1"]')
+  await expect(page1.locator('canvas')).toBeVisible({ timeout: 30_000 })
+
+  await window.getByTitle('Add text field (form)').click()
+  const box = await page1.boundingBox()
+  if (!box) throw new Error('page has no bounding box')
+  await window.mouse.move(box.x + 90, box.y + 120)
+  await window.mouse.down()
+  await window.mouse.move(box.x + 280, box.y + 180, { steps: 6 })
+  await window.mouse.up()
+  await expect(page1.getByText(/^▭ Text_/)).toBeVisible({ timeout: 10_000 })
+
+  // Configure the text-field properties, then commit via the name field.
+  await window.mouse.dblclick(box.x + 185, box.y + 150)
+  await window.getByLabel('Multiline').check()
+  await window.getByLabel('Maximum length').fill('15')
+  await window.getByLabel('Read-only').check()
+  await window.getByLabel('Field name').fill('notes')
+  await window.getByLabel('Field name').press('Enter')
+  await expect(page1.getByText('▭ notes')).toBeVisible()
+
+  const outPath = join(mkdtempSync(join(tmpdir(), 'verso-textprops-')), 'out.pdf')
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath })
+  }, outPath)
+  await window.keyboard.press('Control+Shift+S')
+  await expect
+    .poll(
+      () => {
+        try {
+          return readFileSync(outPath).length
+        } catch {
+          return 0
+        }
+      },
+      { timeout: 15_000 }
+    )
+    .toBeGreaterThan(0)
+
+  const field = (await PDFDocument.load(readFileSync(outPath))).getForm().getTextField('notes')
+  expect(field.isMultiline()).toBe(true)
+  expect(field.getMaxLength()).toBe(15)
+  expect(field.isReadOnly()).toBe(true)
+})

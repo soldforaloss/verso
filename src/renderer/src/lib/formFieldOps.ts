@@ -31,7 +31,17 @@ export function removeFormField(docId: string, pageKey: string, id: string): voi
 
 /** A patch of the editable properties of an authored field. */
 export type FormFieldPatch = Partial<
-  Pick<NewFormField, 'name' | 'options' | 'required' | 'defaultValue' | 'defaultChecked'>
+  Pick<
+    NewFormField,
+    | 'name'
+    | 'options'
+    | 'required'
+    | 'readOnly'
+    | 'multiline'
+    | 'maxLength'
+    | 'defaultValue'
+    | 'defaultChecked'
+  >
 >
 
 /** Patches an authored field's editable properties as a single undo step. */
