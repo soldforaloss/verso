@@ -1,16 +1,21 @@
 import type { Rect } from '@/lib/annotations'
 
 /**
- * A clickable hyperlink authored on a page. Stored per logical page key and
- * written as a real, persistent `/Link` annotation (URI action) on save — links
- * stay clickable in the output, they are NOT flattened. `rect` is in PDF page
- * space (bottom-left origin), as produced by `screenToPage`. `url` is stored as
- * the user typed it (trimmed); it is sanitized at save time (see `sanitizeUrl`).
+ * A clickable link authored on a page, written as a real, persistent `/Link`
+ * annotation on save (NOT flattened). `rect` is in PDF page space (bottom-left
+ * origin), as produced by `screenToPage`.
+ *
+ * A link is one of two kinds:
+ *  - **external** (`page` unset): a `/URI` action to `url` (sanitized at save).
+ *  - **internal** (`page` set): a `/GoTo` action to that 1-based page in the
+ *    saved document; `url` is `''`.
  */
 export interface PageLink {
   id: string
   rect: Rect
   url: string
+  /** 1-based target page for an internal (GoTo) link; unset for a URL link. */
+  page?: number
 }
 
 export function newLinkId(): string {

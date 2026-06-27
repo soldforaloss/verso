@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { ExternalLink, X } from 'lucide-react'
+import { CornerDownRight, ExternalLink, X } from 'lucide-react'
 import type { PageViewport } from '@/lib/pdf'
 import { pageRectToScreen, screenToPage } from '@/lib/annotationGeometry'
 import { useToolStore } from '@/store/toolStore'
-import { addLink, removeLink, updateLinkUrl } from '@/lib/linkOps'
+import { addLink, removeLink, setLinkTarget } from '@/lib/linkOps'
 import { newLinkId, sanitizeUrl, type PageLink } from '@/lib/links'
 
 interface DraftRect {
@@ -13,23 +13,28 @@ interface DraftRect {
   height: number
 }
 
+type LinkKind = 'url' | 'page'
+
 /**
- * Overlay for authoring clickable hyperlinks: when the link tool is active, drag
- * a rectangle to create a link hotspot and type its URL inline. Existing links
- * render as labelled previews (invalid URLs flagged amber) and can be deleted.
- * The real `/Link` annotation is written on save. When the link tool is inactive
- * the overlay is entirely pass-through so other tools reach the layers beneath.
+ * Overlay for authoring clickable links: when the link tool is active, drag a
+ * rectangle to create a hotspot, then make it either a web URL or a jump to
+ * another page. Existing links render as labelled previews (invalid targets
+ * flagged amber) and can be deleted. The real `/Link` annotation is written on
+ * save. When the link tool is inactive the overlay is entirely pass-through so
+ * other tools reach the layers beneath.
  */
 export function LinkCreateLayer({
   viewport,
   docId,
   pageKey,
-  links
+  links,
+  pageCount
 }: {
   viewport: PageViewport
   docId: string
   pageKey: string
   links: PageLink[]
+  pageCount: number
 }): React.JSX.Element {
   const tool = useToolStore((s) => s.tool)
   const isLinkTool = tool === 'link'
@@ -37,7 +42,9 @@ export function LinkCreateLayer({
   const start = useRef<{ x: number; y: number } | null>(null)
   const [draft, setDraft] = useState<DraftRect | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [draftKind, setDraftKind] = useState<LinkKind>('url')
   const [draftUrl, setDraftUrl] = useState('')
+  const [draftPage, setDraftPage] = useState('')
   // Set when Escape cancels an edit so the resulting blur doesn't commit it.
   const cancelEdit = useRef(false)
 
@@ -94,9 +101,11 @@ export function LinkCreateLayer({
         height: Math.abs(b.y - a.y)
       }
     })
-    // Open the URL editor immediately so the user can type the address.
+    // Open the editor immediately so the user can set the target.
     cancelEdit.current = false
+    setDraftKind('url')
     setDraftUrl('')
+    setDraftPage('')
     setEditingId(id)
   }
 
@@ -118,13 +127,19 @@ export function LinkCreateLayer({
       {links.map((link) => {
         const r = pageRectToScreen(viewport, link.rect)
         const editing = editingId === link.id
-        const valid = sanitizeUrl(link.url) !== null
+        const internal = link.page != null
+        const valid = internal
+          ? link.page! >= 1 && link.page! <= pageCount
+          : sanitizeUrl(link.url) !== null
+        const label = internal ? `Page ${link.page}` : link.url || '(no URL)'
+        const empty = link.url === '' && link.page == null
         const beginEdit = (): void => {
-          // Ignore a double-click that bubbles up from inside the open editor
-          // (e.g. double-click-to-select-a-word) — it must not reset the draft.
+          // Ignore a double-click bubbling up from inside the open editor.
           if (!isLinkTool || editing) return
           cancelEdit.current = false
+          setDraftKind(internal ? 'page' : 'url')
           setDraftUrl(link.url)
+          setDraftPage(link.page != null ? String(link.page) : '')
           setEditingId(link.id)
         }
         const commitEdit = (): void => {
@@ -133,11 +148,23 @@ export function LinkCreateLayer({
             return
           }
           setEditingId(null)
-          const next = draftUrl.trim()
-          // An empty URL is not a usable link — drop it (covers an abandoned
-          // create, where the link was added before the URL was typed).
-          if (next === '') removeLink(docId, pageKey, link.id)
-          else if (next !== link.url) updateLinkUrl(docId, pageKey, link.id, next)
+          if (draftKind === 'page') {
+            const n = parseInt(draftPage, 10)
+            if (Number.isInteger(n) && n >= 1) {
+              if (link.page !== n) setLinkTarget(docId, pageKey, link.id, { page: n })
+            } else if (empty) {
+              removeLink(docId, pageKey, link.id) // abandoned, never targeted
+            }
+          } else {
+            const next = draftUrl.trim()
+            if (next !== '') {
+              if (link.url !== next || internal) {
+                setLinkTarget(docId, pageKey, link.id, { url: next })
+              }
+            } else if (link.page == null) {
+              removeLink(docId, pageKey, link.id) // abandoned URL link
+            }
+          }
         }
         return (
           <div
@@ -157,7 +184,7 @@ export function LinkCreateLayer({
           >
             {editing ? (
               <div
-                className="absolute left-0 top-0 flex w-64 -translate-y-full"
+                className="absolute left-0 top-0 flex w-64 -translate-y-full flex-col gap-px"
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null))
                     commitEdit()
@@ -166,21 +193,53 @@ export function LinkCreateLayer({
                   if (event.key === 'Escape') {
                     cancelEdit.current = true
                     setEditingId(null)
-                    // Drop a link that was created but never given a URL.
-                    if (link.url === '') removeLink(docId, pageKey, link.id)
+                    if (empty) removeLink(docId, pageKey, link.id)
                   } else if (event.key === 'Enter' && event.target instanceof HTMLElement) {
                     event.target.blur()
                   }
                 }}
               >
-                <input
-                  autoFocus
-                  aria-label="Link URL"
-                  placeholder="https://example.com"
-                  value={draftUrl}
-                  onChange={(event) => setDraftUrl(event.target.value)}
-                  className="w-full rounded-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
-                />
+                <div className="flex items-center overflow-hidden rounded-t-sm border border-sky-600">
+                  {(['url', 'page'] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-pressed={draftKind === kind}
+                      onClick={() => setDraftKind(kind)}
+                      className={
+                        'flex-1 px-1 py-0.5 text-[10px] capitalize leading-tight ' +
+                        (draftKind === kind ? 'bg-sky-500 text-white' : 'bg-white text-sky-900')
+                      }
+                    >
+                      {kind === 'url' ? 'Web' : 'Page'}
+                    </button>
+                  ))}
+                </div>
+                {draftKind === 'url' ? (
+                  <input
+                    // Distinct key so toggling remounts the input and autoFocus re-fires.
+                    key="url"
+                    autoFocus
+                    aria-label="Link URL"
+                    placeholder="https://example.com"
+                    value={draftUrl}
+                    onChange={(event) => setDraftUrl(event.target.value)}
+                    className="rounded-b-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                  />
+                ) : (
+                  <input
+                    key="page"
+                    autoFocus
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    aria-label="Target page"
+                    placeholder={`Page (1-${pageCount})`}
+                    value={draftPage}
+                    onChange={(event) => setDraftPage(event.target.value)}
+                    className="rounded-b-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                  />
+                )}
               </div>
             ) : (
               <span
@@ -188,14 +247,14 @@ export function LinkCreateLayer({
                   'pointer-events-none absolute left-0 top-0 flex max-w-full -translate-y-full items-center gap-0.5 truncate rounded-t-sm px-1 text-[10px] leading-tight text-white ' +
                   (valid ? 'bg-sky-500' : 'bg-amber-600')
                 }
-                title={
-                  isLinkTool
-                    ? `${link.url || '(no URL)'} — double-click to edit`
-                    : link.url || '(no URL)'
-                }
+                title={isLinkTool ? `${label} — double-click to edit` : label}
               >
-                <ExternalLink className="size-2.5 shrink-0" />
-                {link.url || '(no URL)'}
+                {internal ? (
+                  <CornerDownRight className="size-2.5 shrink-0" />
+                ) : (
+                  <ExternalLink className="size-2.5 shrink-0" />
+                )}
+                {label}
               </span>
             )}
             {isLinkTool && !editing && (

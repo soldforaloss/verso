@@ -253,6 +253,7 @@ export function Viewer({ tab }: { tab: DocumentTab }): React.JSX.Element {
         annotations={tab.annotations[ref.key] ?? NO_ANNOTATIONS}
         formFields={tab.formFields[ref.key] ?? NO_FIELDS}
         links={tab.links[ref.key] ?? NO_LINKS}
+        pageCount={tab.pages.length}
       />
     )
   }

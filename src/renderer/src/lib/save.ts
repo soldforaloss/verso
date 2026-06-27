@@ -22,6 +22,33 @@ import { addNewFormFields } from '@/lib/pdfFormFields'
 import { addLinkAnnotations } from '@/lib/pdfLinks'
 import { applyMetadata, type DocumentMetadata } from '@/lib/metadata'
 
+/**
+ * Adds every page's authored links AFTER all pages exist, so an internal link
+ * can resolve a target page that appears later in the document. `pageByKey` maps
+ * each logical page key to its placed pdf-lib page; `fullPages` is the whole
+ * document's page order (which equals the emitted pages for a full save, but is
+ * a superset for extract/split). An internal link's target is a document-global
+ * 1-based page number, so it is resolved through `fullPages` → its placed page;
+ * a target that wasn't emitted (outside the subset) resolves to undefined and is
+ * skipped rather than mis-aimed at a renumbered subset page.
+ */
+function addAllLinks(
+  linksByKey: Record<string, PageLink[]>,
+  pageByKey: Map<string, PDFPage>,
+  fullPages: PageRef[]
+): void {
+  const placedByDocPage = new Map<number, PDFPage>()
+  fullPages.forEach((ref, index) => {
+    const placed = pageByKey.get(ref.key)
+    if (placed) placedByDocPage.set(index + 1, placed)
+  })
+  const resolve = (pageNumber: number): PDFPage | undefined => placedByDocPage.get(pageNumber)
+  for (const [key, pageLinks] of Object.entries(linksByKey)) {
+    const page = pageByKey.get(key)
+    if (page && pageLinks.length) addLinkAnnotations(page, pageLinks, resolve)
+  }
+}
+
 function toArrayBufferBytes(saved: Uint8Array): Uint8Array<ArrayBuffer> {
   // pdf-lib types its output as Uint8Array<ArrayBufferLike>, which the IPC byte
   // type rejects — copy into a freshly-allocated ArrayBuffer-backed array.
@@ -89,7 +116,8 @@ async function buildFromModel(
   metadata: DocumentMetadata | null,
   outline: OutlineItem[] | null,
   formFieldsByKey: Record<string, NewFormField[]>,
-  linksByKey: Record<string, PageLink[]>
+  linksByKey: Record<string, PageLink[]>,
+  fullPages: PageRef[]
 ): Promise<Uint8Array<ArrayBuffer>> {
   const out = await PDFDocument.create()
   const sourceDocs = new Map<string, PDFDocument>()
@@ -127,13 +155,13 @@ async function buildFromModel(
     pageByKey.set(ref.key, page)
     const newFields = formFieldsByKey[ref.key]
     if (newFields?.length) addNewFormFields(out.getForm(), page, newFields)
-    const pageLinks = linksByKey[ref.key]
-    if (pageLinks?.length) addLinkAnnotations(page, pageLinks)
     for (const annotation of annotationsByKey[ref.key] ?? []) {
       await drawAnnotation(out, page, annotation)
     }
   }
 
+  // After every page exists, so internal links can target later pages.
+  addAllLinks(linksByKey, pageByKey, fullPages)
   if (metadata) applyMetadata(out, metadata)
   if (outline) applyOutline(out, outline, pageByKey)
   return toArrayBufferBytes(await out.save())
@@ -181,13 +209,12 @@ async function buildPristine(
     pageByKey.set(ref.key, page)
     const newFields = tab.formFields[ref.key]
     if (newFields?.length) addNewFormFields(doc.getForm(), page, newFields)
-    const pageLinks = tab.links[ref.key]
-    if (pageLinks?.length) addLinkAnnotations(page, pageLinks)
     for (const annotation of tab.annotations[ref.key] ?? []) {
       await drawAnnotation(doc, page, annotation)
     }
   }
 
+  addAllLinks(tab.links, pageByKey, tab.pages)
   if (tab.metadata) applyMetadata(doc, tab.metadata)
   // The pristine path keeps the source's original /Outlines; overwrite it only
   // once the user has edited bookmarks (tab.outline !== null).
@@ -207,7 +234,8 @@ async function buildDocumentBytes(tab: DocumentTab): Promise<Uint8Array<ArrayBuf
     tab.metadata,
     tab.outline,
     tab.formFields,
-    tab.links
+    tab.links,
+    tab.pages
   )
 }
 
@@ -266,7 +294,8 @@ export async function extractPages(tab: DocumentTab, indices: number[]): Promise
     tab.metadata,
     null,
     tab.formFields,
-    tab.links
+    tab.links,
+    tab.pages
   )
   const path = await window.api.showSaveDialog({
     defaultName: `${stripPdfExt(tab.name)}-extract.pdf`
@@ -291,7 +320,8 @@ export async function splitDocument(tab: DocumentTab): Promise<number> {
       tab.metadata,
       null,
       tab.formFields,
-      tab.links
+      tab.links,
+      tab.pages
     )
     const name = `${base}-${String(index + 1).padStart(3, '0')}.pdf`
     await window.api.writeFileInDir({ dir, name, bytes })

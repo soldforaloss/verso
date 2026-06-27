@@ -49,6 +49,8 @@ interface PageViewProps {
   annotations: Annotation[]
   formFields: NewFormField[]
   links: PageLink[]
+  /** Total logical page count, for internal link-target validation. */
+  pageCount: number
 }
 
 interface HighlightRect {
@@ -89,7 +91,8 @@ function PageViewImpl({
   pageKey,
   annotations,
   formFields,
-  links
+  links,
+  pageCount
 }: PageViewProps): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -274,7 +277,13 @@ function PageViewImpl({
             pageKey={pageKey}
             fields={formFields}
           />
-          <LinkCreateLayer viewport={pageViewport} docId={docId} pageKey={pageKey} links={links} />
+          <LinkCreateLayer
+            viewport={pageViewport}
+            docId={docId}
+            pageKey={pageKey}
+            links={links}
+            pageCount={pageCount}
+          />
         </>
       )}
       {descriptor.kind === 'blank' && (

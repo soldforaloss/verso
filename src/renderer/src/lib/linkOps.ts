@@ -29,11 +29,24 @@ export function removeLink(docId: string, pageKey: string, id: string): void {
   )
 }
 
-export function updateLinkUrl(docId: string, pageKey: string, id: string, url: string): void {
+/** Sets a link to be external (a URL) or internal (a 1-based page), as one undo step. */
+export function setLinkTarget(
+  docId: string,
+  pageKey: string,
+  id: string,
+  target: { url: string } | { page: number }
+): void {
   commit(
     docId,
     pageKey,
     'Edit link',
-    pageLinks(docId, pageKey).map((link) => (link.id === id ? { ...link, url } : link))
+    pageLinks(docId, pageKey).map((link) => {
+      if (link.id !== id) return link
+      // Rebuild the link so `page` is present for internal links and absent for
+      // URL links (exactOptionalPropertyTypes: never set `page: undefined`).
+      return 'page' in target
+        ? { id: link.id, rect: link.rect, url: '', page: target.page }
+        : { id: link.id, rect: link.rect, url: target.url }
+    })
   )
 }
