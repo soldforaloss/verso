@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Crop,
   EyeOff,
+  GitCompare,
   ImageDown,
   Info,
   Lock,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MetadataDialog } from './MetadataDialog'
+import { CompareView } from './CompareView'
 import { CropDialog } from './CropDialog'
 import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
@@ -42,7 +44,13 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const [compare, setCompare] = useState<{ bytes: Uint8Array; name: string } | null>(null)
   const hasRedactions = redactedPageNumbers(tab).length > 0
+
+  const openCompare = async (): Promise<void> => {
+    const doc = await window.api.openFileDialog()
+    if (doc) setCompare({ bytes: doc.bytes, name: doc.name })
+  }
 
   const print = async (): Promise<void> => {
     setPrinting(true)
@@ -76,6 +84,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       </Button>
       <Button variant="ghost" size="icon" title="Crop pages" onClick={() => setCropOpen(true)}>
         <Crop />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Compare with another PDF"
+        onClick={() => void openCompare()}
+      >
+        <GitCompare />
       </Button>
       <Button
         variant="ghost"
@@ -128,6 +144,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
         </Button>
       )}
 
+      {compare && (
+        <CompareView
+          tab={tab}
+          otherBytes={compare.bytes}
+          otherName={compare.name}
+          onClose={() => setCompare(null)}
+        />
+      )}
       <MetadataDialog tab={tab} open={metadataOpen} onOpenChange={setMetadataOpen} />
       <CropDialog tab={tab} open={cropOpen} onOpenChange={setCropOpen} />
       <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />

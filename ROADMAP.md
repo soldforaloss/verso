@@ -145,6 +145,9 @@ next begins.
   unmarked pages copied losslessly.
 - **Export** pages to PNG/JPEG (annotations and filled fields baked in) and
   **print** via Chromium's PDF viewer in a sandboxed offscreen window.
+- **Compare**: open the document against another PDF and view them side by side
+  with a **per-pixel visual diff** (changed regions highlighted, a changed-%
+  readout) and page navigation.
 
 ### ✅ M9 — Polish, packaging & release
 
@@ -187,5 +190,6 @@ All planned milestones (M0–M9) have shipped. Future work lives below.
 - **Live (re-editable) PDF annotations** — Verso flattens annotations on save;
   round-trippable annotation objects need appearance-stream authoring or PDFium.
 - **Form field creation** — author new AcroForm fields, not just fill.
-- **PDF compare** — visual + text diff of two documents.
+- **PDF compare: text diff** — the visual (pixel) diff has shipped; a
+  word-level text diff is a follow-up.
 - **Vite 8** — bump once `electron-vite` supports it (see ADR-0003).
