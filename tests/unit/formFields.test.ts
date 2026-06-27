@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   defaultFieldOptions,
-  isChoiceField,
+  fieldHasOptions,
   newFieldName,
   newFieldId,
   parseFieldOptions,
+  radioButtonRects,
   toWinAnsi
 } from '@/lib/formFields'
 
@@ -14,6 +15,7 @@ describe('formFields', () => {
     expect(newFieldName('checkbox')).toMatch(/^Checkbox_[0-9a-f]{8}$/)
     expect(newFieldName('dropdown')).toMatch(/^Dropdown_[0-9a-f]{8}$/)
     expect(newFieldName('optionlist')).toMatch(/^List_[0-9a-f]{8}$/)
+    expect(newFieldName('radio')).toMatch(/^Radio_[0-9a-f]{8}$/)
   })
 
   it('generates distinct names and ids', () => {
@@ -28,12 +30,60 @@ describe('formFields', () => {
   })
 })
 
-describe('isChoiceField', () => {
-  it('is true only for dropdown and option list', () => {
-    expect(isChoiceField('dropdown')).toBe(true)
-    expect(isChoiceField('optionlist')).toBe(true)
-    expect(isChoiceField('text')).toBe(false)
-    expect(isChoiceField('checkbox')).toBe(false)
+describe('fieldHasOptions', () => {
+  it('is true for dropdown, option list, and radio', () => {
+    expect(fieldHasOptions('dropdown')).toBe(true)
+    expect(fieldHasOptions('optionlist')).toBe(true)
+    expect(fieldHasOptions('radio')).toBe(true)
+    expect(fieldHasOptions('text')).toBe(false)
+    expect(fieldHasOptions('checkbox')).toBe(false)
+  })
+})
+
+describe('radioButtonRects', () => {
+  const bounding = { x: 100, y: 200, width: 30, height: 90 }
+
+  /** Asserts every button square stays inside the bounding box and doesn't overlap. */
+  function expectInsideAndNonOverlapping(
+    rects: ReturnType<typeof radioButtonRects>,
+    box: typeof bounding
+  ): void {
+    for (const r of rects) {
+      expect(r.width).toBe(r.height)
+      expect(r.width).toBeGreaterThanOrEqual(0)
+      expect(r.x).toBeGreaterThanOrEqual(box.x)
+      expect(r.x + r.width).toBeLessThanOrEqual(box.x + box.width + 1e-9)
+      expect(r.y).toBeGreaterThanOrEqual(box.y - 1e-9)
+      expect(r.y + r.height).toBeLessThanOrEqual(box.y + box.height + 1e-9)
+    }
+    // Adjacent rows (sorted top→down already) must not overlap vertically.
+    for (let i = 1; i < rects.length; i += 1) {
+      expect(rects[i]!.y + rects[i]!.height).toBeLessThanOrEqual(rects[i - 1]!.y + 1e-9)
+    }
+  }
+
+  it('places one square button per option, first on top, inside the box', () => {
+    const rects = radioButtonRects(bounding, 3)
+    expect(rects).toHaveLength(3)
+    for (const r of rects) expect(r.x).toBe(100)
+    expect(rects[0]!.y).toBeGreaterThan(rects[1]!.y)
+    expect(rects[1]!.y).toBeGreaterThan(rects[2]!.y)
+    expectInsideAndNonOverlapping(rects, bounding)
+  })
+
+  it('keeps buttons inside the box for short, narrow, and degenerate drags', () => {
+    // Regression: a fixed minimum side used to overflow the box and overlap.
+    const short = { x: 0, y: 0, width: 100, height: 12 }
+    expectInsideAndNonOverlapping(radioButtonRects(short, 4), short)
+    const narrow = { x: 10, y: 10, width: 2, height: 60 }
+    expectInsideAndNonOverlapping(radioButtonRects(narrow, 3), narrow)
+    const many = { x: 0, y: 0, width: 100, height: 40 }
+    expectInsideAndNonOverlapping(radioButtonRects(many, 50), many)
+  })
+
+  it('clamps the option count to at least one button', () => {
+    expect(radioButtonRects(bounding, 0)).toHaveLength(1)
+    expect(radioButtonRects(bounding, -3)).toHaveLength(1)
   })
 })
 
@@ -66,6 +116,15 @@ describe('parseFieldOptions', () => {
     expect(parseFieldOptions('café, 日本語, naïve')).toEqual(['café', 'naïve'])
     expect(parseFieldOptions('USA, 😀, Canada')).toEqual(['USA', 'Canada'])
     expect(parseFieldOptions('Привет, hello')).toEqual(['hello'])
+  })
+
+  it('keeps full Unicode when WinAnsi sanitizing is disabled (radio export values)', () => {
+    // Radio buttons render a dot, not the export value, so the value is not
+    // limited to WinAnsi — pass sanitizeWinAnsi=false.
+    expect(parseFieldOptions('日本語, USA', false)).toEqual(['日本語', 'USA'])
+    expect(parseFieldOptions('Да, Нет', false)).toEqual(['Да', 'Нет'])
+    // Still trims and de-duplicates.
+    expect(parseFieldOptions(' a , a , b ', false)).toEqual(['a', 'b'])
   })
 })
 

@@ -1,5 +1,10 @@
 import type { PDFForm, PDFPage } from 'pdf-lib'
-import { newFieldName, toWinAnsi, type NewFormField } from '@/lib/formFields'
+import {
+  cleanFieldOptions,
+  newFieldName,
+  radioButtonRects,
+  type NewFormField
+} from '@/lib/formFields'
 
 /**
  * Creates the authored form fields on a pdf-lib page. Coordinates are PDF page
@@ -17,11 +22,13 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
       height: Math.max(1, field.rect.height),
       borderWidth: 1
     }
-    // Choice options are rendered into the field appearance with Helvetica, whose
-    // WinAnsi encoder throws on un-encodable characters during save() — strip them
-    // here too (not just at the editor boundary) so legacy/recovered fields can't
-    // abort the whole save. Empty results are dropped.
-    const choiceOptions = (field.options ?? []).map(toWinAnsi).filter(Boolean)
+    // Dropdown/list option text is rendered into the field appearance with
+    // Helvetica, whose WinAnsi encoder throws on un-encodable characters during
+    // save() — strip them here too (not just at the editor boundary) so
+    // legacy/recovered fields can't abort the whole save. Radio export values
+    // aren't rendered, so they keep full Unicode (sanitizeWinAnsi=false).
+    const choiceOptions = cleanFieldOptions(field.options ?? [])
+    const radioOptions = cleanFieldOptions(field.options ?? [], false)
     const create = (name: string): void => {
       if (field.type === 'checkbox') {
         form.createCheckBox(name).addToPage(page, options)
@@ -33,6 +40,23 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
         const list = form.createOptionList(name)
         if (choiceOptions.length) list.addOptions(choiceOptions)
         list.addToPage(page, options)
+      } else if (field.type === 'radio') {
+        const group = form.createRadioGroup(name)
+        // One button per export value, laid out within the field's rect. A radio
+        // group with no usable options would have no widgets, so seed a single
+        // default button rather than create an empty (invisible) group.
+        const values = radioOptions.length ? radioOptions : ['Option 1']
+        const rects = radioButtonRects(field.rect, values.length)
+        values.forEach((value, index) => {
+          const r = rects[index]!
+          group.addOptionToPage(value, page, {
+            x: r.x,
+            y: r.y,
+            width: r.width,
+            height: r.height,
+            borderWidth: 1
+          })
+        })
       } else {
         form.createTextField(name).addToPage(page, options)
       }

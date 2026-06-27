@@ -2,7 +2,7 @@ import { test, expect, type ElectronApplication } from '@playwright/test'
 import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { PDFDocument, PDFDropdown, PDFTextField } from 'pdf-lib'
+import { PDFDocument, PDFDropdown, PDFRadioGroup, PDFTextField } from 'pdf-lib'
 import { FIXTURE_PDF, launchVerso } from './launch'
 
 let app: ElectronApplication
@@ -112,4 +112,58 @@ test('author a dropdown with custom options and write it into the PDF on save', 
     .find((field) => field.getName() === 'country')
   expect(dropdown).toBeInstanceOf(PDFDropdown)
   expect((dropdown as PDFDropdown).getOptions()).toEqual(['USA', 'Canada', 'Mexico'])
+})
+
+test('author a radio group and write its buttons into the PDF on save', async () => {
+  app = await launchVerso([FIXTURE_PDF])
+  const window = await app.firstWindow()
+  const page1 = window.locator('[data-page-number="1"]')
+  await expect(page1.locator('canvas')).toBeVisible({ timeout: 30_000 })
+
+  // Pick the radio tool and drag a tall rectangle (a column of buttons).
+  await window.getByTitle('Add radio group field (form)').click()
+  const box = await page1.boundingBox()
+  if (!box) throw new Error('page has no bounding box')
+  await window.mouse.move(box.x + 90, box.y + 300)
+  await window.mouse.down()
+  await window.mouse.move(box.x + 130, box.y + 390, { steps: 6 })
+  await window.mouse.up()
+
+  // A radio-group preview appears, seeded with the 3 default options.
+  await expect(page1.getByText(/^◉ Radio_.* \(3\)$/)).toBeVisible({ timeout: 10_000 })
+
+  // Edit the name and replace the export values with two buttons.
+  await window.mouse.dblclick(box.x + 110, box.y + 345)
+  await window.getByLabel('Field name').fill('subscribe')
+  const optionsInput = window.getByLabel('Field options')
+  await optionsInput.fill('Yes, No')
+  await optionsInput.press('Enter')
+  await expect(page1.getByText('◉ subscribe (2)')).toBeVisible()
+
+  // Save and verify the saved PDF has the radio group with both options.
+  const outPath = join(mkdtempSync(join(tmpdir(), 'verso-radio-')), 'out.pdf')
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath })
+  }, outPath)
+  await window.keyboard.press('Control+Shift+S')
+  await expect
+    .poll(
+      () => {
+        try {
+          return readFileSync(outPath).length
+        } catch {
+          return 0
+        }
+      },
+      { timeout: 15_000 }
+    )
+    .toBeGreaterThan(0)
+
+  const doc = await PDFDocument.load(readFileSync(outPath))
+  const radio = doc
+    .getForm()
+    .getFields()
+    .find((field) => field.getName() === 'subscribe')
+  expect(radio).toBeInstanceOf(PDFRadioGroup)
+  expect((radio as PDFRadioGroup).getOptions()).toEqual(['Yes', 'No'])
 })

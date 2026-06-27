@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PDFDocument, PDFDropdown, PDFOptionList } from 'pdf-lib'
+import { PDFDocument, PDFDropdown, PDFOptionList, PDFRadioGroup } from 'pdf-lib'
 import { addNewFormFields } from '@/lib/pdfFormFields'
 import type { NewFormField } from '@/lib/formFields'
 
@@ -45,5 +45,30 @@ describe('addNewFormFields choice fields', () => {
     const dropdown = reloaded.getForm().getDropdown('allbad')
     expect(dropdown).toBeInstanceOf(PDFDropdown)
     expect(dropdown.getOptions()).toEqual([])
+  })
+})
+
+describe('addNewFormFields radio groups', () => {
+  it('creates a radio group with one button per export value', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'radio', name: 'choice', rect: RECT, options: ['Yes', 'No', 'Maybe'] }
+    ])
+    const group = reloaded.getForm().getRadioGroup('choice')
+    expect(group).toBeInstanceOf(PDFRadioGroup)
+    expect(group.getOptions()).toEqual(['Yes', 'No', 'Maybe'])
+  })
+
+  it('keeps non-WinAnsi radio export values (they are not rendered) and de-dupes', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'radio', name: 'jp', rect: RECT, options: ['日本語', 'USA', 'USA'] }
+    ])
+    expect(reloaded.getForm().getRadioGroup('jp').getOptions()).toEqual(['日本語', 'USA'])
+  })
+
+  it('seeds one button when a radio group has no usable options', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'radio', name: 'empty', rect: RECT, options: [] }
+    ])
+    expect(reloaded.getForm().getRadioGroup('empty').getOptions()).toHaveLength(1)
   })
 })

@@ -6,10 +6,11 @@ import { FIELD_TOOLS, useToolStore, type Tool } from '@/store/toolStore'
 import { addFormField, removeFormField, updateFormField } from '@/lib/formFieldOps'
 import {
   defaultFieldOptions,
-  isChoiceField,
+  fieldHasOptions,
   newFieldId,
   newFieldName,
   parseFieldOptions,
+  radioButtonRects,
   type NewFieldType,
   type NewFormField
 } from '@/lib/formFields'
@@ -26,7 +27,8 @@ const FIELD_TYPE_BY_TOOL: Partial<Record<Tool, NewFieldType>> = {
   'field-text': 'text',
   'field-checkbox': 'checkbox',
   'field-dropdown': 'dropdown',
-  'field-optionlist': 'optionlist'
+  'field-optionlist': 'optionlist',
+  'field-radio': 'radio'
 }
 
 /** A glyph shown on each field preview so the type reads at a glance. */
@@ -34,7 +36,8 @@ const FIELD_GLYPH: Record<NewFieldType, string> = {
   text: '▭',
   checkbox: '☑',
   dropdown: '▼',
-  optionlist: '☰'
+  optionlist: '☰',
+  radio: '◉'
 }
 
 /**
@@ -124,8 +127,8 @@ export function FieldCreateLayer({
         width: Math.abs(b.x - a.x),
         height: Math.abs(b.y - a.y)
       },
-      // Choice fields need at least one option to be usable; seed a default set.
-      ...(isChoiceField(type) ? { options: defaultFieldOptions() } : {})
+      // Option-bearing fields need at least one option to be usable; seed a set.
+      ...(fieldHasOptions(type) ? { options: defaultFieldOptions() } : {})
     }
     addFormField(docId, pageKey, field)
   }
@@ -148,7 +151,7 @@ export function FieldCreateLayer({
       {fields.map((field) => {
         const r = pageRectToScreen(viewport, field.rect)
         const editing = editingId === field.id
-        const choice = isChoiceField(field.type)
+        const choice = fieldHasOptions(field.type)
         const beginEdit = (): void => {
           if (!isFieldTool) return
           cancelEdit.current = false
@@ -166,7 +169,9 @@ export function FieldCreateLayer({
           const nextName = draftName.trim()
           if (nextName && nextName !== field.name) patch.name = nextName
           if (choice) {
-            const next = parseFieldOptions(draftOptions)
+            // Radio export values aren't rendered, so they keep full Unicode;
+            // dropdown/list option text is stripped to WinAnsi (see parseFieldOptions).
+            const next = parseFieldOptions(draftOptions, field.type !== 'radio')
             const prev = field.options ?? []
             const changed = next.length !== prev.length || next.some((o, i) => o !== prev[i])
             if (next.length && changed) patch.options = next
@@ -238,9 +243,31 @@ export function FieldCreateLayer({
                 title={isFieldTool ? `${field.name} — double-click to edit` : field.name}
               >
                 {FIELD_GLYPH[field.type]} {field.name}
-                {choice ? ` (${field.options?.length ?? 0})` : ''}
+                {/* Radio always renders at least one button (see the preview and
+                    the save seed), so floor its badge at 1 to match. */}
+                {choice
+                  ? ` (${field.type === 'radio' ? field.options?.length || 1 : (field.options?.length ?? 0)})`
+                  : ''}
               </span>
             )}
+            {/* Radio groups place one button per option within the rect; preview
+                their positions so the layout reads at a glance. */}
+            {field.type === 'radio' &&
+              radioButtonRects(field.rect, field.options?.length || 1).map((button, index) => {
+                const sb = pageRectToScreen(viewport, button)
+                return (
+                  <span
+                    key={index}
+                    className="pointer-events-none absolute rounded-full border border-sky-600 bg-white/70"
+                    style={{
+                      left: sb.x - r.x,
+                      top: sb.y - r.y,
+                      width: sb.width,
+                      height: sb.height
+                    }}
+                  />
+                )
+              })}
             {isFieldTool && !editing && (
               <button
                 type="button"

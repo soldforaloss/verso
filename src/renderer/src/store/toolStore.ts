@@ -21,6 +21,7 @@ export type Tool =
   | 'field-checkbox'
   | 'field-dropdown'
   | 'field-optionlist'
+  | 'field-radio'
 
 export const MARKUP_TOOLS = new Set<Tool>(['highlight', 'underline', 'strike', 'squiggly'])
 export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow', 'redaction'])
@@ -30,7 +31,8 @@ export const FIELD_TOOLS = new Set<Tool>([
   'field-text',
   'field-checkbox',
   'field-dropdown',
-  'field-optionlist'
+  'field-optionlist',
+  'field-radio'
 ])
 
 /**

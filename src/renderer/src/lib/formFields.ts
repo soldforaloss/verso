@@ -1,7 +1,7 @@
 import type { Rect } from '@/lib/annotations'
 
 /** The kinds of AcroForm field the editor can author. */
-export type NewFieldType = 'text' | 'checkbox' | 'dropdown' | 'optionlist'
+export type NewFieldType = 'text' | 'checkbox' | 'dropdown' | 'optionlist' | 'radio'
 
 /**
  * A form field authored in the editor (vs. fields detected in the source PDF).
@@ -14,20 +14,53 @@ export interface NewFormField {
   /** Fully-qualified AcroForm field name (must be unique in its document). */
   name: string
   rect: Rect
-  /** Selectable choices for `dropdown` / `optionlist` fields (ignored otherwise). */
+  /**
+   * Options for option-bearing fields. For `dropdown` / `optionlist` these are
+   * the selectable values (rendered with Helvetica). For `radio` these are the
+   * per-button export values (NOT rendered, so they keep full Unicode); the
+   * buttons are laid out within `rect` (see `radioButtonRects`). Ignored for
+   * `text` / `checkbox`.
+   */
   options?: string[]
 }
 
-const CHOICE_FIELD_TYPES = new Set<NewFieldType>(['dropdown', 'optionlist'])
+const OPTION_FIELD_TYPES = new Set<NewFieldType>(['dropdown', 'optionlist', 'radio'])
 
-/** True for field types that carry a list of selectable options. */
-export function isChoiceField(type: NewFieldType): boolean {
-  return CHOICE_FIELD_TYPES.has(type)
+/** True for field types that carry a user-editable list of options. */
+export function fieldHasOptions(type: NewFieldType): boolean {
+  return OPTION_FIELD_TYPES.has(type)
 }
 
-/** The options a freshly-authored choice field starts with. */
+/** The options a freshly-authored option-bearing field starts with. */
 export function defaultFieldOptions(): string[] {
   return ['Option 1', 'Option 2', 'Option 3']
+}
+
+/**
+ * Lays out a radio group's buttons as a left-aligned vertical column of squares
+ * within `bounding` (PDF page space, bottom-left origin), first option on top.
+ * One square per option; the count must be at least 1.
+ */
+export function radioButtonRects(bounding: Rect, count: number): Rect[] {
+  const n = Math.max(1, count)
+  const rowHeight = bounding.height / n
+  // Fit each square inside its row band (rowHeight) and the box width, capped at
+  // 18pt. The lower bound is 0 (not a fixed minimum) so a tiny/degenerate drag
+  // yields near-zero in-box buttons rather than oversized ones that overflow the
+  // bounding rect and overlap their neighbours.
+  const side = Math.max(0, Math.min(rowHeight - 2, bounding.width, 18))
+  const rects: Rect[] = []
+  for (let i = 0; i < n; i += 1) {
+    // Row i counted from the top (highest y) downward; square centered in its row.
+    const rowBottom = bounding.y + bounding.height - (i + 1) * rowHeight
+    rects.push({
+      x: bounding.x,
+      y: rowBottom + (rowHeight - side) / 2,
+      width: side,
+      height: side
+    })
+  }
+  return rects
 }
 
 // The exact WinAnsi (CP1252) special block: code points outside Latin-1 that the
@@ -65,22 +98,30 @@ export function toWinAnsi(text: string): string {
 }
 
 /**
- * Parses a user-entered option list (comma- or newline-separated) into trimmed,
- * non-empty, de-duplicated options. AcroForm choice fields reject duplicate
- * export values, so duplicates are collapsed (first occurrence wins). Characters
- * the PDF StandardFont can't encode are stripped (see `toWinAnsi`).
+ * Trims, drops empty, and de-duplicates a list of option strings (first wins).
+ * When `sanitizeWinAnsi` is true (dropdown / option list, whose option text is
+ * rendered), un-encodable characters are stripped via `toWinAnsi`; radio export
+ * values pass `false` because they aren't rendered and keep full Unicode.
  */
-export function parseFieldOptions(text: string): string[] {
+export function cleanFieldOptions(options: string[], sanitizeWinAnsi = true): string[] {
   const seen = new Set<string>()
   const out: string[] = []
-  for (const raw of text.split(/[,\n]/)) {
-    const option = toWinAnsi(raw.trim())
+  for (const raw of options) {
+    const option = sanitizeWinAnsi ? toWinAnsi(raw.trim()) : raw.trim()
     if (option && !seen.has(option)) {
       seen.add(option)
       out.push(option)
     }
   }
   return out
+}
+
+/**
+ * Parses a user-entered option list (comma- or newline-separated) into clean
+ * options (see `cleanFieldOptions`).
+ */
+export function parseFieldOptions(text: string, sanitizeWinAnsi = true): string[] {
+  return cleanFieldOptions(text.split(/[,\n]/), sanitizeWinAnsi)
 }
 
 export function newFieldId(): string {
@@ -91,7 +132,8 @@ const NAME_PREFIX: Record<NewFieldType, string> = {
   text: 'Text',
   checkbox: 'Checkbox',
   dropdown: 'Dropdown',
-  optionlist: 'List'
+  optionlist: 'List',
+  radio: 'Radio'
 }
 
 /**

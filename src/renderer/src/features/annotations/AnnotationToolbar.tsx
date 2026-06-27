@@ -3,6 +3,7 @@ import {
   Bold,
   BringToFront,
   Circle,
+  CircleDot,
   Eraser,
   EyeOff,
   FormInput,
@@ -65,7 +66,8 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
     { tool: 'field-text', label: 'Add text field (form)', Icon: FormInput },
     { tool: 'field-checkbox', label: 'Add checkbox field (form)', Icon: SquareCheck },
     { tool: 'field-dropdown', label: 'Add dropdown field (form)', Icon: SquareChevronDown },
-    { tool: 'field-optionlist', label: 'Add list field (form)', Icon: ListChecks }
+    { tool: 'field-optionlist', label: 'Add list field (form)', Icon: ListChecks },
+    { tool: 'field-radio', label: 'Add radio group field (form)', Icon: CircleDot }
   ],
   [
     { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
