@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { getSource, type DocumentTab } from '@/store/documentStore'
 import { loadPdfDocument, type PdfDocument, type RenderTask } from '@/lib/pdf'
 import { diffImages, type DiffResult } from '@/lib/pdfCompare'
+import { diffWords, type DiffSummary } from '@/lib/textDiff'
+
+type Mode = 'visual' | 'text'
+
+async function pageText(pdf: PdfDocument, n: number): Promise<string | null> {
+  if (n < 1 || n > pdf.numPages) return null
+  const page = await pdf.getPage(n)
+  const content = await page.getTextContent()
+  return content.items.map((item) => ('str' in item ? item.str : '')).join(' ')
+}
 
 const TARGET_WIDTH = 460
 const RENDERING_CANCELLED = 'RenderingCancelledException'
@@ -41,8 +52,10 @@ export function CompareView({
   const basePdf = getSource(tab.sourceIds[0] ?? '')?.pdf
   const [otherPdf, setOtherPdf] = useState<PdfDocument | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
+  const [mode, setMode] = useState<Mode>('visual')
   const [showDiff, setShowDiff] = useState(true)
   const [changedRatio, setChangedRatio] = useState<number | null>(null)
+  const [textDiff, setTextDiff] = useState<DiffSummary | null>(null)
   const [status, setStatus] = useState('')
   const leftRef = useRef<HTMLCanvasElement>(null)
   const rightRef = useRef<HTMLCanvasElement>(null)
@@ -85,9 +98,9 @@ export function CompareView({
     }
   }, [otherBytes])
 
-  // Render the current page from each document and compute the diff.
+  // Render the current page from each document and compute the visual diff.
   useEffect(() => {
-    if (!basePdf || !otherPdf) return
+    if (!basePdf || !otherPdf || mode !== 'visual') return
     let cancelled = false
     const tasks: RenderTask[] = []
 
@@ -156,7 +169,30 @@ export function CompareView({
       cancelled = true
       for (const task of tasks) task.cancel()
     }
-  }, [basePdf, otherPdf, pageNumber])
+  }, [basePdf, otherPdf, pageNumber, mode])
+
+  // Extract and diff the page text (text mode).
+  useEffect(() => {
+    if (!basePdf || !otherPdf || mode !== 'text') return
+    let cancelled = false
+    void (async () => {
+      try {
+        setStatus('Reading text…')
+        const [a, b] = await Promise.all([
+          pageText(basePdf, pageNumber),
+          pageText(otherPdf, pageNumber)
+        ])
+        if (cancelled) return
+        setTextDiff(diffWords(a ?? '', b ?? ''))
+        setStatus('')
+      } catch {
+        if (!cancelled) setStatus('Failed to read this page.')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [basePdf, otherPdf, pageNumber, mode])
 
   // Toggle the highlight without re-rendering — just re-blit from the cache.
   useEffect(() => {
@@ -218,23 +254,47 @@ export function CompareView({
           >
             <ChevronRight />
           </Button>
-          <Button
-            size="sm"
-            variant={showDiff ? 'secondary' : 'ghost'}
-            aria-pressed={showDiff}
-            onClick={() => setShowDiff((v) => !v)}
-          >
-            Highlight changes
-          </Button>
+          <div className="flex items-center rounded-md border p-0.5">
+            {(['visual', 'text'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'rounded-[5px] px-2 py-0.5 text-xs capitalize transition-colors',
+                  mode === m ? 'bg-secondary text-secondary-foreground' : 'hover:bg-accent'
+                )}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          {mode === 'visual' && (
+            <Button
+              size="sm"
+              variant={showDiff ? 'secondary' : 'ghost'}
+              aria-pressed={showDiff}
+              onClick={() => setShowDiff((v) => !v)}
+            >
+              Highlight changes
+            </Button>
+          )}
           <span
             data-testid="compare-changed"
-            className="min-w-20 px-1 text-center text-xs tabular-nums text-muted-foreground"
+            className="min-w-24 px-1 text-center text-xs tabular-nums text-muted-foreground"
           >
-            {changedRatio === null
-              ? status || '—'
-              : changedRatio === 0
-                ? 'No changes'
-                : `${(changedRatio * 100).toFixed(1)}% changed`}
+            {mode === 'text'
+              ? textDiff === null
+                ? status || '—'
+                : textDiff.added === 0 && textDiff.removed === 0
+                  ? 'No text changes'
+                  : `+${textDiff.added} −${textDiff.removed}`
+              : changedRatio === null
+                ? status || '—'
+                : changedRatio === 0
+                  ? 'No changes'
+                  : `${(changedRatio * 100).toFixed(1)}% changed`}
           </span>
           <Button
             ref={closeRef}
@@ -250,16 +310,45 @@ export function CompareView({
       </div>
 
       <div className="flex min-h-0 flex-1 gap-3 overflow-auto bg-neutral-200 p-4 dark:bg-neutral-900">
-        <figure className="flex flex-1 flex-col items-center gap-1">
-          <figcaption className="text-xs text-muted-foreground">{tab.name}</figcaption>
-          <canvas ref={leftRef} className="max-w-full bg-white shadow ring-1 ring-black/10" />
-        </figure>
-        <figure className="flex flex-1 flex-col items-center gap-1">
-          <figcaption className="text-xs text-muted-foreground">
-            {showDiff ? 'Changes' : otherName}
-          </figcaption>
-          <canvas ref={rightRef} className="max-w-full bg-white shadow ring-1 ring-black/10" />
-        </figure>
+        {mode === 'visual' ? (
+          <>
+            <figure className="flex flex-1 flex-col items-center gap-1">
+              <figcaption className="text-xs text-muted-foreground">{tab.name}</figcaption>
+              <canvas ref={leftRef} className="max-w-full bg-white shadow ring-1 ring-black/10" />
+            </figure>
+            <figure className="flex flex-1 flex-col items-center gap-1">
+              <figcaption className="text-xs text-muted-foreground">
+                {showDiff ? 'Changes' : otherName}
+              </figcaption>
+              <canvas ref={rightRef} className="max-w-full bg-white shadow ring-1 ring-black/10" />
+            </figure>
+          </>
+        ) : (
+          <div
+            data-testid="compare-text"
+            className="mx-auto h-fit max-w-3xl flex-1 whitespace-pre-wrap break-words rounded-md border bg-card p-4 text-sm leading-relaxed"
+          >
+            {textDiff === null ? (
+              <span className="text-muted-foreground">{status || 'Reading…'}</span>
+            ) : textDiff.runs.length === 0 ? (
+              <span className="text-muted-foreground">No text on this page.</span>
+            ) : (
+              textDiff.runs.map((run, index) => (
+                <span
+                  key={index}
+                  className={cn(
+                    run.type === 'add' &&
+                      'rounded bg-green-500/25 text-green-900 dark:text-green-200',
+                    run.type === 'remove' &&
+                      'rounded bg-red-500/25 text-red-900 line-through dark:text-red-200'
+                  )}
+                >
+                  {run.text}{' '}
+                </span>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

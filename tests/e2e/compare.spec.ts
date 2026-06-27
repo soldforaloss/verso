@@ -21,6 +21,13 @@ test('compares the document against another PDF (identical = no changes)', async
   // The compare view opens and reports no changes (identical inputs).
   await expect(window.getByTestId('compare-changed')).toHaveText('No changes', { timeout: 20_000 })
 
+  // The text-diff mode also reports no changes against the same document.
+  await window.getByRole('button', { name: 'text', exact: true }).click()
+  await expect(window.getByTestId('compare-changed')).toHaveText('No text changes', {
+    timeout: 20_000
+  })
+  await expect(window.getByTestId('compare-text')).toBeVisible()
+
   // Escape closes the overlay (it owns the keyboard while open).
   await window.keyboard.press('Escape')
   await expect(window.getByTestId('compare-changed')).toBeHidden()
