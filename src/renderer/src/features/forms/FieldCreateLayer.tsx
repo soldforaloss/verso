@@ -3,7 +3,12 @@ import { X } from 'lucide-react'
 import type { PageViewport } from '@/lib/pdf'
 import { pageRectToScreen, screenToPage } from '@/lib/annotationGeometry'
 import { FIELD_TOOLS, useToolStore, type Tool } from '@/store/toolStore'
-import { addFormField, removeFormField, updateFormField } from '@/lib/formFieldOps'
+import {
+  addFormField,
+  removeFormField,
+  updateFormField,
+  type FormFieldPatch
+} from '@/lib/formFieldOps'
 import {
   defaultFieldOptions,
   fieldHasOptions,
@@ -68,6 +73,9 @@ export function FieldCreateLayer({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [draftOptions, setDraftOptions] = useState('')
+  const [draftRequired, setDraftRequired] = useState(false)
+  const [draftDefault, setDraftDefault] = useState('')
+  const [draftChecked, setDraftChecked] = useState(false)
   // Set when Escape cancels an edit so the resulting blur doesn't commit it.
   const cancelEdit = useRef(false)
 
@@ -152,11 +160,15 @@ export function FieldCreateLayer({
         const r = pageRectToScreen(viewport, field.rect)
         const editing = editingId === field.id
         const choice = fieldHasOptions(field.type)
+        const isCheckbox = field.type === 'checkbox'
         const beginEdit = (): void => {
           if (!isFieldTool) return
           cancelEdit.current = false
           setDraftName(field.name)
           setDraftOptions((field.options ?? []).join(', '))
+          setDraftRequired(field.required ?? false)
+          setDraftDefault(field.defaultValue ?? '')
+          setDraftChecked(field.defaultChecked ?? false)
           setEditingId(field.id)
         }
         const commitEdit = (): void => {
@@ -165,7 +177,7 @@ export function FieldCreateLayer({
             return
           }
           setEditingId(null)
-          const patch: { name?: string; options?: string[] } = {}
+          const patch: FormFieldPatch = {}
           const nextName = draftName.trim()
           if (nextName && nextName !== field.name) patch.name = nextName
           if (choice) {
@@ -176,7 +188,15 @@ export function FieldCreateLayer({
             const changed = next.length !== prev.length || next.some((o, i) => o !== prev[i])
             if (next.length && changed) patch.options = next
           }
-          if (patch.name !== undefined || patch.options !== undefined) {
+          if (draftRequired !== (field.required ?? false)) patch.required = draftRequired
+          if (isCheckbox) {
+            if (draftChecked !== (field.defaultChecked ?? false))
+              patch.defaultChecked = draftChecked
+          } else {
+            const nextDefault = draftDefault.trim()
+            if (nextDefault !== (field.defaultValue ?? '')) patch.defaultValue = nextDefault
+          }
+          if (Object.keys(patch).length > 0) {
             updateFormField(docId, pageKey, field.id, patch)
           }
         }
@@ -200,10 +220,20 @@ export function FieldCreateLayer({
               <div
                 className="absolute left-0 top-0 flex w-56 -translate-y-full flex-col gap-px"
                 // Commit once focus leaves the whole editor (moving between the
-                // name and options inputs keeps focus inside, so no commit).
+                // controls keeps focus inside, so no commit). Key handling lives
+                // here so every control — including the checkboxes — commits on
+                // Enter and cancels on Escape no matter which one is focused.
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null))
                     commitEdit()
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    cancelEdit.current = true
+                    setEditingId(null)
+                  } else if (event.key === 'Enter' && event.target instanceof HTMLElement) {
+                    event.target.blur()
+                  }
                 }}
               >
                 <input
@@ -211,13 +241,6 @@ export function FieldCreateLayer({
                   aria-label="Field name"
                   value={draftName}
                   onChange={(event) => setDraftName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') event.currentTarget.blur()
-                    else if (event.key === 'Escape') {
-                      cancelEdit.current = true
-                      setEditingId(null)
-                    }
-                  }}
                   className="rounded-t-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
                 />
                 {choice && (
@@ -226,16 +249,39 @@ export function FieldCreateLayer({
                     placeholder="Comma-separated options"
                     value={draftOptions}
                     onChange={(event) => setDraftOptions(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') event.currentTarget.blur()
-                      else if (event.key === 'Escape') {
-                        cancelEdit.current = true
-                        setEditingId(null)
-                      }
-                    }}
-                    className="rounded-b-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                    className="border border-sky-600 px-1 text-[11px] leading-tight outline-none"
                   />
                 )}
+                {/* Default value: a checkbox starts checked or not; every other
+                    field type takes a default text / selected option. */}
+                {isCheckbox ? (
+                  <label className="flex items-center gap-1 bg-white px-1 text-[11px] leading-tight text-sky-900">
+                    <input
+                      type="checkbox"
+                      aria-label="Checked by default"
+                      checked={draftChecked}
+                      onChange={(event) => setDraftChecked(event.target.checked)}
+                    />
+                    Checked by default
+                  </label>
+                ) : (
+                  <input
+                    aria-label="Default value"
+                    placeholder={choice ? 'Default (an option)' : 'Default value'}
+                    value={draftDefault}
+                    onChange={(event) => setDraftDefault(event.target.value)}
+                    className="border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                  />
+                )}
+                <label className="flex items-center gap-1 rounded-b-sm bg-white px-1 text-[11px] leading-tight text-sky-900">
+                  <input
+                    type="checkbox"
+                    aria-label="Required"
+                    checked={draftRequired}
+                    onChange={(event) => setDraftRequired(event.target.checked)}
+                  />
+                  Required
+                </label>
               </div>
             ) : (
               <span
@@ -243,6 +289,7 @@ export function FieldCreateLayer({
                 title={isFieldTool ? `${field.name} — double-click to edit` : field.name}
               >
                 {FIELD_GLYPH[field.type]} {field.name}
+                {field.required ? ' *' : ''}
                 {/* Radio always renders at least one button (see the preview and
                     the save seed), so floor its badge at 1 to match. */}
                 {choice

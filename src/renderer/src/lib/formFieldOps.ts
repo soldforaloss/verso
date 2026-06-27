@@ -29,12 +29,17 @@ export function removeFormField(docId: string, pageKey: string, id: string): voi
   )
 }
 
-/** Patches an authored field's name and/or options as a single undo step. */
+/** A patch of the editable properties of an authored field. */
+export type FormFieldPatch = Partial<
+  Pick<NewFormField, 'name' | 'options' | 'required' | 'defaultValue' | 'defaultChecked'>
+>
+
+/** Patches an authored field's editable properties as a single undo step. */
 export function updateFormField(
   docId: string,
   pageKey: string,
   id: string,
-  patch: { name?: string; options?: string[] }
+  patch: FormFieldPatch
 ): void {
   commit(
     docId,

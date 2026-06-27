@@ -3,6 +3,7 @@ import {
   cleanFieldOptions,
   newFieldName,
   radioButtonRects,
+  toWinAnsi,
   type NewFormField
 } from '@/lib/formFields'
 
@@ -31,14 +32,26 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
     const radioOptions = cleanFieldOptions(field.options ?? [], false)
     const create = (name: string): void => {
       if (field.type === 'checkbox') {
-        form.createCheckBox(name).addToPage(page, options)
+        const checkbox = form.createCheckBox(name)
+        if (field.defaultChecked) checkbox.check()
+        if (field.required) checkbox.enableRequired()
+        checkbox.addToPage(page, options)
       } else if (field.type === 'dropdown') {
         const dropdown = form.createDropdown(name)
         if (choiceOptions.length) dropdown.addOptions(choiceOptions)
+        // Default selection is rendered, so it must be a (WinAnsi-clean) option.
+        if (field.defaultValue && choiceOptions.includes(field.defaultValue)) {
+          dropdown.select(field.defaultValue)
+        }
+        if (field.required) dropdown.enableRequired()
         dropdown.addToPage(page, options)
       } else if (field.type === 'optionlist') {
         const list = form.createOptionList(name)
         if (choiceOptions.length) list.addOptions(choiceOptions)
+        if (field.defaultValue && choiceOptions.includes(field.defaultValue)) {
+          list.select([field.defaultValue])
+        }
+        if (field.required) list.enableRequired()
         list.addToPage(page, options)
       } else if (field.type === 'radio') {
         const group = form.createRadioGroup(name)
@@ -57,8 +70,16 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
             borderWidth: 1
           })
         })
+        if (field.defaultValue && values.includes(field.defaultValue)) {
+          group.select(field.defaultValue)
+        }
+        if (field.required) group.enableRequired()
       } else {
-        form.createTextField(name).addToPage(page, options)
+        const textField = form.createTextField(name)
+        // The default text is rendered with Helvetica → strip un-encodable chars.
+        if (field.defaultValue) textField.setText(toWinAnsi(field.defaultValue))
+        if (field.required) textField.enableRequired()
+        textField.addToPage(page, options)
       }
     }
     try {

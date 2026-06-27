@@ -22,6 +22,16 @@ export interface NewFormField {
    * `text` / `checkbox`.
    */
   options?: string[]
+  /** Marks the field required (AcroForm Ff "Required" flag). */
+  required?: boolean
+  /**
+   * Default value. For `text` the default text; for `dropdown` / `optionlist` /
+   * `radio` the initially-selected option/export value (ignored unless it
+   * matches one of `options`). Ignored for `checkbox` (see `defaultChecked`).
+   */
+  defaultValue?: string
+  /** Whether a `checkbox` field starts checked. */
+  defaultChecked?: boolean
 }
 
 const OPTION_FIELD_TYPES = new Set<NewFieldType>(['dropdown', 'optionlist', 'radio'])

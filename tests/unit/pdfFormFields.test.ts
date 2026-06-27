@@ -72,3 +72,52 @@ describe('addNewFormFields radio groups', () => {
     expect(reloaded.getForm().getRadioGroup('empty').getOptions()).toHaveLength(1)
   })
 })
+
+describe('addNewFormFields field properties', () => {
+  it('applies required and default value across field types', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'text', name: 'fullname', rect: RECT, required: true, defaultValue: 'Jane' },
+      { id: '2', type: 'checkbox', name: 'agree', rect: RECT, defaultChecked: true },
+      {
+        id: '3',
+        type: 'dropdown',
+        name: 'country',
+        rect: RECT,
+        options: ['USA', 'Canada'],
+        defaultValue: 'Canada',
+        required: true
+      },
+      {
+        id: '4',
+        type: 'radio',
+        name: 'sub',
+        rect: RECT,
+        options: ['Yes', 'No'],
+        defaultValue: 'No'
+      }
+    ])
+    const form = reloaded.getForm()
+    const text = form.getTextField('fullname')
+    expect(text.getText()).toBe('Jane')
+    expect(text.isRequired()).toBe(true)
+    expect(form.getCheckBox('agree').isChecked()).toBe(true)
+    const dropdown = form.getDropdown('country')
+    expect(dropdown.getSelected()).toEqual(['Canada'])
+    expect(dropdown.isRequired()).toBe(true)
+    expect(form.getRadioGroup('sub').getSelected()).toBe('No')
+  })
+
+  it('ignores a default value that is not one of the options', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'dropdown', name: 'd', rect: RECT, options: ['A', 'B'], defaultValue: 'Z' }
+    ])
+    expect(reloaded.getForm().getDropdown('d').getSelected()).toEqual([])
+  })
+
+  it('strips un-encodable characters from a text default (no save abort)', async () => {
+    const reloaded = await buildWith([
+      { id: '1', type: 'text', name: 't', rect: RECT, defaultValue: 'OK 日本語 done' }
+    ])
+    expect(reloaded.getForm().getTextField('t').getText()).toBe('OK  done')
+  })
+})
