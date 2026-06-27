@@ -29,11 +29,17 @@ export function removeFormField(docId: string, pageKey: string, id: string): voi
   )
 }
 
-export function renameFormField(docId: string, pageKey: string, id: string, name: string): void {
+/** Patches an authored field's name and/or options as a single undo step. */
+export function updateFormField(
+  docId: string,
+  pageKey: string,
+  id: string,
+  patch: { name?: string; options?: string[] }
+): void {
   commit(
     docId,
     pageKey,
-    'Rename field',
-    pageFields(docId, pageKey).map((field) => (field.id === id ? { ...field, name } : field))
+    'Edit field',
+    pageFields(docId, pageKey).map((field) => (field.id === id ? { ...field, ...patch } : field))
   )
 }

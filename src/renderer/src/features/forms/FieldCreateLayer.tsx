@@ -2,9 +2,17 @@ import { useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { PageViewport } from '@/lib/pdf'
 import { pageRectToScreen, screenToPage } from '@/lib/annotationGeometry'
-import { FIELD_TOOLS, useToolStore } from '@/store/toolStore'
-import { addFormField, removeFormField, renameFormField } from '@/lib/formFieldOps'
-import { newFieldId, newFieldName, type NewFormField } from '@/lib/formFields'
+import { FIELD_TOOLS, useToolStore, type Tool } from '@/store/toolStore'
+import { addFormField, removeFormField, updateFormField } from '@/lib/formFieldOps'
+import {
+  defaultFieldOptions,
+  isChoiceField,
+  newFieldId,
+  newFieldName,
+  parseFieldOptions,
+  type NewFieldType,
+  type NewFormField
+} from '@/lib/formFields'
 
 interface DraftRect {
   left: number
@@ -13,12 +21,29 @@ interface DraftRect {
   height: number
 }
 
+/** Maps the active field tool to the field type it authors. */
+const FIELD_TYPE_BY_TOOL: Partial<Record<Tool, NewFieldType>> = {
+  'field-text': 'text',
+  'field-checkbox': 'checkbox',
+  'field-dropdown': 'dropdown',
+  'field-optionlist': 'optionlist'
+}
+
+/** A glyph shown on each field preview so the type reads at a glance. */
+const FIELD_GLYPH: Record<NewFieldType, string> = {
+  text: '▭',
+  checkbox: '☑',
+  dropdown: '▼',
+  optionlist: '☰'
+}
+
 /**
  * Overlay for authoring AcroForm fields: when a field tool is active, drag to
- * place a text field or checkbox. Existing authored fields render as labelled
- * previews and can be deleted while a field tool is active. The real field is
- * created in the PDF on save. When no field tool is active the overlay is
- * entirely pass-through (no interactive descendants), so select/markup tools
+ * place a text field, checkbox, dropdown, or option list. Choice fields seed a
+ * default option list that can be edited inline. Existing authored fields render
+ * as labelled previews and can be deleted while a field tool is active. The real
+ * field is created in the PDF on save. When no field tool is active the overlay
+ * is entirely pass-through (no interactive descendants), so select/markup tools
  * reach the form and annotation layers beneath it.
  */
 export function FieldCreateLayer({
@@ -39,6 +64,9 @@ export function FieldCreateLayer({
   const [draft, setDraft] = useState<DraftRect | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
+  const [draftOptions, setDraftOptions] = useState('')
+  // Set when Escape cancels an edit so the resulting blur doesn't commit it.
+  const cancelEdit = useRef(false)
 
   const localPoint = (event: React.PointerEvent): { x: number; y: number } => {
     const rect = containerRef.current!.getBoundingClientRect()
@@ -85,7 +113,7 @@ export function FieldCreateLayer({
     if (Math.abs(end.x - s.x) < 6 && Math.abs(end.y - s.y) < 6) return
     const a = screenToPage(viewport, s.x, s.y)
     const b = screenToPage(viewport, end.x, end.y)
-    const type = tool === 'field-checkbox' ? 'checkbox' : 'text'
+    const type = FIELD_TYPE_BY_TOOL[tool] ?? 'text'
     const field: NewFormField = {
       id: newFieldId(),
       type,
@@ -95,7 +123,9 @@ export function FieldCreateLayer({
         y: Math.min(a.y, b.y),
         width: Math.abs(b.x - a.x),
         height: Math.abs(b.y - a.y)
-      }
+      },
+      // Choice fields need at least one option to be usable; seed a default set.
+      ...(isChoiceField(type) ? { options: defaultFieldOptions() } : {})
     }
     addFormField(docId, pageKey, field)
   }
@@ -118,16 +148,38 @@ export function FieldCreateLayer({
       {fields.map((field) => {
         const r = pageRectToScreen(viewport, field.rect)
         const editing = editingId === field.id
-        const commitRename = (): void => {
-          const next = draftName.trim()
+        const choice = isChoiceField(field.type)
+        const beginEdit = (): void => {
+          if (!isFieldTool) return
+          cancelEdit.current = false
+          setDraftName(field.name)
+          setDraftOptions((field.options ?? []).join(', '))
+          setEditingId(field.id)
+        }
+        const commitEdit = (): void => {
+          if (cancelEdit.current) {
+            cancelEdit.current = false
+            return
+          }
           setEditingId(null)
-          if (next && next !== field.name) renameFormField(docId, pageKey, field.id, next)
+          const patch: { name?: string; options?: string[] } = {}
+          const nextName = draftName.trim()
+          if (nextName && nextName !== field.name) patch.name = nextName
+          if (choice) {
+            const next = parseFieldOptions(draftOptions)
+            const prev = field.options ?? []
+            const changed = next.length !== prev.length || next.some((o, i) => o !== prev[i])
+            if (next.length && changed) patch.options = next
+          }
+          if (patch.name !== undefined || patch.options !== undefined) {
+            updateFormField(docId, pageKey, field.id, patch)
+          }
         }
         return (
           <div
             key={field.id}
             // Interactive only while a field tool is active (double-click to
-            // rename, × to delete); in select mode it is pass-through so the
+            // edit, × to delete); in select mode it is pass-through so the
             // form/annotation layers beneath stay reachable.
             className="group absolute rounded-sm border border-dashed border-sky-500 bg-sky-500/10"
             style={{
@@ -137,31 +189,56 @@ export function FieldCreateLayer({
               height: r.height,
               pointerEvents: isFieldTool ? 'auto' : 'none'
             }}
-            onDoubleClick={() => {
-              if (!isFieldTool) return
-              setDraftName(field.name)
-              setEditingId(field.id)
-            }}
+            onDoubleClick={beginEdit}
           >
             {editing ? (
-              <input
-                autoFocus
-                aria-label="Field name"
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                onBlur={commitRename}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') event.currentTarget.blur()
-                  else if (event.key === 'Escape') setEditingId(null)
+              <div
+                className="absolute left-0 top-0 flex w-56 -translate-y-full flex-col gap-px"
+                // Commit once focus leaves the whole editor (moving between the
+                // name and options inputs keeps focus inside, so no commit).
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                    commitEdit()
                 }}
-                className="absolute left-0 top-0 w-40 -translate-y-full rounded-t-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
-              />
+              >
+                <input
+                  autoFocus
+                  aria-label="Field name"
+                  value={draftName}
+                  onChange={(event) => setDraftName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur()
+                    else if (event.key === 'Escape') {
+                      cancelEdit.current = true
+                      setEditingId(null)
+                    }
+                  }}
+                  className="rounded-t-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                />
+                {choice && (
+                  <input
+                    aria-label="Field options"
+                    placeholder="Comma-separated options"
+                    value={draftOptions}
+                    onChange={(event) => setDraftOptions(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur()
+                      else if (event.key === 'Escape') {
+                        cancelEdit.current = true
+                        setEditingId(null)
+                      }
+                    }}
+                    className="rounded-b-sm border border-sky-600 px-1 text-[11px] leading-tight outline-none"
+                  />
+                )}
+              </div>
             ) : (
               <span
                 className="pointer-events-none absolute left-0 top-0 max-w-full -translate-y-full truncate rounded-t-sm bg-sky-500 px-1 text-[10px] leading-tight text-white"
-                title={isFieldTool ? `${field.name} — double-click to rename` : field.name}
+                title={isFieldTool ? `${field.name} — double-click to edit` : field.name}
               >
-                {field.type === 'checkbox' ? '☑' : '▭'} {field.name}
+                {FIELD_GLYPH[field.type]} {field.name}
+                {choice ? ` (${field.options?.length ?? 0})` : ''}
               </span>
             )}
             {isFieldTool && !editing && (

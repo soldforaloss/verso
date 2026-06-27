@@ -9,11 +9,13 @@ import {
   Highlighter,
   Image as ImageIcon,
   Italic,
+  ListChecks,
   Minus,
   MousePointer2,
   Pencil,
   SendToBack,
   Square,
+  SquareChevronDown,
   SquareCheck,
   Strikethrough,
   StickyNote,
@@ -61,7 +63,9 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
   ],
   [
     { tool: 'field-text', label: 'Add text field (form)', Icon: FormInput },
-    { tool: 'field-checkbox', label: 'Add checkbox field (form)', Icon: SquareCheck }
+    { tool: 'field-checkbox', label: 'Add checkbox field (form)', Icon: SquareCheck },
+    { tool: 'field-dropdown', label: 'Add dropdown field (form)', Icon: SquareChevronDown },
+    { tool: 'field-optionlist', label: 'Add list field (form)', Icon: ListChecks }
   ],
   [
     { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },

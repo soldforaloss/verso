@@ -19,12 +19,19 @@ export type Tool =
   | 'redaction'
   | 'field-text'
   | 'field-checkbox'
+  | 'field-dropdown'
+  | 'field-optionlist'
 
 export const MARKUP_TOOLS = new Set<Tool>(['highlight', 'underline', 'strike', 'squiggly'])
 export const DRAWING_TOOLS = new Set<Tool>(['ink', 'rect', 'ellipse', 'line', 'arrow', 'redaction'])
 export const PLACING_TOOLS = new Set<Tool>(['text', 'note'])
 /** Tools that draw a rectangle to author a fillable AcroForm field. */
-export const FIELD_TOOLS = new Set<Tool>(['field-text', 'field-checkbox'])
+export const FIELD_TOOLS = new Set<Tool>([
+  'field-text',
+  'field-checkbox',
+  'field-dropdown',
+  'field-optionlist'
+])
 
 /**
  * Single-key shortcuts for the most-used tools (the single source of truth for

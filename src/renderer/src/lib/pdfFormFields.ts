@@ -1,5 +1,5 @@
 import type { PDFForm, PDFPage } from 'pdf-lib'
-import { newFieldName, type NewFormField } from '@/lib/formFields'
+import { newFieldName, toWinAnsi, type NewFormField } from '@/lib/formFields'
 
 /**
  * Creates the authored form fields on a pdf-lib page. Coordinates are PDF page
@@ -17,9 +17,25 @@ export function addNewFormFields(form: PDFForm, page: PDFPage, fields: NewFormFi
       height: Math.max(1, field.rect.height),
       borderWidth: 1
     }
+    // Choice options are rendered into the field appearance with Helvetica, whose
+    // WinAnsi encoder throws on un-encodable characters during save() — strip them
+    // here too (not just at the editor boundary) so legacy/recovered fields can't
+    // abort the whole save. Empty results are dropped.
+    const choiceOptions = (field.options ?? []).map(toWinAnsi).filter(Boolean)
     const create = (name: string): void => {
-      if (field.type === 'checkbox') form.createCheckBox(name).addToPage(page, options)
-      else form.createTextField(name).addToPage(page, options)
+      if (field.type === 'checkbox') {
+        form.createCheckBox(name).addToPage(page, options)
+      } else if (field.type === 'dropdown') {
+        const dropdown = form.createDropdown(name)
+        if (choiceOptions.length) dropdown.addOptions(choiceOptions)
+        dropdown.addToPage(page, options)
+      } else if (field.type === 'optionlist') {
+        const list = form.createOptionList(name)
+        if (choiceOptions.length) list.addOptions(choiceOptions)
+        list.addToPage(page, options)
+      } else {
+        form.createTextField(name).addToPage(page, options)
+      }
     }
     try {
       create(field.name)
