@@ -154,6 +154,9 @@ next begins.
   top-level **error boundary** with a calm, recoverable fallback.
 - **Unsaved-changes guard:** closing the window with unsaved edits prompts before
   quitting, so work isn't lost to an accidental close.
+- **Autosave & crash recovery:** dirty documents are snapshotted to disk after an
+  editing pause and offered for restore on the next launch if the app didn't close
+  cleanly ([ADR-0012](./docs/decisions/0012-crash-recovery.md)).
 - **Accessibility:** landmark roles (`main`, document `tablist`, navigation
   `complementary`) and a keyboard-focusable, named page-view region, plus full
   keyboard page navigation (Home/End/PageUp/PageDown).
@@ -185,5 +188,4 @@ All planned milestones (M0–M9) have shipped. Future work lives below.
   round-trippable annotation objects need appearance-stream authoring or PDFium.
 - **Form field creation** — author new AcroForm fields, not just fill.
 - **PDF compare** — visual + text diff of two documents.
-- **Crash recovery** — restore unsaved edits after an unexpected exit.
 - **Vite 8** — bump once `electron-vite` supports it (see ADR-0003).

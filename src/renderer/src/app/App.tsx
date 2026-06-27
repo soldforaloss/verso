@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { useDocumentStore } from '@/store/documentStore'
 import { useViewStore } from '@/store/viewStore'
@@ -25,7 +25,10 @@ import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
 import { ShortcutsDialog } from '@/features/help/ShortcutsDialog'
 import { ConfirmQuitDialog } from '@/features/help/ConfirmQuitDialog'
+import { RestoreDialog } from '@/features/help/RestoreDialog'
 import { CommandPalette } from '@/features/command/CommandPalette'
+import { dismissRecovery, restoreRecovery, startRecoveryWatcher } from '@/lib/recovery'
+import type { RecoveryEntry } from '@shared/ipc'
 import { TabBar } from './TabBar'
 import { EmptyState } from './EmptyState'
 
@@ -38,6 +41,22 @@ function App(): React.JSX.Element {
   const theme = usePreferencesStore((s) => s.theme)
   const hydrate = usePreferencesStore((s) => s.hydrate)
   const resetForDocument = useViewStore((s) => s.resetForDocument)
+  const [recoveries, setRecoveries] = useState<RecoveryEntry[]>([])
+
+  // Start the autosave watcher and offer any unsaved work left by a crash.
+  useEffect(() => {
+    void window.api.listRecovery().then(setRecoveries)
+    return startRecoveryWatcher()
+  }, [])
+
+  const handleRestore = (entry: RecoveryEntry): void => {
+    setRecoveries((list) => list.filter((e) => e.id !== entry.id))
+    void restoreRecovery(entry).catch(() => setRecoveries((list) => [...list, entry]))
+  }
+  const handleDiscard = (entry: RecoveryEntry): void => {
+    setRecoveries((list) => list.filter((e) => e.id !== entry.id))
+    void dismissRecovery(entry).catch(() => setRecoveries((list) => [...list, entry]))
+  }
 
   useEffect(() => {
     void window.api.getPreferences().then(hydrate)
@@ -309,6 +328,7 @@ function App(): React.JSX.Element {
       <ShortcutsDialog />
       <CommandPalette />
       <ConfirmQuitDialog />
+      <RestoreDialog entries={recoveries} onRestore={handleRestore} onDiscard={handleDiscard} />
     </div>
   )
 }

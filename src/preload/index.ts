@@ -30,6 +30,11 @@ const api: VersoApi = {
   writeFile: (request) => ipcRenderer.invoke(IpcChannels.writeFile, request),
   writeFileInDir: (request) => ipcRenderer.invoke(IpcChannels.writeFileInDir, request),
 
+  saveRecovery: (request) => ipcRenderer.invoke(IpcChannels.recoverySave, request),
+  listRecovery: () => ipcRenderer.invoke(IpcChannels.recoveryList),
+  readRecovery: (request) => ipcRenderer.invoke(IpcChannels.recoveryRead, request),
+  discardRecovery: (request) => ipcRenderer.invoke(IpcChannels.recoveryDiscard, request),
+
   getSecurityStatus: () => ipcRenderer.invoke(IpcChannels.getSecurityStatus),
   transformPdf: (request) => ipcRenderer.invoke(IpcChannels.transformPdf, request),
 

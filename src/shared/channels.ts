@@ -37,6 +37,15 @@ export const IpcChannels = {
   /** Writes bytes to `<dir>/<name>` (atomic); returns the full path. */
   writeFileInDir: 'file:write-in-dir',
 
+  /** Autosaves a recovery snapshot of a dirty document to userData. */
+  recoverySave: 'recovery:save',
+  /** Lists recoverable documents left by a previous (possibly crashed) session. */
+  recoveryList: 'recovery:list',
+  /** Reads a recovery snapshot's PDF bytes. */
+  recoveryRead: 'recovery:read',
+  /** Deletes a recovery snapshot (after restore, save, or close). */
+  recoveryDiscard: 'recovery:discard',
+
   /** Reports whether the bundled qpdf sidecar is available (+ its version). */
   getSecurityStatus: 'security:status',
   /** Runs a qpdf transform (encrypt/decrypt/repair/linearize); returns bytes. */

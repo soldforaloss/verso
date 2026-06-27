@@ -1,5 +1,6 @@
 import { registerAppHandlers } from './app'
 import { registerFileHandlers } from './files'
+import { registerRecoveryHandlers } from './recovery'
 import { registerSecurityHandlers } from './security'
 import { registerPrintHandlers } from './print'
 
@@ -13,6 +14,7 @@ import { registerPrintHandlers } from './print'
 export function registerIpcHandlers(): void {
   registerAppHandlers()
   registerFileHandlers()
+  registerRecoveryHandlers()
   registerSecurityHandlers()
   registerPrintHandlers()
 }

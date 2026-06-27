@@ -8,6 +8,9 @@ import type {
   PrintPdfRequest,
   ReadFileRequest,
   RecentFile,
+  RecoveryEntry,
+  RecoveryIdRequest,
+  RecoverySaveRequest,
   SaveDialogRequest,
   SecurityStatus,
   TransformPdfRequest,
@@ -57,6 +60,15 @@ export interface VersoApi {
   writeFileInDir(request: WriteInDirRequest): Promise<string>
 
   /** Reports qpdf sidecar availability and version. */
+  /** Autosaves a recovery snapshot of a dirty document. */
+  saveRecovery(request: RecoverySaveRequest): Promise<void>
+  /** Lists recoverable documents from a previous (possibly crashed) session. */
+  listRecovery(): Promise<RecoveryEntry[]>
+  /** Reads a recovery snapshot's PDF bytes. */
+  readRecovery(request: RecoveryIdRequest): Promise<Uint8Array>
+  /** Discards a recovery snapshot. */
+  discardRecovery(request: RecoveryIdRequest): Promise<void>
+
   getSecurityStatus(): Promise<SecurityStatus>
   /** Runs a qpdf transform (encrypt/decrypt/repair/linearize); resolves to bytes. */
   transformPdf(request: TransformPdfRequest): Promise<Uint8Array<ArrayBuffer>>

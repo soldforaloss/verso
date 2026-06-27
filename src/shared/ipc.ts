@@ -113,6 +113,29 @@ export const WriteInDirRequestSchema = z.object({
 })
 export type WriteInDirRequest = z.infer<typeof WriteInDirRequestSchema>
 
+// --- Crash recovery --------------------------------------------------------
+
+/** Autosaves a recovery snapshot of a dirty document. */
+export const RecoverySaveRequestSchema = z.object({
+  id: z.string().min(1).max(128),
+  name: z.string().min(1).max(255),
+  path: z.string().nullable(),
+  bytes: z.instanceof(Uint8Array)
+})
+export type RecoverySaveRequest = z.infer<typeof RecoverySaveRequestSchema>
+
+/** Metadata for a recoverable document (bytes fetched separately). */
+export const RecoveryEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string().nullable(),
+  savedAt: z.number().int().nonnegative()
+})
+export type RecoveryEntry = z.infer<typeof RecoveryEntrySchema>
+
+export const RecoveryIdRequestSchema = z.object({ id: z.string().min(1).max(128) })
+export type RecoveryIdRequest = z.infer<typeof RecoveryIdRequestSchema>
+
 // --- Security (qpdf sidecar) -----------------------------------------------
 
 /** Availability of the bundled qpdf sidecar binary. */

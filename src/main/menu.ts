@@ -58,7 +58,14 @@ export function installApplicationMenu(window: BrowserWindow): void {
       : []),
     {
       label: '&File',
-      submenu: [isMac ? { role: 'close' } : { role: 'quit' }]
+      // Route Quit through window.close() (not role:'quit'/app.quit) so the
+      // unsaved-changes guard and crash-recovery cleanup run, instead of a bare
+      // app quit that bypasses both.
+      submenu: [
+        isMac
+          ? { role: 'close' }
+          : { label: 'Quit', accelerator: 'Ctrl+Q', click: () => window.close() }
+      ]
     },
     {
       label: '&Edit',

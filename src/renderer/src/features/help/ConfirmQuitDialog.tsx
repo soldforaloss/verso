@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useUiStore } from '@/store/uiStore'
+import { useDocumentStore } from '@/store/documentStore'
+import { suppressAutosave } from '@/lib/recovery'
 
 /**
  * Shown when the window is closing with unsaved changes. "Discard & quit" tells
@@ -34,7 +36,13 @@ export function ConfirmQuitDialog(): React.JSX.Element {
             variant="destructive"
             onClick={() => {
               setOpen(false)
-              void window.api.allowClose()
+              // The user chose to discard: stop autosave (so a late snapshot can't
+              // resurrect the files), then drop any existing recovery snapshots.
+              suppressAutosave()
+              const dirty = useDocumentStore.getState().tabs.filter((tab) => tab.dirty)
+              void Promise.all(
+                dirty.map((tab) => window.api.discardRecovery({ id: tab.id }))
+              ).finally(() => window.api.allowClose())
             }}
           >
             Discard &amp; quit
