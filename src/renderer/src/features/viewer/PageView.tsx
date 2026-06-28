@@ -9,6 +9,9 @@ import {
   type TextContentItem
 } from '@/lib/pdf'
 import { normalizeRotation, type PageSize } from '@/lib/geometry'
+import { renderPageToImageData } from '@/lib/pdfium'
+import { getSource } from '@/store/documentStore'
+import { usePreferencesStore } from '@/store/preferencesStore'
 import { cn } from '@/lib/utils'
 import type { Annotation } from '@/lib/annotations'
 import type { CropBox } from '@/lib/pageModel'
@@ -110,6 +113,8 @@ function PageViewImpl({
     normal: HighlightRect[]
     active: HighlightRect[]
   }>({ normal: [], active: [] })
+  // Tier-3 PDFium (WASM) render backend, opt-in via preferences.
+  const pdfiumEnabled = usePreferencesStore((s) => s.experimentalPdfiumRenderer)
 
   useEffect(() => {
     const element = wrapperRef.current
@@ -138,7 +143,7 @@ function PageViewImpl({
     if (!canvas || !textContainer) return
 
     let cancelled = false
-    const { pdf, pageIndex, userRotation } = descriptor
+    const { pdf, pageIndex, userRotation, sourceId } = descriptor
 
     void (async () => {
       try {
@@ -153,18 +158,55 @@ function PageViewImpl({
         const rotation = normalizeRotation(page.rotate + userRotation)
         const viewport = page.getViewport({ scale, rotation })
         const dpr = window.devicePixelRatio || 1
-        canvas.width = Math.floor(viewport.width * dpr)
-        canvas.height = Math.floor(viewport.height * dpr)
         canvas.style.width = `${Math.floor(viewport.width)}px`
         canvas.style.height = `${Math.floor(viewport.height)}px`
 
-        renderTaskRef.current?.cancel()
-        const renderParams: Parameters<PdfPage['render']>[0] = { canvas, viewport }
-        if (dpr !== 1) renderParams.transform = [dpr, 0, 0, dpr, 0, 0]
-        const task = page.render(renderParams)
-        renderTaskRef.current = task
-        await task.promise
-        if (cancelled) return
+        // Tier-3: render the page bitmap with PDFium when enabled. PDFium honors
+        // the page's intrinsic /Rotate, so it matches the viewport only when the
+        // USER rotation is 0 — otherwise fall back to pdf.js. pdf.js still owns
+        // the text layer + geometry below regardless of the bitmap source.
+        const source = pdfiumEnabled ? getSource(sourceId) : undefined
+        const usePdfium = !!source && normalizeRotation(userRotation) === 0
+        // Both backends target the same floored device dimensions so the bitmap
+        // aligns exactly with the CSS box and the viewport-derived overlays.
+        const targetWidth = Math.floor(viewport.width * dpr)
+        const targetHeight = Math.floor(viewport.height * dpr)
+        let rendered = false
+        if (usePdfium && source) {
+          try {
+            const image = await renderPageToImageData(
+              sourceId,
+              source.bytes,
+              pageIndex,
+              targetWidth,
+              targetHeight
+            )
+            if (cancelled) return
+            canvas.width = image.width
+            canvas.height = image.height
+            canvas.getContext('2d')?.putImageData(image, 0, 0)
+            canvas.dataset.renderBackend = 'pdfium'
+            rendered = true
+          } catch (error) {
+            // Never let a Tier-3 failure blank the page — degrade to pdf.js.
+            console.warn(
+              `[viewer] PDFium render failed on page ${pageNumber}, using pdf.js:`,
+              error
+            )
+          }
+        }
+        if (!rendered) {
+          canvas.width = targetWidth
+          canvas.height = targetHeight
+          renderTaskRef.current?.cancel()
+          const renderParams: Parameters<PdfPage['render']>[0] = { canvas, viewport }
+          if (dpr !== 1) renderParams.transform = [dpr, 0, 0, dpr, 0, 0]
+          const task = page.render(renderParams)
+          renderTaskRef.current = task
+          await task.promise
+          if (cancelled) return
+          canvas.dataset.renderBackend = 'pdfjs'
+        }
 
         const textContent = await page.getTextContent()
         textContainer.replaceChildren()
@@ -194,13 +236,15 @@ function PageViewImpl({
       renderTaskRef.current = null
       canvas.width = 0
       canvas.height = 0
+      // Don't let a blanked canvas keep advertising a stale render backend.
+      delete canvas.dataset.renderBackend
       textContainer.replaceChildren()
       renderInfoRef.current = null
       setPageViewport(null)
       pageRef.current?.cleanup()
       pageRef.current = null
     }
-  }, [visible, descriptor, scale, pageNumber, onMeasured])
+  }, [visible, descriptor, scale, pageNumber, onMeasured, pdfiumEnabled])
 
   useEffect(() => {
     const info = renderInfoRef.current

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { loadPdfDocument, type PdfDocument } from '@/lib/pdf'
+import { destroyPdfiumDocument } from '@/lib/pdfium'
 import { pageKey, type PageRef } from '@/lib/pageModel'
 import type { Annotation } from '@/lib/annotations'
 import type { OutlineItem } from '@/lib/outline'
@@ -174,6 +175,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         if (source) {
           void source.destroy()
           sourceCache.delete(sourceId)
+          destroyPdfiumDocument(sourceId)
         }
       }
     }
@@ -243,6 +245,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const { pdf, destroy } = await loadPdfDocument(bytes)
     sourceCache.set(sourceId, { pdf, bytes, destroy })
     if (previous) void previous.destroy()
+    // The source's bytes changed — drop the now-stale cached PDFium document so
+    // the next Tier-3 render re-loads the new bytes.
+    destroyPdfiumDocument(sourceId)
     set((state) => ({
       tabs: state.tabs.map((tab) =>
         tab.id === tabId ? { ...tab, dirty: true, sourceRevision: tab.sourceRevision + 1 } : tab
@@ -262,6 +267,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           if (source) {
             void source.destroy()
             sourceCache.delete(previousId)
+            destroyPdfiumDocument(previousId)
           }
         }
       }

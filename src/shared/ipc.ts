@@ -85,7 +85,9 @@ export const PreferencesSchema = z.object({
   readingMode: ReadingModeSchema.default('normal'),
   sidebarOpen: z.boolean().default(true),
   /** Tesseract language code for OCR (a bundled `best_int` model). */
-  ocrLanguage: z.string().default('eng')
+  ocrLanguage: z.string().default('eng'),
+  /** Experimental: render pages with the Tier-3 PDFium (WASM) engine. */
+  experimentalPdfiumRenderer: z.boolean().default(false)
 })
 export type Preferences = z.infer<typeof PreferencesSchema>
 

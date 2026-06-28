@@ -40,6 +40,7 @@ interface PreferencesState extends Preferences {
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
   setOcrLanguage: (code: string) => void
+  setExperimentalPdfiumRenderer: (enabled: boolean) => void
 }
 
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
@@ -48,6 +49,7 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   readingMode: 'normal',
   sidebarOpen: true,
   ocrLanguage: 'eng',
+  experimentalPdfiumRenderer: false,
   hydrated: false,
 
   hydrate: (prefs) => set({ ...prefs, hydrated: true }),
@@ -81,5 +83,9 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   setOcrLanguage: (ocrLanguage) => {
     set({ ocrLanguage })
     persist({ ocrLanguage })
+  },
+  setExperimentalPdfiumRenderer: (experimentalPdfiumRenderer) => {
+    set({ experimentalPdfiumRenderer })
+    persist({ experimentalPdfiumRenderer })
   }
 }))

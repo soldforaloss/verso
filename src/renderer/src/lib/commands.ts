@@ -171,6 +171,15 @@ export function buildCommands(tab: DocumentTab | null): Command[] {
       label: 'Keyboard shortcuts',
       keywords: 'help',
       run: () => useUiStore.getState().openShortcuts()
+    },
+    {
+      id: 'toggle-pdfium',
+      group: 'Tools',
+      label: prefs().experimentalPdfiumRenderer
+        ? 'Disable experimental PDFium renderer'
+        : 'Enable experimental PDFium renderer',
+      keywords: 'tier-3 render engine fidelity wasm high quality',
+      run: () => prefs().setExperimentalPdfiumRenderer(!prefs().experimentalPdfiumRenderer)
     }
   )
 

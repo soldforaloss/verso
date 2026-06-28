@@ -11,22 +11,25 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Bundled / sidecar (not npm)
 
-| Component                              | License                   | Notes                                                                                       |
-| -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
-| qpdf                                   | Apache-2.0                | Sidecar binary for encryption/decryption/repair/linearize (M8).                             |
-| PDFium                                 | BSD-3-Clause / Apache-2.0 | Optional native addon for Tier-3 content editing (stretch).                                 |
-| PDF.js cMaps & standard fonts          | Apache-2.0                | Bundled from `pdfjs-dist` for offline rendering.                                            |
-| tesseract.js wasm core & language data | Apache-2.0                | Bundled `best_int` models for offline OCR in 8 languages (eng/spa/fra/deu/por/ita/nld/rus). |
-| Carlito font (≈ Calibri)               | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.                            |
-| Caladea font (≈ Cambria)               | SIL OFL 1.1               | Bundled in `resources/fonts` for metric-compatible text editing.                            |
-| Liberation Sans/Serif/Mono             | SIL OFL 1.1               | Bundled — metric-compatible with Arial / Times New Roman / Courier New.                     |
-| Lato font                              | SIL OFL 1.1               | Bundled — a common open font used directly by many documents.                               |
-| Great Vibes & Caveat fonts             | SIL OFL 1.1               | Bundled — used to render typed signatures to an image.                                      |
+| Component                                                    | License                                  | Notes                                                                                                                                                                                        |
+| ------------------------------------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| qpdf                                                         | Apache-2.0                               | Sidecar binary for encryption/decryption/repair/linearize (M8).                                                                                                                              |
+| PDFium (WASM)                                                | BSD-3-Clause                             | Tier-3 render engine, bundled offline via the `@hyzyla/pdfium` MIT wrapper. Copyright 2014 The PDFium Authors.                                                                               |
+| FreeType (vendored in PDFium)                                | FTL (FreeType License)                   | Permissive (BSD-style w/ attribution), NOT the GPLv2 arm. "Portions of this software are copyright the FreeType Project (www.freetype.org); based in part on the work of the FreeType Team." |
+| lcms2 / libjpeg-turbo / OpenJPEG / zlib (vendored in PDFium) | MIT / BSD+IJG+Zlib / BSD-2-Clause / Zlib | Permissive deps bundled inside the PDFium WASM build.                                                                                                                                        |
+| PDF.js cMaps & standard fonts                                | Apache-2.0                               | Bundled from `pdfjs-dist` for offline rendering.                                                                                                                                             |
+| tesseract.js wasm core & language data                       | Apache-2.0                               | Bundled `best_int` models for offline OCR in 8 languages (eng/spa/fra/deu/por/ita/nld/rus).                                                                                                  |
+| Carlito font (≈ Calibri)                                     | SIL OFL 1.1                              | Bundled in `resources/fonts` for metric-compatible text editing.                                                                                                                             |
+| Caladea font (≈ Cambria)                                     | SIL OFL 1.1                              | Bundled in `resources/fonts` for metric-compatible text editing.                                                                                                                             |
+| Liberation Sans/Serif/Mono                                   | SIL OFL 1.1                              | Bundled — metric-compatible with Arial / Times New Roman / Courier New.                                                                                                                      |
+| Lato font                                                    | SIL OFL 1.1                              | Bundled — a common open font used directly by many documents.                                                                                                                                |
+| Great Vibes & Caveat fonts                                   | SIL OFL 1.1                              | Bundled — used to render typed signatures to an image.                                                                                                                                       |
 
 ## Runtime dependencies
 
 | Package                    | Version | License    |
 | -------------------------- | ------- | ---------- |
+| `@hyzyla/pdfium`           | 2.1.13  | MIT        |
 | `@pdf-lib/fontkit`         | 1.1.1   | MIT        |
 | `@tesseract.js-data/*`     | 1.0.0   | MIT        |
 | `class-variance-authority` | 0.7.1   | Apache-2.0 |
