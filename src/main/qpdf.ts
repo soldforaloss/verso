@@ -75,8 +75,40 @@ export async function getSecurityStatus(): Promise<SecurityStatus> {
   }
 }
 
+/** Cheap heuristic: does the file reference an `/Encrypt` dictionary? */
+function looksEncrypted(bytes: Uint8Array): boolean {
+  // A Buffer view over the same memory (no copy) so the scan is cheap even for
+  // large files; bytes here is always a fresh ArrayBuffer-backed Uint8Array.
+  return Buffer.from(bytes.buffer as ArrayBuffer, bytes.byteOffset, bytes.byteLength).includes(
+    '/Encrypt'
+  )
+}
+
+/**
+ * Transparently removes encryption from an owner-restricted PDF (empty user
+ * password) when it is opened, so the rest of the pipeline can edit and save it
+ * — pdf-lib, which `save.ts` uses, cannot parse encrypted objects, so a
+ * restricted PDF that renders fine would otherwise fail on every save. A PDF
+ * that needs a real user password (or when qpdf is unavailable) is returned
+ * untouched. Most PDFs aren't encrypted, so the qpdf round-trip is skipped.
+ */
+export async function maybeDecrypt(
+  bytes: Uint8Array<ArrayBuffer>
+): Promise<Uint8Array<ArrayBuffer>> {
+  if (!looksEncrypted(bytes)) return bytes
+  try {
+    return await transformPdf({ operation: 'decrypt', bytes, password: '' })
+  } catch (error) {
+    log.info(
+      '[qpdf] could not auto-decrypt on open (a user password may be required):',
+      error instanceof Error ? error.message : error
+    )
+    return bytes
+  }
+}
+
 /** Runs a transform on the given bytes via temp files and returns the result. */
-export async function transformPdf(request: TransformPdfRequest): Promise<Uint8Array> {
+export async function transformPdf(request: TransformPdfRequest): Promise<Uint8Array<ArrayBuffer>> {
   if (request.bytes.length === 0) throw new Error('Nothing to transform.')
   if (request.bytes.length > MAX_PDF_BYTES) throw new Error('File is too large.')
 

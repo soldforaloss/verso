@@ -3,6 +3,7 @@ import { basename, extname, join } from 'node:path'
 import { readFile, writeFile, rename, mkdir, stat } from 'node:fs/promises'
 import { app, dialog, type BrowserWindow } from 'electron'
 import log from 'electron-log/main'
+import { maybeDecrypt } from './qpdf'
 import {
   PreferencesSchema,
   RecentFileSchema,
@@ -58,11 +59,15 @@ export async function readPdf(path: string): Promise<OpenedDocument> {
   const buffer = await readFile(path)
   await addRecentFile(path)
 
+  // Transparently lift owner-only encryption so the pdf-lib save path can edit
+  // it (a restricted PDF renders but pdf-lib can't parse its encrypted objects).
+  const bytes = await maybeDecrypt(new Uint8Array(buffer))
+
   return {
     id: randomUUID(),
     name: basename(path),
     path,
-    bytes: new Uint8Array(buffer)
+    bytes
   }
 }
 
