@@ -68,6 +68,8 @@ fileAssociations:
 # macOS / Linux are roadmap targets; kept minimal so the config stays portable.
 mac:
   category: public.app-category.productivity
+  # Generated from the 1024px PNG (electron-builder makes the .icns).
+  icon: resources/icon.png
   target:
     - dmg
     - zip

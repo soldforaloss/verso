@@ -5,7 +5,8 @@
   "homepage": "https://versoeditor.com",
   "license": "MIT",
   "author": {
-    "name": "Verso contributors"
+    "name": "Verso contributors",
+    "email": "noreply@versoeditor.com"
   },
   "repository": {
     "type": "git",
