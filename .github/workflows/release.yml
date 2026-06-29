@@ -3,15 +3,23 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Build-only smoke test (no publish — see the `publish` job's tag guard).
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release-windows:
-    name: Build & publish Windows artifacts
-    runs-on: windows-latest
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, target: win }
+          - { os: macos-latest, target: mac }
+          - { os: ubuntu-latest, target: linux }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +33,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Bundle the qpdf security sidecar (Apache-2.0) into the installer.
+      # Bundle the qpdf security sidecar (Apache-2.0) into the installer. Best
+      # effort: macOS has no prebuilt (resolved from PATH / brew there instead).
       - name: Fetch qpdf sidecar
+        continue-on-error: true
         run: npm run fetch:qpdf
 
       # Regenerate the committed app icons for reproducibility.
@@ -36,22 +46,54 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Package the installer, portable exe, and latest.yml (auto-update feed)
-      # WITHOUT publishing. electron-builder's GitHub publisher uploads files
-      # concurrently and can create two releases for the same tag when the
-      # release doesn't yet exist (a known race), which splits the assets.
+      # Package installers WITHOUT publishing (the publish job uploads them all
+      # to one release atomically). Builds are UNSIGNED for now —
+      # CSC_IDENTITY_AUTO_DISCOVERY=false skips macOS code-signing/notarization;
+      # add CSC_LINK / APPLE_ID secrets later to sign without changing this file.
       - name: Package
-        run: npx electron-builder --win --publish never
+        run: npx electron-builder --${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      # Publish everything to a single release in one atomic create — no race,
-      # one release per tag, with all assets together.
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: |
+            release/*/*.exe
+            release/*/*.exe.blockmap
+            release/*/*.dmg
+            release/*/*.dmg.blockmap
+            release/*/*.zip
+            release/*/*.zip.blockmap
+            release/*/*.AppImage
+            release/*/*.deb
+            release/*/latest*.yml
+          if-no-files-found: warn
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    # Only publish for a real tag push; a manual workflow_dispatch is build-only.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
       - name: Publish GitHub Release
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          files=$(ls release/*/Verso-*.exe release/*/Verso-*.exe.blockmap release/*/latest.yml)
+          files=$(find dist -type f \( \
+            -name '*.exe' -o -name '*.exe.blockmap' \
+            -o -name '*.dmg' -o -name '*.dmg.blockmap' \
+            -o -name '*.zip' -o -name '*.zip.blockmap' \
+            -o -name '*.AppImage' -o -name '*.deb' \
+            -o -name 'latest*.yml' \) | sort)
           echo "Publishing assets:"
           echo "$files"
           gh release create "$GITHUB_REF_NAME" $files \

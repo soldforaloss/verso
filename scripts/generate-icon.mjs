@@ -8,9 +8,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const OUT = join(process.cwd(), 'resources')
-const SIZE = 256
 const SS = 4 // supersample factor
-const BIG = SIZE * SS
 
 const TOP = [0x63, 0x66, 0xf1] // indigo-500
 const BOTTOM = [0x43, 0x38, 0xca] // indigo-700
@@ -38,7 +36,7 @@ function distToSegment(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 }
 
-function sample(x, y) {
+function sample(x, y, BIG) {
   // Returns [r,g,b,a] at a point in the BIG canvas.
   const margin = BIG * 0.04
   const tileSize = BIG - margin * 2
@@ -63,7 +61,8 @@ function sample(x, y) {
   return [bg[0], bg[1], bg[2], 255]
 }
 
-function renderPng() {
+function renderPng(SIZE) {
+  const BIG = SIZE * SS
   const pixels = Buffer.alloc(SIZE * SIZE * 4)
   for (let y = 0; y < SIZE; y += 1) {
     for (let x = 0; x < SIZE; x += 1) {
@@ -73,7 +72,7 @@ function renderPng() {
       let a = 0
       for (let sy = 0; sy < SS; sy += 1) {
         for (let sx = 0; sx < SS; sx += 1) {
-          const [sr, sg, sb, sa] = sample(x * SS + sx + 0.5, y * SS + sy + 0.5)
+          const [sr, sg, sb, sa] = sample(x * SS + sx + 0.5, y * SS + sy + 0.5, BIG)
           r += sr
           g += sg
           b += sb
@@ -165,7 +164,9 @@ function encodeIco(png) {
 }
 
 mkdirSync(OUT, { recursive: true })
-const png = renderPng()
-writeFileSync(join(OUT, 'icon.png'), png)
-writeFileSync(join(OUT, 'icon.ico'), encodeIco(png))
-console.log(`[generate-icon] Wrote resources/icon.png and icon.ico (${png.length} B PNG).`)
+// 1024px PNG: macOS (electron-builder) needs ≥512 to generate the .icns, and it
+// stays crisp on retina + as the Linux icon. The .ico keeps a 256px entry
+// (Windows ICO PNG entries are capped at 256).
+writeFileSync(join(OUT, 'icon.png'), renderPng(1024))
+writeFileSync(join(OUT, 'icon.ico'), encodeIco(renderPng(256)))
+console.log('[generate-icon] Wrote resources/icon.png (1024) and icon.ico (256).')
