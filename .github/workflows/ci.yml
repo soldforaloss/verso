@@ -15,9 +15,8 @@ jobs:
   quality:
     name: Lint · Typecheck · Test · Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # Windows is the required gate; macOS/Linux run for cross-platform coverage
-    # but don't fail the workflow yet (promote to required once consistently green).
-    continue-on-error: ${{ matrix.os != 'windows-latest' }}
+    # All three platforms are a required gate — the full suite (lint, typecheck,
+    # unit, e2e) must pass on Windows, macOS, and Linux.
     strategy:
       fail-fast: false
       matrix:
