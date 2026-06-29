@@ -13,8 +13,15 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint · Typecheck · Test · Build
-    runs-on: windows-latest
+    name: Lint · Typecheck · Test · Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Windows is the required gate; macOS/Linux run for cross-platform coverage
+    # but don't fail the workflow yet (promote to required once consistently green).
+    continue-on-error: ${{ matrix.os != 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,11 +32,15 @@ jobs:
           node-version: 22
           cache: npm
 
-      # Electron downloads its binary on first use; cache it across runs.
+      # Electron downloads its binary on first use; cache it across runs. The
+      # cache path differs per OS — list all; the action keeps whichever exists.
       - name: Cache Electron binary
         uses: actions/cache@v4
         with:
-          path: ~/AppData/Local/electron/Cache
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/.cache/electron
+            ~/Library/Caches/electron
           key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
@@ -56,20 +67,26 @@ jobs:
         run: node node_modules/electron/install.js
 
       # Download the qpdf sidecar so the security e2e exercises the real
-      # encrypt/decrypt path. Best-effort: if the download fails, the test
-      # falls back to asserting the graceful "unavailable" UI.
+      # encrypt/decrypt path. Best-effort: if it's unavailable (e.g. macOS has
+      # no prebuilt), the security tests fall back to graceful-degrade / skip.
       - name: Fetch qpdf sidecar
         continue-on-error: true
         run: npm run fetch:qpdf
 
+      # Linux runners are headless — Electron/Playwright need a virtual display.
+      - name: End-to-end tests (Electron, Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+
       - name: End-to-end tests (Electron)
+        if: runner.os != 'Linux'
         run: npm run test:e2e
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 7
           if-no-files-found: ignore
