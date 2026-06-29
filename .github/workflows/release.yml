@@ -96,7 +96,9 @@ jobs:
             -o -name 'latest*.yml' \) | sort)
           echo "Publishing assets:"
           echo "$files"
+          # --repo is explicit because this job has no checkout (no local .git).
           gh release create "$GITHUB_REF_NAME" $files \
+            --repo "$GITHUB_REPOSITORY" \
             --title "Verso $GITHUB_REF_NAME" \
             --generate-notes \
             --verify-tag
