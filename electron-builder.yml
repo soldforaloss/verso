@@ -57,13 +57,14 @@ nsis:
 portable:
   artifactName: ${productName}-${version}-${arch}-portable.${ext}
 
-# Opt-in file association for .pdf (the installer lets users decline).
+# Opt-in file association for .pdf (the installer lets users decline). No
+# explicit icon — it uses the per-platform app icon (the Windows .ico, the
+# macOS .icns generated from the PNG), so there's no cross-platform icon path.
 fileAssociations:
   - ext: pdf
     name: PDF Document
     description: Portable Document Format
     role: Editor
-    icon: resources/icon.ico
 
 # macOS / Linux are roadmap targets; kept minimal so the config stays portable.
 mac:
