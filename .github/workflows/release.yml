@@ -17,9 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, target: win }
-          - { os: macos-latest, target: mac }
-          - { os: ubuntu-latest, target: linux }
+          - { os: windows-latest, target: win, extra: '' }
+          # Universal: one .dmg that runs on both Apple Silicon and Intel Macs.
+          - { os: macos-latest, target: mac, extra: '--universal' }
+          - { os: ubuntu-latest, target: linux, extra: '' }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,7 +52,7 @@ jobs:
       # CSC_IDENTITY_AUTO_DISCOVERY=false skips macOS code-signing/notarization;
       # add CSC_LINK / APPLE_ID secrets later to sign without changing this file.
       - name: Package
-        run: npx electron-builder --${{ matrix.target }} --publish never
+        run: npx electron-builder --${{ matrix.target }} ${{ matrix.extra }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
