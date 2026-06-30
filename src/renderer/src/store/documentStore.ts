@@ -137,9 +137,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id }))
 
-    try {
-      const { pdf, destroy } = await loadPdfDocument(source.bytes)
-      sourceCache.set(source.id, { pdf, bytes: source.bytes, destroy })
+    const applyLoaded = async (bytes: Uint8Array): Promise<void> => {
+      const { pdf, destroy } = await loadPdfDocument(bytes)
+      sourceCache.set(source.id, { pdf, bytes, destroy })
       const pages: PageRef[] = Array.from({ length: pdf.numPages }, (_, index) => ({
         key: pageKey(),
         kind: 'source',
@@ -152,18 +152,33 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           existing.id === source.id ? { ...existing, status: 'ready', pages } : existing
         )
       }))
+    }
+
+    try {
+      await applyLoaded(source.bytes)
     } catch (error) {
-      set((state) => ({
-        tabs: state.tabs.map((existing) =>
-          existing.id === source.id
-            ? {
-                ...existing,
-                status: 'error',
-                error: error instanceof Error ? error.message : 'Failed to load PDF'
-              }
-            : existing
-        )
-      }))
+      // The file is malformed/damaged. Try to recover it with the qpdf sidecar
+      // (it reconstructs a broken xref, strips leading junk, etc.) and retry
+      // once — the recovered bytes become the tab's source, so edits/saves work.
+      try {
+        const repaired = await window.api.transformPdf({
+          operation: 'repair',
+          bytes: source.bytes
+        })
+        await applyLoaded(repaired)
+      } catch {
+        set((state) => ({
+          tabs: state.tabs.map((existing) =>
+            existing.id === source.id
+              ? {
+                  ...existing,
+                  status: 'error',
+                  error: error instanceof Error ? error.message : 'Failed to load PDF'
+                }
+              : existing
+          )
+        }))
+      }
     }
   },
 
