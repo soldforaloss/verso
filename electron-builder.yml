@@ -23,6 +23,11 @@ files:
   - '!{.env,.env.*,.npmrc}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - '!{playwright.config.ts,vitest.config.ts,vitest.setup.ts}'
+  # @napi-rs/canvas is an OPTIONAL native dep of pdfjs-dist used only when pdf.js
+  # renders in Node. The renderer uses the real DOM canvas, so it's never loaded
+  # at runtime. Excluding it drops ~37MB of skia .node binaries AND fixes the
+  # macOS universal build (the arch-specific binary can't be lipo-merged).
+  - '!**/node_modules/@napi-rs/**'
 
 asarUnpack:
   - resources/**
