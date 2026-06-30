@@ -9,7 +9,7 @@ machine, with no account, no telemetry, and no cloud.
 
 [![CI](https://github.com/soldforaloss/verso/actions/workflows/ci.yml/badge.svg)](https://github.com/soldforaloss/verso/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](./LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](#install)
+[![Platforms: Windows · macOS · Linux](https://img.shields.io/badge/platforms-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078D6.svg)](#install)
 [![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F.svg)](https://www.electronjs.org/)
 
 [versoeditor.com](https://versoeditor.com)
@@ -35,29 +35,45 @@ documents to someone else's server. Verso is neither:
 
 ## Features
 
-Verso is built milestone by milestone. Status reflects what's on `main`.
+Status reflects what's on `main`.
 
-| Area       | Capability                                                              | Status |
-| ---------- | ----------------------------------------------------------------------- | ------ |
-| Foundation | Hardened Electron shell, typed/validated IPC, CI, installers            | ✅ M0  |
-| Viewer     | PDF.js rendering, text selection, zoom/pan, layouts, themes, tabs       | ✅ M1  |
-| Navigation | Thumbnails, outline/bookmarks, full-text search                         | ✅ M2  |
-| Pages      | Reorder, rotate, delete, insert, extract, merge, split + undo/redo      | ✅ M3  |
-| Annotation | Highlight/underline/strike, ink, shapes, text boxes, sticky notes       | ✅ M4  |
-| Forms      | Fill & save AcroForms (text, check, radio, dropdown, list)              | ✅ M5  |
-| Editing    | Add/edit text, images, shapes; cover-&-replace existing text (Tier 1–2) | ✅ M6  |
-| OCR        | Make scanned PDFs searchable (tesseract.js, offline)                    | ✅ M7  |
-| Security   | Passwords/permissions, repair, linearize, **true redaction**, export    | ✅ M8  |
-| Polish     | Shortcuts cheat-sheet, error boundary, icon, auto-update, release       | ✅ M9  |
+| Area       | Capability                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Viewer     | PDF.js rendering (+ optional Tier-3 PDFium WASM engine), text selection, zoom, layouts, themes, tabs                                        |
+| Navigation | Thumbnails, editable outline/bookmarks, full-text search (match-case / whole-word)                                                          |
+| Pages      | Reorder, rotate, delete, insert, extract, merge, split, crop — all undo/redo                                                                |
+| Annotation | Highlight/underline/strike/squiggly, ink, shapes, text boxes, sticky notes, stamps, signatures                                              |
+| Forms      | **Fill _and author_** AcroForms — text, checkbox, dropdown, list, radio; with required / read-only / multiline / max-length / default value |
+| Links      | Author clickable hyperlinks — external URLs (sanitized) and internal page jumps                                                             |
+| Editing    | Add/edit text, images, shapes; cover-&-replace existing text                                                                                |
+| OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                             |
+| Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                  |
+| Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                        |
+| Robustness | Auto-decrypts owner-restricted PDFs and auto-repairs damaged ones on open                                                                   |
+| Platforms  | Windows, macOS, and Linux — the full test suite runs on all three in CI                                                                     |
 
-See [`ROADMAP.md`](./ROADMAP.md) for the full plan, including stretch goals
-(true content-stream editing, macOS/Linux, form creation, PDF compare).
+See [`ROADMAP.md`](./ROADMAP.md) for the full plan. The main remaining stretch
+goals are true content-stream editing (a custom PDFium build) and code-signed
+installers.
 
 ## Install
 
-Grab the Windows installer or portable `.exe` from the
-[**Releases**](https://github.com/soldforaloss/verso/releases) page (published by
-the tagged release pipeline), or build from source below.
+Download for your platform from the
+[**Releases**](https://github.com/soldforaloss/verso/releases) page:
+
+| Platform    | Download                                                                 |
+| ----------- | ------------------------------------------------------------------------ |
+| **Windows** | `Verso-<version>-x64-setup.exe` (installer) or `-x64-portable.exe`       |
+| **macOS**   | `Verso-<version>-arm64.dmg` (Apple Silicon) or the `-mac.zip`            |
+| **Linux**   | `Verso-<version>.AppImage` (run anywhere) or `verso_<version>_amd64.deb` |
+
+> **Unsigned for now.** The installers aren't yet code-signed, so the OS shows a
+> first-run warning. It's safe to proceed:
+>
+> - **Windows** — SmartScreen: _More info → Run anyway_.
+> - **macOS** — right-click the app → _Open_ (or _System Settings → Privacy &
+>   Security → Open Anyway_). Apple Silicon only for now.
+> - **Linux** — `chmod +x Verso-*.AppImage` then run it.
 
 ### Build from source
 
@@ -66,11 +82,13 @@ the tagged release pipeline), or build from source below.
 git clone https://github.com/soldforaloss/verso.git
 cd verso
 npm install
-npm run fetch:qpdf # download the qpdf security sidecar into resources/bin (optional)
+npm run fetch:qpdf  # download the qpdf security sidecar into resources/bin (optional)
 
-npm run dev        # launch in development with HMR
-npm run build      # typecheck + production build into out/
-npm run build:win  # produce the Windows installer + portable exe in release/
+npm run dev         # launch in development with HMR
+npm run build       # typecheck + production build into out/
+npm run build:win   # Windows installer + portable exe in release/
+npm run build:mac   # macOS .dmg / .zip
+npm run build:linux # Linux AppImage / .deb
 ```
 
 > The security features (encrypt/decrypt/repair/linearize) use a bundled
@@ -81,9 +99,10 @@ npm run build:win  # produce the Windows installer + portable exe in release/
 ## Tech stack
 
 Electron · electron-vite · React 19 + TypeScript (strict) · Vite 7 · Tailwind
-CSS v4 + Radix/shadcn-style primitives · Zustand + Immer · zod · PDF.js
-(rendering) · pdf-lib (mutation) · tesseract.js (OCR) · qpdf sidecar (security) ·
-Vitest + React Testing Library + Playwright · electron-builder + electron-updater.
+CSS v4 + Radix/shadcn-style primitives · Zustand + Immer · zod · PDF.js + an
+optional PDFium WASM engine (rendering) · pdf-lib (mutation) · tesseract.js
+(OCR) · qpdf sidecar (security) · Vitest + React Testing Library + Playwright ·
+electron-builder + electron-updater.
 
 Exact versions and the rationale behind them live in
 [`docs/decisions/`](./docs/decisions).
