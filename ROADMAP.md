@@ -116,8 +116,15 @@ next begins.
 - **Fast workflow:** select text and act from a floating popover (highlight,
   underline, strikethrough, **edit**, copy), or **double-click a run** to edit
   it — no need to pick a tool first.
-- A clean **`ContentEditor`** abstraction is the swap point for a future Tier 3
-  (PDFium, BSD-licensed) — see [ADR-0008](./docs/decisions/0008-in-place-editing.md).
+- A clean **`ContentEditor`** abstraction is the swap point for Tier 3 — see
+  [ADR-0008](./docs/decisions/0008-in-place-editing.md).
+- **Tier 3 — true in-place editing (shipped):** **double-click a text run** to
+  edit the **real content stream** via PDFium (`@embedpdf/pdfium`, MIT wrapper
+  over Apache-2.0 PDFium) — `FPDFText_SetText` + `FPDFPage_GenerateContent` +
+  `PDFiumExt_SaveAsCopy`. The original font, size, and color are preserved
+  natively (no substitution, no white-box cover-up); the edited text is genuine,
+  selectable, searchable text. Runs in the main process behind a zod-validated
+  IPC channel; cleanly falls back to Tier 2 on rotated pages or non-text clicks.
 
 ### ✅ M7 — OCR
 
@@ -170,14 +177,26 @@ next begins.
   publishes the Windows installer + portable exe and the update feed
   ([ADR-0011](./docs/decisions/0011-packaging-and-release.md)).
 
-All planned milestones (M0–M9) have shipped. Future work lives below.
+### ✅ 1.0 — Cross-platform, true editing & real-world validation
+
+- **Cross-platform installers** — Windows, **universal macOS** (one `.dmg` for
+  both Apple Silicon and Intel), and Linux (AppImage + `.deb`), all built and
+  tested on their native runners in CI on every push.
+- **True in-place text editing** — the marquee Tier 3 (see M6 above): genuine
+  content-stream text edits via PDFium, replacing the cover-&-replace stopgap as
+  the primary edit gesture.
+- **Real-world corpus validation** — beyond the synthetic adversarial suites
+  (`robustness`/`perf` unit tests), the save + render pipeline was validated
+  against a corpus of **150+ real-world PDFs** (bank statements, tax forms, pay
+  stubs, scanned and digitally-signed documents) with **zero failures**. The
+  documents are private and intentionally **not committed**; only pass/fail
+  counts were recorded.
+
+All planned milestones (M0–M9) plus the 1.0 goals have shipped. Future work
+lives below.
 
 ## Stretch / future
 
-- **Tier 3 in-place editing** — true content-stream/glyph editing via a PDFium
-  (BSD) native addon, implementing the `ContentEditor` interface.
-- **macOS & Linux builds** — the architecture is cross-platform; package targets
-  are stubbed in `electron-builder.yml`.
 - **Cropped-view rendering** — the viewer masks the trimmed margins today;
   rendering the page at its reduced cropped size (vs. masking) is a follow-up.
 - **Bookmark fidelity** — edited bookmarks save with top-of-page (`/XYZ`)

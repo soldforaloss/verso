@@ -45,7 +45,7 @@ Status reflects what's on `main`.
 | Annotation | Highlight/underline/strike/squiggly, ink, shapes, text boxes, sticky notes, stamps, signatures                                              |
 | Forms      | **Fill _and author_** AcroForms — text, checkbox, dropdown, list, radio; with required / read-only / multiline / max-length / default value |
 | Links      | Author clickable hyperlinks — external URLs (sanitized) and internal page jumps                                                             |
-| Editing    | Add/edit text, images, shapes; cover-&-replace existing text                                                                                |
+| Editing    | **True in-place text editing** — edits the real content stream (PDFium); add/edit text, images, shapes; cover-&-replace fallback            |
 | OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                             |
 | Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                  |
 | Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                        |
@@ -53,8 +53,7 @@ Status reflects what's on `main`.
 | Platforms  | Windows, macOS, and Linux — the full test suite runs on all three in CI                                                                     |
 
 See [`ROADMAP.md`](./ROADMAP.md) for the full plan. The main remaining stretch
-goals are true content-stream editing (a custom PDFium build) and code-signed
-installers.
+goal is code-signed installers.
 
 ## Install
 

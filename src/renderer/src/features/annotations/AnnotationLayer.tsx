@@ -27,6 +27,7 @@ import {
 import { OverlayContentEditor } from '@/lib/contentEditor'
 import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
 import { bundledFontByKey, ensureBundledFontLoaded } from '@/lib/fonts'
+import { getSource, useDocumentStore } from '@/store/documentStore'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
 
 const contentEditor = new OverlayContentEditor()
@@ -94,6 +95,18 @@ export function AnnotationLayer({
   const [draft, setDraft] = useState<Annotation | null>(null)
   const [live, setLive] = useState<Annotation | null>(null)
   const [selectionBox, setSelectionBox] = useState<{ centerX: number; top: number } | null>(null)
+  // Tier-3 true text editing: an in-place editor over a real content-stream
+  // text object (see `tryTrueEdit`). Null when no true edit is in progress.
+  const [trueEdit, setTrueEdit] = useState<{
+    rect: Rect
+    value: string
+    x: number
+    y: number
+    sourceId: string
+  } | null>(null)
+  // Synchronous mirror of `trueEdit` so a commit can claim-and-clear atomically
+  // — Enter unmounts the input, whose blur would otherwise commit a second time.
+  const trueEditRef = useRef<typeof trueEdit>(null)
   const createStart = useRef<Point | null>(null)
   const gestureRef = useRef<Gesture | null>(null)
 
@@ -236,7 +249,97 @@ export function AnnotationLayer({
     }
   }
 
-  // Tier 2 cover-&-replace: edit the existing text run under the click.
+  /**
+   * Resolves the source document backing this rendered page — its tab, source
+   * id, current bytes, and the tab-applied rotation. Returns null for blank
+   * pages or while the tab/source is unavailable.
+   */
+  const sourceContext = (): {
+    tabId: string
+    sourceId: string
+    bytes: Uint8Array<ArrayBuffer>
+    rotation: number
+  } | null => {
+    const tab = useDocumentStore.getState().tabs.find((t) => t.id === docId)
+    const ref = tab?.pages.find((p) => p.key === pageKey)
+    if (!tab || !ref || ref.kind !== 'source') return null
+    const source = getSource(ref.sourceId)
+    if (!source) return null
+    // Source bytes are always ArrayBuffer-backed (IPC / pdf-lib output), never a
+    // SharedArrayBuffer — assert that so they satisfy the IPC request type.
+    const bytes = source.bytes as Uint8Array<ArrayBuffer>
+    return { tabId: tab.id, sourceId: ref.sourceId, bytes, rotation: ref.rotation }
+  }
+
+  /**
+   * Tier-3 true editing: if a real content-stream text object sits under the
+   * click, open an in-place editor pre-filled with its actual text. Returns true
+   * when handled; false (no object, rotated page, or PDFium unavailable) so the
+   * caller falls back to the Tier-2 overlay.
+   */
+  const tryTrueEdit = async (point: Point): Promise<boolean> => {
+    const ctx = sourceContext()
+    // Page-space coordinates only line up with PDFium on unrotated pages; a
+    // rotated page falls back to the (rotation-agnostic) overlay editor.
+    if (!ctx || ctx.rotation !== 0) return false
+    try {
+      const hit = await window.api.pdfiumLocateText({
+        bytes: ctx.bytes,
+        pageIndex,
+        x: point.x,
+        y: point.y
+      })
+      if (!hit) return false
+      useToolStore.getState().setTool('select')
+      setSelectionBox(null)
+      const next = {
+        rect: hit.rect,
+        value: hit.text,
+        x: point.x,
+        y: point.y,
+        sourceId: ctx.sourceId
+      }
+      trueEditRef.current = next
+      setTrueEdit(next)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** Cancels the in-place true edit without applying it. */
+  const cancelTrueEdit = (): void => {
+    trueEditRef.current = null
+    setTrueEdit(null)
+  }
+
+  /** Commits the in-place true edit, mutating the real content stream. */
+  const commitTrueEdit = async (newText: string): Promise<void> => {
+    // Claim-and-clear synchronously: a second caller (the blur fired by Enter
+    // unmounting the input) sees null and is a no-op.
+    const edit = trueEditRef.current
+    trueEditRef.current = null
+    setTrueEdit(null)
+    if (!edit || newText === edit.value) return
+    const ctx = sourceContext()
+    if (!ctx) return
+    try {
+      const bytes = await window.api.pdfiumEditText({
+        bytes: ctx.bytes,
+        pageIndex,
+        x: edit.x,
+        y: edit.y,
+        newText
+      })
+      if (bytes) await useDocumentStore.getState().replaceSource(ctx.tabId, edit.sourceId, bytes)
+    } catch {
+      /* edit failed — leave the document unchanged */
+    }
+  }
+
+  // Tier-2 cover-&-replace overlay edit (the explicit "Edit existing text" tool
+  // and the selection popover). Double-clicking a run prefers Tier-3 true editing
+  // (see `trueEditAt`), falling back here.
   const editTextRunAt = async (point: Point): Promise<void> => {
     const page = await pdf.getPage(pageIndex + 1)
     const created = await contentEditor.editTextRun({
@@ -253,6 +356,13 @@ export function AnnotationLayer({
     // setTool clears the selection, so select the new text box afterwards.
     useToolStore.getState().setTool('select')
     if (textAnnotation) selectAnnotation(pageKey, textAnnotation.id)
+  }
+
+  // Primary "click into text to edit" gesture: a real content-stream edit when
+  // PDFium finds a text object under the click, else the cover-&-replace overlay.
+  const trueEditAt = async (point: Point): Promise<void> => {
+    if (await tryTrueEdit(point)) return
+    await editTextRunAt(point)
   }
 
   // Starts a cover-&-replace edit on the run under the current text selection.
@@ -279,10 +389,11 @@ export function AnnotationLayer({
     setSelectionBox(null)
   }
 
-  // Double-clicking a run in select mode edits it directly (fastest path).
-  const editTextRunRef = useRef(editTextRunAt)
+  // Double-clicking a run in select mode edits it directly — true content-stream
+  // editing first, overlay fallback (the fastest path to genuine text editing).
+  const editTextRunRef = useRef(trueEditAt)
   useEffect(() => {
-    editTextRunRef.current = editTextRunAt
+    editTextRunRef.current = trueEditAt
   })
   useEffect(() => {
     if (tool !== 'select') return
@@ -569,6 +680,39 @@ export function AnnotationLayer({
           </button>
         </div>
       )}
+      {trueEdit &&
+        (() => {
+          const r = pageRectToScreen(viewport, trueEdit.rect)
+          return (
+            <input
+              data-true-text-editor
+              autoFocus
+              defaultValue={trueEdit.value}
+              spellCheck={false}
+              onFocus={(event) => event.target.select()}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  void commitTrueEdit(event.currentTarget.value)
+                } else if (event.key === 'Escape') {
+                  event.preventDefault()
+                  cancelTrueEdit()
+                }
+              }}
+              onBlur={(event) => void commitTrueEdit(event.target.value)}
+              className="absolute z-30 rounded-sm border border-blue-500 bg-white px-0.5 leading-none text-black shadow-sm outline-none"
+              style={{
+                left: r.x,
+                top: r.y,
+                height: Math.max(r.height, 16),
+                minWidth: Math.max(r.width + 10, 28),
+                fontSize: Math.max(8, trueEdit.rect.height * viewport.scale * 0.82),
+                pointerEvents: 'auto'
+              }}
+            />
+          )
+        })()}
       <svg width={width} height={height} className="absolute inset-0 overflow-visible">
         {all.map((annotation) =>
           renderVector(annotation, {

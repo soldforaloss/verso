@@ -31,6 +31,9 @@ files:
 
 asarUnpack:
   - resources/**
+  # The PDFium wasm (Tier-3 true text editing) is read from disk by the main
+  # process; unpack it so readFileSync gets a real file path, not an asar entry.
+  - '**/node_modules/@embedpdf/pdfium/dist/pdfium.wasm'
 
 # The qpdf sidecar (Apache-2.0) is downloaded into resources/bin by
 # `npm run fetch:qpdf` (not committed) and bundled here. At runtime the main

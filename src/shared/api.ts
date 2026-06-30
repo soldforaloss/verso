@@ -1,5 +1,8 @@
 import type {
   AppInfo,
+  EditTextRequest,
+  LocatedText,
+  LocateTextRequest,
   OpenedDocument,
   PartialPreferences,
   Preferences,
@@ -75,6 +78,17 @@ export interface VersoApi {
 
   /** Prints the given PDF bytes via the OS print dialog. */
   printPdf(request: PrintPdfRequest): Promise<void>
+
+  /**
+   * Tier-3 PDFium: returns the text object under a page-space click — its
+   * current string and rect — or null if no editable text is there.
+   */
+  pdfiumLocateText(request: LocateTextRequest): Promise<LocatedText | null>
+  /**
+   * Tier-3 PDFium: replaces the text object under a click in the real content
+   * stream and resolves to the re-saved PDF bytes (null if nothing was hit).
+   */
+  pdfiumEditText(request: EditTextRequest): Promise<Uint8Array<ArrayBuffer> | null>
 
   /**
    * Subscribes to "open this file" requests originating outside the UI (file

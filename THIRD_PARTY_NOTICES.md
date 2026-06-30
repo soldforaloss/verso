@@ -15,6 +15,7 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 | ------------------------------------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | qpdf                                                         | Apache-2.0                               | Sidecar binary for encryption/decryption/repair/linearize (M8).                                                                                                                              |
 | PDFium (WASM)                                                | BSD-3-Clause                             | Tier-3 render engine, bundled offline via the `@hyzyla/pdfium` MIT wrapper. Copyright 2014 The PDFium Authors.                                                                               |
+| PDFium (WASM, save-capable build)                            | Apache-2.0                               | Tier-3 **true text editing** — bundled offline via the `@embedpdf/pdfium` MIT wrapper (`dist/pdfium.wasm`). A full PDFium binding that can edit text objects and `FPDF_SaveAsCopy`.          |
 | FreeType (vendored in PDFium)                                | FTL (FreeType License)                   | Permissive (BSD-style w/ attribution), NOT the GPLv2 arm. "Portions of this software are copyright the FreeType Project (www.freetype.org); based in part on the work of the FreeType Team." |
 | lcms2 / libjpeg-turbo / OpenJPEG / zlib (vendored in PDFium) | MIT / BSD+IJG+Zlib / BSD-2-Clause / Zlib | Permissive deps bundled inside the PDFium WASM build.                                                                                                                                        |
 | PDF.js cMaps & standard fonts                                | Apache-2.0                               | Bundled from `pdfjs-dist` for offline rendering.                                                                                                                                             |
@@ -29,6 +30,7 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 | Package                    | Version | License    |
 | -------------------------- | ------- | ---------- |
+| `@embedpdf/pdfium`         | 2.14.4  | MIT        |
 | `@hyzyla/pdfium`           | 2.1.13  | MIT        |
 | `@pdf-lib/fontkit`         | 1.1.1   | MIT        |
 | `@tesseract.js-data/*`     | 1.0.0   | MIT        |

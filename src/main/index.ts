@@ -7,6 +7,7 @@ import { registerIpcHandlers } from './ipc'
 import { registerAppScheme, serveRenderer } from './protocol'
 import { readPdf } from './files'
 import { initAutoUpdater } from './updater'
+import { warmUpPdfium } from './pdfiumEdit'
 import { IpcChannels } from '@shared/channels'
 
 // Route all main-process logging to a rotating file plus the console. No data
@@ -89,6 +90,10 @@ if (!gotLock) {
     mainWindow = createMainWindow()
     installApplicationMenu(mainWindow)
     initAutoUpdater(mainWindow)
+
+    // Compile the PDFium wasm in the background so the first true text edit is
+    // instant rather than paying the ~4.6 MB compile cost interactively.
+    warmUpPdfium()
 
     // Once the renderer has loaded (and registered its onOpenFile listener),
     // flush any files requested before it was ready.

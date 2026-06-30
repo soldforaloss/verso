@@ -40,6 +40,9 @@ const api: VersoApi = {
 
   printPdf: (request) => ipcRenderer.invoke(IpcChannels.printPdf, request),
 
+  pdfiumLocateText: (request) => ipcRenderer.invoke(IpcChannels.pdfiumLocateText, request),
+  pdfiumEditText: (request) => ipcRenderer.invoke(IpcChannels.pdfiumEditText, request),
+
   onOpenFile: (callback) => {
     const listener = (_event: Electron.IpcRendererEvent, document: OpenedDocument): void =>
       callback(document)

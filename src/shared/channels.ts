@@ -54,6 +54,11 @@ export const IpcChannels = {
   /** Prints a PDF (given bytes) via a hidden window and the OS print dialog. */
   printPdf: 'print:pdf',
 
+  /** Tier-3 PDFium: returns the text object under a click (or null). */
+  pdfiumLocateText: 'pdfium:locate-text',
+  /** Tier-3 PDFium: true content-stream edit of the text under a click. */
+  pdfiumEditText: 'pdfium:edit-text',
+
   /**
    * Event (main → renderer): a file was opened outside the UI — via the OS file
    * association, a CLI argument, a second instance, or macOS `open-file`.

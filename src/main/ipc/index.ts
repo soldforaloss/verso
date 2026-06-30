@@ -3,6 +3,7 @@ import { registerFileHandlers } from './files'
 import { registerRecoveryHandlers } from './recovery'
 import { registerSecurityHandlers } from './security'
 import { registerPrintHandlers } from './print'
+import { registerEditingHandlers } from './editing'
 
 /**
  * Registers all IPC handlers exactly once, at app startup.
@@ -17,4 +18,5 @@ export function registerIpcHandlers(): void {
   registerRecoveryHandlers()
   registerSecurityHandlers()
   registerPrintHandlers()
+  registerEditingHandlers()
 }

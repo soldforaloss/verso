@@ -189,3 +189,51 @@ export const PrintPdfRequestSchema = z.object({
   bytes: z.instanceof(Uint8Array)
 })
 export type PrintPdfRequest = z.infer<typeof PrintPdfRequestSchema>
+
+// --- Tier-3 true text editing (PDFium) -------------------------------------
+
+/** Hard cap on PDF bytes accepted over IPC (mirrors the qpdf/PDFium guards). */
+const MAX_PDF_BYTES = 512 * 1024 * 1024
+const MAX_PAGE_INDEX = 1_000_000
+const EDIT_TEXT_MAX = 2_000
+
+/** Bytes that are a Uint8Array within the size cap — the trust-boundary guard. */
+const PdfBytesSchema = z
+  .instanceof(Uint8Array)
+  .refine((b) => b.byteLength <= MAX_PDF_BYTES, 'PDF exceeds the size limit')
+
+/** A page-space rectangle (PDF user space, origin bottom-left). */
+export const PageRectSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number()
+})
+export type PageRect = z.infer<typeof PageRectSchema>
+
+/** Asks which text object sits under a click on a page. */
+export const LocateTextRequestSchema = z.object({
+  bytes: PdfBytesSchema,
+  pageIndex: z.number().int().nonnegative().max(MAX_PAGE_INDEX),
+  /** Click position in PDF page space (origin bottom-left). */
+  x: z.number().finite(),
+  y: z.number().finite()
+})
+export type LocateTextRequest = z.infer<typeof LocateTextRequestSchema>
+
+/** The located text object's current string and its page-space rect. */
+export const LocatedTextSchema = z.object({
+  text: z.string(),
+  rect: PageRectSchema
+})
+export type LocatedText = z.infer<typeof LocatedTextSchema>
+
+/** Replaces the text object under a click with `newText`; returns new bytes. */
+export const EditTextRequestSchema = z.object({
+  bytes: PdfBytesSchema,
+  pageIndex: z.number().int().nonnegative().max(MAX_PAGE_INDEX),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  newText: z.string().max(EDIT_TEXT_MAX)
+})
+export type EditTextRequest = z.infer<typeof EditTextRequestSchema>

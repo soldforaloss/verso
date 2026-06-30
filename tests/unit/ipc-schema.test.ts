@@ -3,7 +3,9 @@ import {
   PingRequestSchema,
   PingResponseSchema,
   AppInfoSchema,
-  EmptyRequestSchema
+  EmptyRequestSchema,
+  LocateTextRequestSchema,
+  EditTextRequestSchema
 } from '@shared/ipc'
 
 describe('IPC schemas', () => {
@@ -55,6 +57,49 @@ describe('IPC schemas', () => {
     it('requires every version field', () => {
       const partial = { name: 'Verso', version: '0.1.0' }
       expect(AppInfoSchema.safeParse(partial).success).toBe(false)
+    })
+  })
+
+  describe('LocateTextRequestSchema', () => {
+    const ok = { bytes: new Uint8Array([1]), pageIndex: 0, x: 10, y: 20 }
+
+    it('accepts a well-formed locate request', () => {
+      expect(LocateTextRequestSchema.safeParse(ok).success).toBe(true)
+    })
+
+    it('rejects a negative or non-integer page index', () => {
+      expect(LocateTextRequestSchema.safeParse({ ...ok, pageIndex: -1 }).success).toBe(false)
+      expect(LocateTextRequestSchema.safeParse({ ...ok, pageIndex: 1.5 }).success).toBe(false)
+    })
+
+    it('rejects bytes that are not a Uint8Array (the trust-boundary guarantee)', () => {
+      expect(LocateTextRequestSchema.safeParse({ ...ok, bytes: [1, 2, 3] }).success).toBe(false)
+    })
+
+    it('rejects non-finite or absurd coordinates / page indices', () => {
+      expect(LocateTextRequestSchema.safeParse({ ...ok, x: Number.NaN }).success).toBe(false)
+      expect(
+        LocateTextRequestSchema.safeParse({ ...ok, y: Number.POSITIVE_INFINITY }).success
+      ).toBe(false)
+      expect(LocateTextRequestSchema.safeParse({ ...ok, pageIndex: 2_000_000 }).success).toBe(false)
+    })
+  })
+
+  describe('EditTextRequestSchema', () => {
+    const ok = { bytes: new Uint8Array([1]), pageIndex: 0, x: 1, y: 2, newText: 'hi' }
+
+    it('accepts a well-formed edit request', () => {
+      expect(EditTextRequestSchema.safeParse(ok).success).toBe(true)
+    })
+
+    it('accepts an empty replacement (clearing the text object)', () => {
+      expect(EditTextRequestSchema.safeParse({ ...ok, newText: '' }).success).toBe(true)
+    })
+
+    it('rejects an absurdly long replacement', () => {
+      expect(EditTextRequestSchema.safeParse({ ...ok, newText: 'x'.repeat(2001) }).success).toBe(
+        false
+      )
     })
   })
 })
