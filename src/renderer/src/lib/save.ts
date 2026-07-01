@@ -239,7 +239,7 @@ async function buildDocumentBytes(tab: DocumentTab): Promise<Uint8Array<ArrayBuf
   )
 }
 
-function baseName(path: string): string {
+export function baseName(path: string): string {
   const parts = path.split(/[\\/]/)
   return parts[parts.length - 1] || path
 }
@@ -248,7 +248,7 @@ function stripPdfExt(name: string): string {
   return name.replace(/\.pdf$/i, '')
 }
 
-function withPdfExt(name: string): string {
+export function withPdfExt(name: string): string {
   return /\.pdf$/i.test(name) ? name : `${name}.pdf`
 }
 

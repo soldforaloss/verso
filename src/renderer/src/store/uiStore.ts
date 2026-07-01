@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 
+/** A save deferred until the user resolves its unapplied redaction marks. */
+export interface PendingRedactionSave {
+  tabId: string
+  saveAs: boolean
+}
+
 /** Small store for app-global UI surfaces that several components toggle. */
 interface UiState {
   /** Whether the keyboard-shortcuts cheat-sheet is open. */
@@ -13,6 +19,12 @@ interface UiState {
   /** Whether the "discard unsaved changes and quit?" dialog is open. */
   quitConfirmOpen: boolean
   setQuitConfirmOpen: (open: boolean) => void
+  /** A save awaiting a decision about unapplied redaction marks (null = none). */
+  redactionSavePrompt: PendingRedactionSave | null
+  setRedactionSavePrompt: (prompt: PendingRedactionSave | null) => void
+  /** A non-save write (extract/split/…) blocked by unapplied redaction marks. */
+  redactionBlock: { tabId: string } | null
+  setRedactionBlock: (block: { tabId: string } | null) => void
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -23,5 +35,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
   toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen }),
   quitConfirmOpen: false,
-  setQuitConfirmOpen: (quitConfirmOpen) => set({ quitConfirmOpen })
+  setQuitConfirmOpen: (quitConfirmOpen) => set({ quitConfirmOpen }),
+  redactionSavePrompt: null,
+  setRedactionSavePrompt: (redactionSavePrompt) => set({ redactionSavePrompt }),
+  redactionBlock: null,
+  setRedactionBlock: (redactionBlock) => set({ redactionBlock })
 }))

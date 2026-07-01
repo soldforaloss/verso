@@ -1,5 +1,5 @@
 import { openViaDialog } from '@/lib/open'
-import { saveDocument } from '@/lib/save'
+import { requestSaveDocument } from '@/lib/saveGuards'
 import { rotatePages } from '@/lib/pageOps'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
@@ -43,8 +43,13 @@ export function buildCommands(tab: DocumentTab | null): Command[] {
   if (tab) {
     const pageCount = tab.pages.length
     commands.push(
-      { id: 'save', group: 'File', label: 'Save', run: () => void saveDocument(tab) },
-      { id: 'save-as', group: 'File', label: 'Save As…', run: () => void saveDocument(tab, true) },
+      { id: 'save', group: 'File', label: 'Save', run: () => void requestSaveDocument(tab) },
+      {
+        id: 'save-as',
+        group: 'File',
+        label: 'Save As…',
+        run: () => void requestSaveDocument(tab, true)
+      },
       {
         id: 'undo',
         group: 'Edit',

@@ -20,6 +20,7 @@ import {
   type OptimizeResult
 } from '@/lib/security'
 import { formatBytes } from '@/lib/utils'
+import { hasUnappliedRedactions, unappliedRedactionMessage } from '@/lib/saveGuards'
 import type { DocumentTab } from '@/store/documentStore'
 import type { PdfPermissions, SecurityStatus } from '@shared/ipc'
 
@@ -87,6 +88,12 @@ export function SecurityDialog({
   }, [open])
 
   const guard = async (action: () => Promise<boolean>): Promise<void> => {
+    // qpdf transforms preserve the content stream, so writing over unapplied
+    // redaction marks ships recoverable text (and encryption makes it feel safe).
+    if (hasUnappliedRedactions(tab)) {
+      setError(unappliedRedactionMessage('creating this copy'))
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -102,6 +109,10 @@ export function SecurityDialog({
   // Runs the size analysis but does NOT close the dialog — the user reviews the
   // reduction before choosing to save the smaller copy.
   const runOptimize = async (): Promise<void> => {
+    if (hasUnappliedRedactions(tab)) {
+      setError(unappliedRedactionMessage('optimizing'))
+      return
+    }
     setBusy(true)
     setError(null)
     setOptimizeResult(null)

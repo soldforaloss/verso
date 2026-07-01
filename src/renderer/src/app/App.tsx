@@ -9,7 +9,7 @@ import { toolForKey, useToolStore } from '@/store/toolStore'
 import { useUiStore } from '@/store/uiStore'
 import { applyTheme, usePreferencesStore } from '@/store/preferencesStore'
 import { openPath, openViaDialog } from '@/lib/open'
-import { saveDocument } from '@/lib/save'
+import { requestSaveDocument } from '@/lib/saveGuards'
 import {
   addAnnotation,
   removeAnnotation,
@@ -25,6 +25,8 @@ import { Sidebar } from '@/features/navigation/Sidebar'
 import { SearchBar } from '@/features/navigation/SearchBar'
 import { ShortcutsDialog } from '@/features/help/ShortcutsDialog'
 import { ConfirmQuitDialog } from '@/features/help/ConfirmQuitDialog'
+import { ConfirmRedactionSaveDialog } from '@/features/document/ConfirmRedactionSaveDialog'
+import { RedactionBlockDialog } from '@/features/document/RedactionBlockDialog'
 import { RestoreDialog } from '@/features/help/RestoreDialog'
 import { CommandPalette } from '@/features/command/CommandPalette'
 import { dismissRecovery, restoreRecovery, startRecoveryWatcher } from '@/lib/recovery'
@@ -220,7 +222,7 @@ function App(): React.JSX.Element {
         }
       } else if (key === 's' && tab) {
         event.preventDefault()
-        void saveDocument(tab, event.shiftKey)
+        void requestSaveDocument(tab, event.shiftKey)
       } else if (key === 'z' && tab) {
         event.preventDefault()
         useSelectionStore.getState().clear()
@@ -328,6 +330,8 @@ function App(): React.JSX.Element {
       <ShortcutsDialog />
       <CommandPalette />
       <ConfirmQuitDialog />
+      <ConfirmRedactionSaveDialog />
+      <RedactionBlockDialog />
       <RestoreDialog entries={recoveries} onRestore={handleRestore} onDiscard={handleDiscard} />
     </div>
   )

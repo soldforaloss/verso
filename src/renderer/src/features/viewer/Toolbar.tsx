@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { openViaDialog } from '@/lib/open'
-import { saveDocument } from '@/lib/save'
+import { requestSaveDocument } from '@/lib/saveGuards'
 import { rotatePages } from '@/lib/pageOps'
 import { useViewStore } from '@/store/viewStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
@@ -149,7 +149,7 @@ export function Toolbar({ tab }: { tab: DocumentTab }): React.JSX.Element {
         variant={tab.dirty ? 'default' : 'ghost'}
         size="icon"
         title={tab.dirty ? 'Save (Ctrl+S) — unsaved changes' : 'Save (Ctrl+S)'}
-        onClick={() => void saveDocument(tab)}
+        onClick={() => void requestSaveDocument(tab)}
       >
         <Save />
       </Button>

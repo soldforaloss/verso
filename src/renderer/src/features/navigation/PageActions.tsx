@@ -11,6 +11,7 @@ import {
   rotatePages
 } from '@/lib/pageOps'
 import { extractPages, splitDocument } from '@/lib/save'
+import { blockWriteIfUnappliedRedactions } from '@/lib/saveGuards'
 
 function Divider(): React.JSX.Element {
   return <div className="mx-0.5 h-5 w-px bg-border" />
@@ -90,7 +91,9 @@ export function PageActions({ tab }: { tab: DocumentTab }): React.JSX.Element {
         variant="ghost"
         size="icon"
         title="Extract selection to a new PDF…"
-        onClick={() => void extractPages(tab, targets)}
+        onClick={() => {
+          if (!blockWriteIfUnappliedRedactions(tab)) void extractPages(tab, targets)
+        }}
       >
         <Scissors />
       </Button>
@@ -98,7 +101,9 @@ export function PageActions({ tab }: { tab: DocumentTab }): React.JSX.Element {
         variant="ghost"
         size="icon"
         title="Split into one PDF per page…"
-        onClick={() => void splitDocument(tab)}
+        onClick={() => {
+          if (!blockWriteIfUnappliedRedactions(tab)) void splitDocument(tab)
+        }}
       >
         <Split />
       </Button>

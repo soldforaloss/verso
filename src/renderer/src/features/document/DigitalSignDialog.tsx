@@ -11,6 +11,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { buildDocumentPdf } from '@/lib/save'
+import { hasUnappliedRedactions, unappliedRedactionMessage } from '@/lib/saveGuards'
 import type { DocumentTab } from '@/store/documentStore'
 
 function signedName(name: string): string {
@@ -65,6 +66,12 @@ export function DigitalSignDialog({
   }, [open])
 
   const sign = async (): Promise<void> => {
+    // Never sign over unapplied redaction marks — the signed file would carry the
+    // still-recoverable text under an authoritative signature.
+    if (hasUnappliedRedactions(tab)) {
+      setError(unappliedRedactionMessage('signing'))
+      return
+    }
     setBusy(true)
     setError(null)
     setSavedPath(null)
