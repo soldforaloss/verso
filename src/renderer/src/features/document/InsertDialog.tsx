@@ -39,6 +39,12 @@ function numberFormat(
   return { format: '{n}', digits: 0 }
 }
 
+const WATERMARK_ANGLES: { label: string; value: number }[] = [
+  { label: 'Diagonal ↗', value: 45 },
+  { label: 'Diagonal ↘', value: -45 },
+  { label: 'Horizontal', value: 0 }
+]
+
 const COLORS = ['#9ca3af', '#111827', '#dc2626', '#1d4ed8']
 const OPACITIES: { label: string; value: number }[] = [
   { label: 'Light', value: 0.12 },
@@ -116,6 +122,7 @@ export function InsertDialog({
   const [wmOpacity, setWmOpacity] = useState(0.25)
   const [wmSize, setWmSize] = useState(60)
   const [wmColor, setWmColor] = useState(COLORS[0]!)
+  const [wmAngle, setWmAngle] = useState(45)
 
   const [pnStart, setPnStart] = useState(1)
   const [pnSize, setPnSize] = useState(12)
@@ -196,6 +203,22 @@ export function InsertDialog({
               </label>
               <Swatches value={wmColor} onChange={setWmColor} />
             </div>
+            <div className="flex flex-wrap gap-1">
+              {WATERMARK_ANGLES.map((a) => (
+                <button
+                  key={a.value}
+                  type="button"
+                  aria-pressed={wmAngle === a.value}
+                  onClick={() => setWmAngle(a.value)}
+                  className={cn(
+                    'rounded-md border px-2 py-1 text-xs transition-colors',
+                    wmAngle === a.value ? 'border-primary bg-accent' : 'hover:bg-accent'
+                  )}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
             <Button
               className="justify-self-start"
               disabled={busy || wmText.trim() === ''}
@@ -205,7 +228,8 @@ export function InsertDialog({
                     text: wmText,
                     opacity: wmOpacity,
                     fontSize: wmSize,
-                    color: wmColor
+                    color: wmColor,
+                    angle: wmAngle
                   })
                 )
               }

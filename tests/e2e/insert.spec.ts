@@ -20,10 +20,8 @@ test('add a watermark across pages and flatten it on save', async () => {
   await expect(window.getByText('Insert across pages')).toBeVisible()
   await window.getByRole('button', { name: 'Add watermark' }).click()
 
-  // The watermark lands on every page as an editable text annotation.
-  await expect(window.locator('[data-page-number] textarea').first()).toHaveValue('CONFIDENTIAL', {
-    timeout: 20_000
-  })
+  // The watermark lands on every page as a flattened (rotated) image.
+  await expect(window.locator('[data-page-number] img').first()).toBeVisible({ timeout: 20_000 })
   await expect(window.getByTitle('Undo (Ctrl+Z)')).toBeEnabled()
 
   // Saving flattens it into a valid 8-page PDF.

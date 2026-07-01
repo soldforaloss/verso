@@ -3,6 +3,7 @@ import { addAnnotationsAcrossPages } from '@/lib/annotationOps'
 import { getSource, type DocumentTab } from '@/store/documentStore'
 import { formatPageLabel } from '@/lib/pageLabel'
 import { expandHeaderFooter, HEADER_FOOTER_SLOTS, type HeaderFooterSlot } from '@/lib/headerFooter'
+import { fitFontSize } from '@/lib/watermarkFit'
 import type { PageRef } from '@/lib/pageModel'
 
 export { formatPageLabel }
@@ -31,32 +32,79 @@ export interface WatermarkOptions {
   opacity: number
   fontSize: number
   color: string
+  /** Rotation in degrees (0 = horizontal; 45 = the Adobe-style diagonal). */
+  angle: number
 }
 
-/** Stamps a centered text watermark onto every page (one undoable command). */
+/** Supersample factor so the rotated watermark text stays crisp when scaled. */
+const WATERMARK_RES = 2
+/** Hard ceiling on a canvas side (px) — well under Chromium's ~16384 limit. */
+const WATERMARK_MAX_SIDE = 8192
+
+/**
+ * Renders a centered, rotated, semi-transparent watermark onto a page-sized
+ * transparent PNG. The opacity is baked into the image's alpha (image
+ * annotations draw opaquely) and rotation is baked in too — so no annotation
+ * needs to carry an angle. The font auto-shrinks so long text can't overrun the
+ * page, and the canvas resolution is capped for very large pages. Returns a data
+ * URL (empty string if canvas is unavailable).
+ */
+function renderWatermarkPng(text: string, options: WatermarkOptions, w: number, h: number): string {
+  // Cap the backing store so an oversized page can't allocate a giant canvas.
+  const res = Math.min(WATERMARK_RES, WATERMARK_MAX_SIDE / Math.max(w, h))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(w * res))
+  canvas.height = Math.max(1, Math.round(h * res))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
+  ctx.scale(res, res)
+  ctx.translate(w / 2, h / 2)
+  ctx.rotate((-options.angle * Math.PI) / 180)
+
+  // Shrink the font so the (rotated) text stays inside the page — no silent clip.
+  ctx.font = `bold ${options.fontSize}px sans-serif`
+  const fontSize = fitFontSize(options.fontSize, ctx.measureText(text).width, options.angle, w, h)
+
+  ctx.globalAlpha = Math.max(0, Math.min(1, options.opacity))
+  ctx.fillStyle = options.color
+  ctx.font = `bold ${fontSize}px sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, 0, 0)
+  return canvas.toDataURL('image/png')
+}
+
+/**
+ * Stamps a rotated, semi-transparent text watermark across every page (one
+ * undoable command). The watermark is a flattened image (rotation + opacity
+ * baked in), so a diagonal "CONFIDENTIAL" renders and saves correctly. One PNG
+ * is rendered per unique page size and reused.
+ */
 export async function addWatermark(tab: DocumentTab, options: WatermarkOptions): Promise<void> {
   const text = options.text.trim()
   if (!text) return
-  const textWidth = measureWidth(text, options.fontSize)
+  const pngBySize = new Map<string, string>()
   const byPageKey: Record<string, Annotation[]> = {}
   for (const ref of tab.pages) {
     const size = await logicalPageSize(ref)
     if (!size) continue
+    const sizeKey = `${size.width}x${size.height}`
+    let dataUrl = pngBySize.get(sizeKey)
+    if (dataUrl === undefined) {
+      dataUrl = renderWatermarkPng(text, options, size.width, size.height)
+      pngBySize.set(sizeKey, dataUrl)
+    }
+    if (!dataUrl) continue
     byPageKey[ref.key] = [
       {
         id: newAnnotationId(),
         pageKey: ref.key,
-        type: 'text',
-        color: options.color,
-        opacity: options.opacity,
-        fontSize: options.fontSize,
-        text,
-        rect: {
-          x: Math.max(8, (size.width - textWidth) / 2),
-          y: (size.height - options.fontSize) / 2,
-          width: Math.min(textWidth + 8, size.width),
-          height: options.fontSize * 1.4
-        }
+        type: 'image',
+        color: '#000000',
+        // Fully opaque draw of an already-semi-transparent PNG.
+        opacity: 1,
+        dataUrl,
+        rect: { x: 0, y: 0, width: size.width, height: size.height }
       }
     ]
   }
