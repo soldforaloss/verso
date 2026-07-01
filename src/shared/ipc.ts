@@ -273,6 +273,44 @@ export const EditTextRequestSchema = z.object({
 })
 export type EditTextRequest = z.infer<typeof EditTextRequestSchema>
 
+// --- Tier-3 in-place image editing (PDFium) --------------------------------
+
+/** A point on a page (shared by the locate-image request). */
+export const LocateImageRequestSchema = z.object({
+  bytes: PdfBytesSchema,
+  pageIndex: z.number().int().nonnegative().max(MAX_PAGE_INDEX),
+  x: z.number().finite(),
+  y: z.number().finite()
+})
+export type LocateImageRequest = z.infer<typeof LocateImageRequestSchema>
+
+/** The located image object's page-space rect. */
+export const LocatedImageSchema = z.object({ rect: PageRectSchema })
+export type LocatedImage = z.infer<typeof LocatedImageSchema>
+
+const MAX_DIM = 100_000
+
+/** A new axis-aligned placement rect for an image (PDF user space). */
+const PositiveRectSchema = z.object({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().finite().positive().max(MAX_DIM),
+  height: z.number().finite().positive().max(MAX_DIM)
+})
+
+/** Moves/resizes or deletes the image object under a click. */
+export const EditImageRequestSchema = z.object({
+  bytes: PdfBytesSchema,
+  pageIndex: z.number().int().nonnegative().max(MAX_PAGE_INDEX),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  op: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('transform'), rect: PositiveRectSchema }),
+    z.object({ kind: z.literal('delete') })
+  ])
+})
+export type EditImageRequest = z.infer<typeof EditImageRequestSchema>
+
 // --- Digital signatures (PKI) ----------------------------------------------
 
 const SIG_FIELD_MAX = 256

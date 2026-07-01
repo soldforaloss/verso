@@ -3,7 +3,15 @@ import { existsSync, readFileSync } from 'node:fs'
 import { app } from 'electron'
 import log from 'electron-log/main'
 import { init, type WrappedPdfiumModule } from '@embedpdf/pdfium'
-import type { LocateTextRequest, LocatedText, EditTextRequest, EditStyle } from '@shared/ipc'
+import type {
+  LocateTextRequest,
+  LocatedText,
+  EditTextRequest,
+  EditStyle,
+  LocateImageRequest,
+  LocatedImage,
+  EditImageRequest
+} from '@shared/ipc'
 
 /**
  * Tier-3 **true** content-stream text editing, backed by PDFium (Apache-2.0)
@@ -24,6 +32,8 @@ import type { LocateTextRequest, LocatedText, EditTextRequest, EditStyle } from 
 
 /** PDFium page-object type for text (`FPDF_PAGEOBJ_TEXT`). */
 const PAGEOBJ_TEXT = 1
+/** PDFium page-object type for images (`FPDF_PAGEOBJ_IMAGE`). */
+const PAGEOBJ_IMAGE = 3
 /** Hit-test padding (PDF points) so clicks near a glyph's edge still register. */
 const HIT_PADDING = 2
 /** Refuse absurd inputs early (matches the qpdf sidecar's guard). */
@@ -542,5 +552,145 @@ export async function editText(request: EditTextRequest): Promise<Uint8Array<Arr
     } finally {
       m.PDFiumExt_CloseFileWriter(writer)
     }
+  })
+}
+
+// --- Tier-3 in-place image editing -----------------------------------------
+
+interface ImageHit {
+  obj: number
+  bounds: { left: number; bottom: number; right: number; top: number }
+  /** The image's matrix has no rotation/skew (b≈0, c≈0), so it can be edited. */
+  axisAligned: boolean
+}
+
+/**
+ * Finds the image object whose page-space bounding box contains `(x, y)`. When
+ * boxes overlap the topmost (last in z-order) wins — that's the one a click
+ * visually targets.
+ */
+function findImageObjectAt(
+  m: WrappedPdfiumModule,
+  rt: Runtime,
+  page: number,
+  x: number,
+  y: number
+): ImageHit | null {
+  const count = m.FPDFPage_CountObjects(page)
+  const box = rt.malloc(16)
+  try {
+    let best: ImageHit | null = null
+    for (let i = 0; i < count; i += 1) {
+      const obj = m.FPDFPage_GetObject(page, i)
+      if (m.FPDFPageObj_GetType(obj) !== PAGEOBJ_IMAGE) continue
+      if (!m.FPDFPageObj_GetBounds(obj, box, box + 4, box + 8, box + 12)) continue
+      const left = rt.getFloat(box)
+      const bottom = rt.getFloat(box + 4)
+      const right = rt.getFloat(box + 8)
+      const top = rt.getFloat(box + 12)
+      if (x >= left && x <= right && y >= bottom && y <= top) {
+        const [, b, c] = readMatrix(m, rt, obj)
+        best = {
+          obj,
+          bounds: { left, bottom, right, top },
+          axisAligned: Math.abs(b!) < 1e-3 && Math.abs(c!) < 1e-3
+        }
+        // Keep scanning — a later (topmost) image at this point wins.
+      }
+    }
+    return best
+  } finally {
+    rt.free(box)
+  }
+}
+
+/** Serializes the (already-mutated) document via PDFium's file writer. */
+function saveViaCopy(m: WrappedPdfiumModule, rt: Runtime, doc: number): Uint8Array<ArrayBuffer> {
+  const writer = m.PDFiumExt_OpenFileWriter()
+  try {
+    if (!m.PDFiumExt_SaveAsCopy(doc, writer)) throw new Error('PDFiumExt_SaveAsCopy failed')
+    const size = m.PDFiumExt_GetFileWriterSize(writer)
+    if (size <= 0 || size > MAX_PDF_BYTES) throw new Error('Saved PDF size out of range')
+    const out = new Uint8Array(new ArrayBuffer(size))
+    const obuf = rt.malloc(size)
+    try {
+      m.PDFiumExt_GetFileWriterData(writer, obuf, size)
+      out.set(rt.heap().subarray(obuf, obuf + size))
+    } finally {
+      rt.free(obuf)
+    }
+    return out
+  } finally {
+    m.PDFiumExt_CloseFileWriter(writer)
+  }
+}
+
+/**
+ * Returns the axis-aligned image object under `(x, y)` on `pageIndex` — its
+ * page-space rect — or null if the point is not over an editable image.
+ */
+export async function locateImage(request: LocateImageRequest): Promise<LocatedImage | null> {
+  const { bytes, pageIndex, x, y } = request
+  return withDocument(bytes, (m, rt, doc) => {
+    if (pageIndex < 0 || pageIndex >= m.FPDF_GetPageCount(doc)) return null
+    const page = m.FPDF_LoadPage(doc, pageIndex)
+    if (!page) return null
+    if (m.FPDFPage_GetRotation(page) !== 0) {
+      m.FPDF_ClosePage(page)
+      return null
+    }
+    try {
+      const hit = findImageObjectAt(m, rt, page, x, y)
+      if (!hit || !hit.axisAligned) return null
+      const { left, bottom, right, top } = hit.bounds
+      return { rect: { x: left, y: bottom, width: right - left, height: top - bottom } }
+    } finally {
+      m.FPDF_ClosePage(page)
+    }
+  })
+}
+
+/**
+ * Moves/resizes (to a new axis-aligned rect) or deletes the image object under
+ * `(x, y)` on `pageIndex`, then returns the re-saved bytes. Null if no editable
+ * image is under the point.
+ */
+export async function editImage(
+  request: EditImageRequest
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  const { bytes, pageIndex, x, y, op } = request
+  return withDocument(bytes, (m, rt, doc) => {
+    if (pageIndex < 0 || pageIndex >= m.FPDF_GetPageCount(doc)) return null
+    const page = m.FPDF_LoadPage(doc, pageIndex)
+    if (!page) return null
+    if (m.FPDFPage_GetRotation(page) !== 0) {
+      m.FPDF_ClosePage(page)
+      return null
+    }
+    const applied = ((): boolean => {
+      try {
+        const hit = findImageObjectAt(m, rt, page, x, y)
+        if (!hit || !hit.axisAligned) return false
+        if (op.kind === 'delete') {
+          if (!m.FPDFPage_RemoveObject(page, hit.obj))
+            throw new Error('FPDFPage_RemoveObject failed')
+          m.FPDFPageObj_Destroy(hit.obj)
+        } else {
+          const { x: rx, y: ry, width: rw, height: rh } = op.rect
+          if (rw <= 0 || rh <= 0) return false
+          // The image's matrix maps the unit square onto the page, so an
+          // axis-aligned placement rect is just [w, 0, 0, h, x, y].
+          if (!m.FPDFImageObj_SetMatrix(hit.obj, rw, 0, 0, rh, rx, ry)) {
+            throw new Error('FPDFImageObj_SetMatrix failed')
+          }
+        }
+        if (!m.FPDFPage_GenerateContent(page)) throw new Error('FPDFPage_GenerateContent failed')
+        return true
+      } finally {
+        m.FPDF_ClosePage(page)
+      }
+    })()
+    if (!applied) return null
+    return saveViaCopy(m, rt, doc)
   })
 }

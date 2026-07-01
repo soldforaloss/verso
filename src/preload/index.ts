@@ -42,6 +42,8 @@ const api: VersoApi = {
 
   pdfiumLocateText: (request) => ipcRenderer.invoke(IpcChannels.pdfiumLocateText, request),
   pdfiumEditText: (request) => ipcRenderer.invoke(IpcChannels.pdfiumEditText, request),
+  pdfiumLocateImage: (request) => ipcRenderer.invoke(IpcChannels.pdfiumLocateImage, request),
+  pdfiumEditImage: (request) => ipcRenderer.invoke(IpcChannels.pdfiumEditImage, request),
 
   signPdf: (request) => ipcRenderer.invoke(IpcChannels.signPdf, request),
   verifySignatures: (request) => ipcRenderer.invoke(IpcChannels.verifySignatures, request),

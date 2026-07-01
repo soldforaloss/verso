@@ -6,6 +6,7 @@ import {
   EmptyRequestSchema,
   LocateTextRequestSchema,
   EditTextRequestSchema,
+  EditImageRequestSchema,
   SignPdfRequestSchema,
   VerifySignaturesRequestSchema
 } from '@shared/ipc'
@@ -161,6 +162,34 @@ describe('IPC schemas', () => {
         true
       )
       expect(VerifySignaturesRequestSchema.safeParse({ bytes: 'nope' }).success).toBe(false)
+    })
+  })
+
+  describe('EditImageRequestSchema', () => {
+    const base = { bytes: new Uint8Array([1]), pageIndex: 0, x: 10, y: 20 }
+
+    it('accepts a transform op with a positive rect and a delete op', () => {
+      expect(
+        EditImageRequestSchema.safeParse({
+          ...base,
+          op: { kind: 'transform', rect: { x: 5, y: 5, width: 40, height: 30 } }
+        }).success
+      ).toBe(true)
+      expect(EditImageRequestSchema.safeParse({ ...base, op: { kind: 'delete' } }).success).toBe(
+        true
+      )
+    })
+
+    it('rejects a non-positive or non-finite rect, and an unknown op', () => {
+      expect(
+        EditImageRequestSchema.safeParse({
+          ...base,
+          op: { kind: 'transform', rect: { x: 0, y: 0, width: 0, height: 10 } }
+        }).success
+      ).toBe(false)
+      expect(EditImageRequestSchema.safeParse({ ...base, op: { kind: 'flip' } }).success).toBe(
+        false
+      )
     })
   })
 })

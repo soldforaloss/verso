@@ -61,7 +61,8 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
   [
     { tool: 'text', label: 'Text box', Icon: Type },
     { tool: 'note', label: 'Sticky note', Icon: StickyNote },
-    { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput }
+    { tool: 'edittext', label: 'Edit existing text (cover & replace)', Icon: TextCursorInput },
+    { tool: 'editimage', label: 'Edit image (move, resize, delete)', Icon: ImageIcon }
   ],
   [
     { tool: 'field-text', label: 'Add text field (form)', Icon: FormInput },

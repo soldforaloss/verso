@@ -1,7 +1,10 @@
 import type {
   AppInfo,
+  EditImageRequest,
   EditTextRequest,
+  LocatedImage,
   LocatedText,
+  LocateImageRequest,
   LocateTextRequest,
   OpenedDocument,
   PartialPreferences,
@@ -92,6 +95,11 @@ export interface VersoApi {
    * stream and resolves to the re-saved PDF bytes (null if nothing was hit).
    */
   pdfiumEditText(request: EditTextRequest): Promise<Uint8Array<ArrayBuffer> | null>
+
+  /** Tier-3 PDFium: returns the image object under a page-space click, or null. */
+  pdfiumLocateImage(request: LocateImageRequest): Promise<LocatedImage | null>
+  /** Tier-3 PDFium: move/resize or delete the image under a click; new bytes or null. */
+  pdfiumEditImage(request: EditImageRequest): Promise<Uint8Array<ArrayBuffer> | null>
 
   /**
    * Cryptographically signs the PDF with a certificate the user picks in a

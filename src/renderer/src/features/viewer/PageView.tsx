@@ -18,6 +18,7 @@ import type { CropBox } from '@/lib/pageModel'
 import type { NewFormField } from '@/lib/formFields'
 import type { PageLink } from '@/lib/links'
 import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
+import { ImageEditLayer } from '@/features/annotations/ImageEditLayer'
 import { FormLayer } from '@/features/forms/FormLayer'
 import { FieldCreateLayer } from '@/features/forms/FieldCreateLayer'
 import { LinkCreateLayer } from '@/features/annotations/LinkCreateLayer'
@@ -312,6 +313,12 @@ function PageViewImpl({
             viewport={pageViewport}
             annotations={annotations}
             pdf={descriptor.pdf}
+            pageIndex={descriptor.pageIndex}
+          />
+          <ImageEditLayer
+            docId={docId}
+            pageKey={pageKey}
+            viewport={pageViewport}
             pageIndex={descriptor.pageIndex}
           />
           {descriptor.crop && <CropOverlay viewport={pageViewport} crop={descriptor.crop} />}

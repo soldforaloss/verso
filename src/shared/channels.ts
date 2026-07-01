@@ -59,6 +59,11 @@ export const IpcChannels = {
   /** Tier-3 PDFium: true content-stream edit of the text under a click. */
   pdfiumEditText: 'pdfium:edit-text',
 
+  /** Tier-3 PDFium: returns the image object under a click (or null). */
+  pdfiumLocateImage: 'pdfium:locate-image',
+  /** Tier-3 PDFium: move/resize or delete the image under a click. */
+  pdfiumEditImage: 'pdfium:edit-image',
+
   /** Cryptographically signs a PDF with a certificate chosen in a native dialog. */
   signPdf: 'pdf:sign',
   /** Verifies a PDF's existing digital signatures (integrity + signer). */

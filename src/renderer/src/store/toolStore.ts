@@ -16,6 +16,7 @@ export type Tool =
   | 'strike'
   | 'squiggly'
   | 'edittext'
+  | 'editimage'
   | 'redaction'
   | 'link'
   | 'field-text'
