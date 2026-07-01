@@ -121,10 +121,15 @@ next begins.
 - **Tier 3 — true in-place editing (shipped):** **double-click a text run** to
   edit the **real content stream** via PDFium (`@embedpdf/pdfium`, MIT wrapper
   over Apache-2.0 PDFium) — `FPDFText_SetText` + `FPDFPage_GenerateContent` +
-  `PDFiumExt_SaveAsCopy`. The original font, size, and color are preserved
-  natively (no substitution, no white-box cover-up); the edited text is genuine,
-  selectable, searchable text. Runs in the main process behind a zod-validated
-  IPC channel; cleanly falls back to Tier 2 on rotated pages or non-text clicks.
+  `PDFiumExt_SaveAsCopy`. The edited text is genuine, selectable, searchable
+  text — no substitution, no white-box cover-up. A compact **style toolbar**
+  (font size, bold, italic, colour, Sans/Serif/Mono) rides with the inline
+  editor: a colour/text change mutates the object in place; a size change
+  rebuilds it reusing the original font; a weight/slant/family change rebuilds it
+  with a bundled metric-compatible font (`FPDFText_LoadFont`), all preserving the
+  original position via a scale-normalized matrix. Runs in the main process
+  behind a zod-validated IPC channel; falls back to Tier 2 on rotated pages or
+  non-text clicks.
 
 ### ✅ M7 — OCR
 

@@ -26,9 +26,45 @@ import {
 } from '@/lib/annotationGeometry'
 import { OverlayContentEditor } from '@/lib/contentEditor'
 import { estimateInkColor, hexToRgbTriple } from '@/lib/textStyle'
-import { bundledFontByKey, ensureBundledFontLoaded } from '@/lib/fonts'
+import { bundledFontByKey, bundledFontFile, ensureBundledFontLoaded } from '@/lib/fonts'
 import { getSource, useDocumentStore } from '@/store/documentStore'
+import { TrueTextEditor, type EditorStyle } from '@/features/annotations/TrueTextEditor'
+import type { FontFamily } from '@shared/ipc'
 import type { PageViewport, PdfDocument } from '@/lib/pdf'
+
+/** The bundled (metric-compatible) font used to render each generic family. */
+const FONT_KEY_BY_FAMILY: Record<FontFamily, string> = {
+  'sans-serif': 'liberation-sans',
+  serif: 'liberation-serif',
+  monospace: 'liberation-mono'
+}
+
+/** Fetches the .ttf bytes for a family+weight+slant (the proven save-time path). */
+async function resolveFontBytes(
+  family: FontFamily,
+  bold: boolean,
+  italic: boolean
+): Promise<Uint8Array<ArrayBuffer> | undefined> {
+  try {
+    const font = bundledFontByKey(FONT_KEY_BY_FAMILY[family])
+    if (!font) return undefined
+    const buffer = await fetch(bundledFontFile(font, bold, italic)).then((r) => r.arrayBuffer())
+    return new Uint8Array(buffer)
+  } catch {
+    return undefined
+  }
+}
+
+/** Whether two edit styles are visually identical (size within half a point). */
+function styleEquals(a: EditorStyle, b: EditorStyle): boolean {
+  return (
+    Math.abs(a.sizePt - b.sizePt) < 0.5 &&
+    a.colorHex.toLowerCase() === b.colorHex.toLowerCase() &&
+    a.bold === b.bold &&
+    a.italic === b.italic &&
+    a.family === b.family
+  )
+}
 
 const contentEditor = new OverlayContentEditor()
 
@@ -103,6 +139,8 @@ export function AnnotationLayer({
     x: number
     y: number
     sourceId: string
+    revision: number
+    style: EditorStyle
   } | null>(null)
   // Synchronous mirror of `trueEdit` so a commit can claim-and-clear atomically
   // — Enter unmounts the input, whose blur would otherwise commit a second time.
@@ -259,6 +297,7 @@ export function AnnotationLayer({
     sourceId: string
     bytes: Uint8Array<ArrayBuffer>
     rotation: number
+    revision: number
   } | null => {
     const tab = useDocumentStore.getState().tabs.find((t) => t.id === docId)
     const ref = tab?.pages.find((p) => p.key === pageKey)
@@ -268,7 +307,13 @@ export function AnnotationLayer({
     // Source bytes are always ArrayBuffer-backed (IPC / pdf-lib output), never a
     // SharedArrayBuffer — assert that so they satisfy the IPC request type.
     const bytes = source.bytes as Uint8Array<ArrayBuffer>
-    return { tabId: tab.id, sourceId: ref.sourceId, bytes, rotation: ref.rotation }
+    return {
+      tabId: tab.id,
+      sourceId: ref.sourceId,
+      bytes,
+      rotation: ref.rotation,
+      revision: tab.sourceRevision
+    }
   }
 
   /**
@@ -297,7 +342,9 @@ export function AnnotationLayer({
         value: hit.text,
         x: point.x,
         y: point.y,
-        sourceId: ctx.sourceId
+        sourceId: ctx.sourceId,
+        revision: ctx.revision,
+        style: hit.style
       }
       trueEditRef.current = next
       setTrueEdit(next)
@@ -313,23 +360,43 @@ export function AnnotationLayer({
     setTrueEdit(null)
   }
 
-  /** Commits the in-place true edit, mutating the real content stream. */
-  const commitTrueEdit = async (newText: string): Promise<void> => {
+  /** Commits the in-place true edit — text and/or style — to the content stream. */
+  const commitTrueEdit = async (newText: string, newStyle: EditorStyle): Promise<void> => {
     // Claim-and-clear synchronously: a second caller (the blur fired by Enter
     // unmounting the input) sees null and is a no-op.
     const edit = trueEditRef.current
     trueEditRef.current = null
     setTrueEdit(null)
-    if (!edit || newText === edit.value) return
+    if (!edit) return
+    // Nothing changed → don't rewrite the document.
+    if (newText === edit.value && styleEquals(newStyle, edit.style)) return
     const ctx = sourceContext()
     if (!ctx) return
+    // The source was replaced under the open editor (OCR, redaction, …) — its
+    // bytes no longer match the located object, so abort rather than edit blindly.
+    if (ctx.sourceId !== edit.sourceId || ctx.revision !== edit.revision) return
+
+    // A weight/slant/family change needs a font swap; fetch its .ttf bytes.
+    const fontSwap =
+      newStyle.bold !== edit.style.bold ||
+      newStyle.italic !== edit.style.italic ||
+      newStyle.family !== edit.style.family
+    const fontBytes = fontSwap
+      ? await resolveFontBytes(newStyle.family, newStyle.bold, newStyle.italic)
+      : undefined
+
     try {
       const bytes = await window.api.pdfiumEditText({
         bytes: ctx.bytes,
         pageIndex,
         x: edit.x,
         y: edit.y,
-        newText
+        newText,
+        style: {
+          sizePt: newStyle.sizePt,
+          colorHex: newStyle.colorHex,
+          ...(fontBytes ? { fontBytes } : {})
+        }
       })
       if (bytes) await useDocumentStore.getState().replaceSource(ctx.tabId, edit.sourceId, bytes)
     } catch {
@@ -680,39 +747,16 @@ export function AnnotationLayer({
           </button>
         </div>
       )}
-      {trueEdit &&
-        (() => {
-          const r = pageRectToScreen(viewport, trueEdit.rect)
-          return (
-            <input
-              data-true-text-editor
-              autoFocus
-              defaultValue={trueEdit.value}
-              spellCheck={false}
-              onFocus={(event) => event.target.select()}
-              onPointerDown={(event) => event.stopPropagation()}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  void commitTrueEdit(event.currentTarget.value)
-                } else if (event.key === 'Escape') {
-                  event.preventDefault()
-                  cancelTrueEdit()
-                }
-              }}
-              onBlur={(event) => void commitTrueEdit(event.target.value)}
-              className="absolute z-30 rounded-sm border border-blue-500 bg-white px-0.5 leading-none text-black shadow-sm outline-none"
-              style={{
-                left: r.x,
-                top: r.y,
-                height: Math.max(r.height, 16),
-                minWidth: Math.max(r.width + 10, 28),
-                fontSize: Math.max(8, trueEdit.rect.height * viewport.scale * 0.82),
-                pointerEvents: 'auto'
-              }}
-            />
-          )
-        })()}
+      {trueEdit && (
+        <TrueTextEditor
+          screenRect={pageRectToScreen(viewport, trueEdit.rect)}
+          scale={viewport.scale}
+          initialText={trueEdit.value}
+          initialStyle={trueEdit.style}
+          onCommit={(text, style) => void commitTrueEdit(text, style)}
+          onCancel={cancelTrueEdit}
+        />
+      )}
       <svg width={width} height={height} className="absolute inset-0 overflow-visible">
         {all.map((annotation) =>
           renderVector(annotation, {

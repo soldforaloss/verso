@@ -196,11 +196,29 @@ export type PrintPdfRequest = z.infer<typeof PrintPdfRequestSchema>
 const MAX_PDF_BYTES = 512 * 1024 * 1024
 const MAX_PAGE_INDEX = 1_000_000
 const EDIT_TEXT_MAX = 2_000
+/** A bundled .ttf is well under this; caps the font-swap payload. */
+const MAX_FONT_BYTES = 8 * 1024 * 1024
 
 /** Bytes that are a Uint8Array within the size cap — the trust-boundary guard. */
 const PdfBytesSchema = z
   .instanceof(Uint8Array)
   .refine((b) => b.byteLength <= MAX_PDF_BYTES, 'PDF exceeds the size limit')
+
+/** The three generic font families the true-text editor offers. */
+export const FontFamilySchema = z.enum(['sans-serif', 'serif', 'monospace'])
+export type FontFamily = z.infer<typeof FontFamilySchema>
+
+/** A text object's visual style, reported by locate and shown in the editor. */
+export const TextStyleSchema = z.object({
+  /** On-page (effective) font size in points. */
+  sizePt: z.number().positive().max(2_000),
+  /** Fill colour as `#rrggbb`. */
+  colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  bold: z.boolean(),
+  italic: z.boolean(),
+  family: FontFamilySchema
+})
+export type TextStyle = z.infer<typeof TextStyleSchema>
 
 /** A page-space rectangle (PDF user space, origin bottom-left). */
 export const PageRectSchema = z.object({
@@ -221,19 +239,36 @@ export const LocateTextRequestSchema = z.object({
 })
 export type LocateTextRequest = z.infer<typeof LocateTextRequestSchema>
 
-/** The located text object's current string and its page-space rect. */
+/** The located text object's current string, page-space rect, and style. */
 export const LocatedTextSchema = z.object({
   text: z.string(),
-  rect: PageRectSchema
+  rect: PageRectSchema,
+  style: TextStyleSchema
 })
 export type LocatedText = z.infer<typeof LocatedTextSchema>
 
-/** Replaces the text object under a click with `newText`; returns new bytes. */
+/**
+ * The desired style on a styled edit. `fontBytes` (a bundled .ttf) is present
+ * only when the weight/slant/family changed — a size-only change reuses the
+ * object's original font, and a colour/text-only change needs no style at all.
+ */
+export const EditStyleSchema = z.object({
+  sizePt: z.number().positive().max(2_000),
+  colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  fontBytes: z
+    .instanceof(Uint8Array)
+    .refine((b) => b.byteLength <= MAX_FONT_BYTES, 'Font exceeds the size limit')
+    .optional()
+})
+export type EditStyle = z.infer<typeof EditStyleSchema>
+
+/** Replaces the text object under a click with `newText` (+ optional style). */
 export const EditTextRequestSchema = z.object({
   bytes: PdfBytesSchema,
   pageIndex: z.number().int().nonnegative().max(MAX_PAGE_INDEX),
   x: z.number().finite(),
   y: z.number().finite(),
-  newText: z.string().max(EDIT_TEXT_MAX)
+  newText: z.string().max(EDIT_TEXT_MAX),
+  style: EditStyleSchema.optional()
 })
 export type EditTextRequest = z.infer<typeof EditTextRequestSchema>

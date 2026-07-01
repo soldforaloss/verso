@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
 
@@ -91,5 +93,83 @@ describe('PDFium true text editing (Tier 3)', () => {
     expect(
       await editText({ bytes: rotated, pageIndex: 0, x: 90, y: 228, newText: 'nope' })
     ).toBeNull()
+  })
+
+  // --- Style editing ---------------------------------------------------------
+
+  it('reports the located object style (size, colour, family)', async () => {
+    const hit = await locateText({ bytes, pageIndex: 0, x: 90, y: 228 })
+    expect(hit?.style).toBeDefined()
+    expect(Math.round(hit!.style.sizePt)).toBe(24)
+    expect(hit!.style.colorHex).toMatch(/^#[0-9a-f]{6}$/)
+    // Helvetica → sans-serif, regular weight.
+    expect(hit!.style.family).toBe('sans-serif')
+    expect(hit!.style.bold).toBe(false)
+  })
+
+  it('changes colour in place (no rebuild), preserving size and text', async () => {
+    const edited = await editText({
+      bytes,
+      pageIndex: 0,
+      x: 90,
+      y: 228,
+      newText: 'Hello World',
+      style: { sizePt: 24, colorHex: '#cc2222' }
+    })
+    expect(edited).not.toBeNull()
+    const after = await locateText({ bytes: edited!, pageIndex: 0, x: 90, y: 228 })
+    expect(after?.text).toBe('Hello World')
+    expect(after?.style.colorHex).toBe('#cc2222')
+    expect(Math.round(after!.style.sizePt)).toBe(24)
+  })
+
+  it('changes font size by rebuilding, preserving text and position', async () => {
+    const edited = await editText({
+      bytes,
+      pageIndex: 0,
+      x: 90,
+      y: 228,
+      newText: 'Hello World',
+      style: { sizePt: 40, colorHex: '#1a1a1a' }
+    })
+    expect(edited).not.toBeNull()
+    const after = await locateText({ bytes: edited!, pageIndex: 0, x: 90, y: 232 })
+    expect(after?.text).toBe('Hello World')
+    expect(Math.round(after!.style.sizePt)).toBe(40)
+    // Same left origin (position preserved through the rebuild).
+    expect(after!.rect.x).toBeGreaterThan(40)
+    expect(after!.rect.x).toBeLessThan(60)
+  })
+
+  it('swaps to a bold font when given font bytes (weight change)', async () => {
+    const bold = new Uint8Array(
+      readFileSync(join(process.cwd(), 'resources', 'fonts', 'LiberationSans-Bold.ttf'))
+    )
+    const edited = await editText({
+      bytes,
+      pageIndex: 0,
+      x: 90,
+      y: 228,
+      newText: 'Hello World',
+      style: { sizePt: 24, colorHex: '#1a1a1a', fontBytes: bold }
+    })
+    expect(edited).not.toBeNull()
+    const after = await locateText({ bytes: edited!, pageIndex: 0, x: 90, y: 228 })
+    expect(after?.text).toBe('Hello World')
+    expect(after?.style.bold).toBe(true)
+  })
+
+  it('does not drop a style-only change when the text is unchanged', async () => {
+    // Same string, only the colour differs — must still be applied.
+    const edited = await editText({
+      bytes,
+      pageIndex: 0,
+      x: 90,
+      y: 228,
+      newText: 'Hello World',
+      style: { sizePt: 24, colorHex: '#00aa00' }
+    })
+    const after = await locateText({ bytes: edited!, pageIndex: 0, x: 90, y: 228 })
+    expect(after?.style.colorHex).toBe('#00aa00')
   })
 })

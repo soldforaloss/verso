@@ -101,5 +101,28 @@ describe('IPC schemas', () => {
         false
       )
     })
+
+    it('accepts an optional style block (size + colour + font bytes)', () => {
+      const styled = {
+        ...ok,
+        style: { sizePt: 18, colorHex: '#1a2b3c', fontBytes: new Uint8Array([0, 1, 2]) }
+      }
+      expect(EditTextRequestSchema.safeParse(styled).success).toBe(true)
+      // fontBytes is optional (size/colour-only edits omit it).
+      expect(
+        EditTextRequestSchema.safeParse({ ...ok, style: { sizePt: 12, colorHex: '#000000' } })
+          .success
+      ).toBe(true)
+    })
+
+    it('rejects a malformed style (bad colour, non-positive size)', () => {
+      expect(
+        EditTextRequestSchema.safeParse({ ...ok, style: { sizePt: 12, colorHex: 'red' } }).success
+      ).toBe(false)
+      expect(
+        EditTextRequestSchema.safeParse({ ...ok, style: { sizePt: 0, colorHex: '#000000' } })
+          .success
+      ).toBe(false)
+    })
   })
 })

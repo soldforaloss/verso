@@ -38,6 +38,17 @@ tiers of editing, shipping Tiers 1–2 and scaffolding a clean seam for Tier 3.
     startup, and the edit is a pure `bytes + point → bytes` function. The
     renderer applies the result via `replaceSource` — the same eager path OCR
     uses — so what's shown is exactly what saves.
+  - **Style toolbar:** the inline editor carries a compact toolbar (font size,
+    bold, italic, colour, Sans/Serif/Mono). `locate` reports the object's current
+    style — size (`FPDFTextObj_GetFontSize` × matrix y-scale), colour
+    (`FPDFPageObj_GetFillColor`), and weight/slant/family (from `FPDFFont_GetWeight`,
+    `GetFlags`, `GetBaseFontName`) — to seed it. On commit, a **colour/text-only**
+    change mutates in place (`SetFillColor`/`SetText`, original font kept); a **size** change
+    rebuilds the object reusing the original font at the new size; a
+    **weight/slant/family** change rebuilds with a bundled metric-compatible font
+    (the renderer fetches the .ttf and sends the bytes; PDFium `FPDFText_LoadFont`,
+    CID/Type0 for full Unicode). Rebuilds preserve position/rotation via a
+    scale-normalized matrix and delete the old object (`RemoveObject` + `Destroy`).
   - **Fallback:** if the click isn't over a text object (or the page carries a
     tab-applied rotation, where page-space coordinates don't line up), it cleanly
     falls back to the Tier-2 overlay. The explicit "Edit existing text" tool and

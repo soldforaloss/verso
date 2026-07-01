@@ -69,3 +69,46 @@ test('double-click does a true content-stream text edit (no cover-up) and saves 
   const saved = await PDFDocument.load(readFileSync(outPath))
   expect(saved.getPageCount()).toBe(8)
 })
+
+test('the style toolbar makes a run bold in the real content stream (round-trips)', async () => {
+  app = await launchVerso([FIXTURE_PDF])
+  const window = await app.firstWindow()
+  await expect(window.locator('[data-page-number="1"] canvas')).toBeVisible({ timeout: 30_000 })
+
+  const run = window.locator('[data-page-number="1"] .textLayer span', {
+    hasText: 'Verso sample page 1'
+  })
+  await expect(run).toBeVisible({ timeout: 20_000 })
+  const box = await run.boundingBox()
+  expect(box).not.toBeNull()
+
+  // Open the editor; the style toolbar comes with it.
+  await window.mouse.dblclick(box!.x + box!.width / 2, box!.y + box!.height / 2)
+  const toolbar = window.locator('[data-true-text-toolbar]')
+  await expect(toolbar).toBeVisible({ timeout: 30_000 })
+
+  // The heading isn't bold to begin with.
+  const boldButton = toolbar.locator('button[title="Bold"]')
+  await expect(boldButton).toHaveAttribute('aria-pressed', 'false')
+
+  // Toggle bold (focus stays on the text input) and commit with Enter.
+  await boldButton.click()
+  await expect(boldButton).toHaveAttribute('aria-pressed', 'true')
+  await window.keyboard.press('Enter')
+
+  // The commit is async (fetch font → PDFium rebuild → re-render). The document
+  // becomes dirty once it lands — wait for that before re-reading the style.
+  await expect(window.locator('[title="Unsaved changes"]')).toBeVisible({ timeout: 20_000 })
+
+  // Re-open the same run: its style now reads back as bold from the genuine
+  // content stream — proof the weight change round-tripped through PDFium.
+  const run2 = window.locator('[data-page-number="1"] .textLayer span', {
+    hasText: 'Verso sample page 1'
+  })
+  await expect(run2).toBeVisible({ timeout: 20_000 })
+  const box2 = await run2.boundingBox()
+  await window.mouse.dblclick(box2!.x + box2!.width / 2, box2!.y + box2!.height / 2)
+  const boldButton2 = window.locator('[data-true-text-toolbar] button[title="Bold"]')
+  await expect(boldButton2).toBeVisible({ timeout: 30_000 })
+  await expect(boldButton2).toHaveAttribute('aria-pressed', 'true')
+})
