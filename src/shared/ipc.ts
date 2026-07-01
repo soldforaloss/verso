@@ -184,7 +184,8 @@ export const TransformPdfRequestSchema = z.discriminatedUnion('operation', [
     password: z.string().max(PASSWORD_MAX)
   }),
   z.object({ operation: z.literal('repair'), bytes: z.instanceof(Uint8Array) }),
-  z.object({ operation: z.literal('linearize'), bytes: z.instanceof(Uint8Array) })
+  z.object({ operation: z.literal('linearize'), bytes: z.instanceof(Uint8Array) }),
+  z.object({ operation: z.literal('optimize'), bytes: z.instanceof(Uint8Array) })
 ])
 export type TransformPdfRequest = z.infer<typeof TransformPdfRequestSchema>
 

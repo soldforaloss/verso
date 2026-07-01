@@ -9,7 +9,17 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { decryptDocument, encryptDocument, linearizeDocument, repairDocument } from '@/lib/security'
+import {
+  currentSourceRevision,
+  decryptDocument,
+  encryptDocument,
+  linearizeDocument,
+  optimizeDocument,
+  repairDocument,
+  saveOptimized,
+  type OptimizeResult
+} from '@/lib/security'
+import { formatBytes } from '@/lib/utils'
 import type { DocumentTab } from '@/store/documentStore'
 import type { PdfPermissions, SecurityStatus } from '@shared/ipc'
 
@@ -56,10 +66,17 @@ export function SecurityDialog({
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [optimizeResult, setOptimizeResult] = useState<OptimizeResult | null>(null)
 
   useEffect(() => {
-    if (!open) return
+    // Clearing on close too releases the (possibly large) optimized buffer
+    // instead of pinning it in state until the dialog is next opened.
+    if (!open) {
+      setOptimizeResult(null)
+      return
+    }
     setError(null)
+    setOptimizeResult(null)
     let cancelled = false
     void window.api.getSecurityStatus().then((result) => {
       if (!cancelled) setStatus(result)
@@ -80,6 +97,33 @@ export function SecurityDialog({
     } finally {
       setBusy(false)
     }
+  }
+
+  // Runs the size analysis but does NOT close the dialog — the user reviews the
+  // reduction before choosing to save the smaller copy.
+  const runOptimize = async (): Promise<void> => {
+    setBusy(true)
+    setError(null)
+    setOptimizeResult(null)
+    try {
+      setOptimizeResult(await optimizeDocument(tab))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The operation failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // The optimized bytes are a snapshot; if the document changed underneath (a
+  // background OCR / in-place edit bumped the source revision), saving them would
+  // export a stale copy. Detect that and force a fresh calculation.
+  const saveOptimizedCopy = async (result: OptimizeResult): Promise<void> => {
+    if (currentSourceRevision(tab.id) !== result.revision) {
+      setOptimizeResult(null)
+      setError('The document changed — recalculate savings before saving.')
+      return
+    }
+    await guard(() => saveOptimized(tab, result.bytes))
   }
 
   const available = status?.available === true
@@ -174,7 +218,44 @@ export function SecurityDialog({
               </Button>
             </Section>
 
-            <Section title="Optimize">
+            <Section title="Reduce file size">
+              <p className="text-xs text-muted-foreground">
+                Repacks the document into compressed object streams and re-deflates every stream.
+                Structural only — it never touches image quality.
+              </p>
+              <Button
+                className="justify-self-start"
+                disabled={busy}
+                onClick={() => void runOptimize()}
+              >
+                {busy && optimizeResult === null ? 'Analyzing…' : 'Calculate savings'}
+              </Button>
+              {optimizeResult &&
+                (optimizeResult.after < optimizeResult.before ? (
+                  <div className="grid gap-2 rounded-md bg-muted p-3 text-sm">
+                    <p>
+                      {formatBytes(optimizeResult.before)} → {formatBytes(optimizeResult.after)} ·{' '}
+                      <span className="font-medium text-primary">
+                        {Math.round((1 - optimizeResult.after / optimizeResult.before) * 100)}%
+                        smaller
+                      </span>
+                    </p>
+                    <Button
+                      className="justify-self-start"
+                      disabled={busy}
+                      onClick={() => void saveOptimizedCopy(optimizeResult)}
+                    >
+                      Save optimized copy
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                    This document is already optimized — no further reduction is available.
+                  </p>
+                ))}
+            </Section>
+
+            <Section title="Restructure">
               <div className="flex gap-2">
                 <Button
                   variant="secondary"

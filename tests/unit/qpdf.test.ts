@@ -41,6 +41,23 @@ describe('buildQpdfArgs', () => {
       OUT
     ])
   })
+
+  it('optimizes with object streams + max-effort flate recompression', () => {
+    const args = buildQpdfArgs({ operation: 'optimize', bytes }, IN, OUT)
+    expect(args).toEqual([
+      '--object-streams=generate',
+      '--compress-streams=y',
+      '--recompress-flate',
+      '--compression-level=9',
+      '--',
+      IN,
+      OUT
+    ])
+    // Input/output come after the `--` separator so a path can't be read as a flag.
+    expect(args.slice(-3)).toEqual(['--', IN, OUT])
+    // No image-touching flags — structural recompression must never re-encode images.
+    expect(args.some((a) => a.includes('image'))).toBe(false)
+  })
 })
 
 describe('TransformPdfRequestSchema', () => {
@@ -53,6 +70,10 @@ describe('TransformPdfRequestSchema', () => {
       permissions: { printing: true, modifying: true, copying: true, annotating: true }
     })
     expect(result.success).toBe(true)
+  })
+
+  it('accepts a valid optimize request', () => {
+    expect(TransformPdfRequestSchema.safeParse({ operation: 'optimize', bytes }).success).toBe(true)
   })
 
   it('rejects an unknown operation', () => {

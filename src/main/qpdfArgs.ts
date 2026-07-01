@@ -35,5 +35,20 @@ export function buildQpdfArgs(
       return [inputPath, outputPath]
     case 'linearize':
       return ['--linearize', inputPath, outputPath]
+    case 'optimize':
+      // Reduce file size: pack objects into compressed object streams and
+      // re-deflate every stream at maximum effort. Structural only (qpdf never
+      // touches image data), so it never degrades quality — it just squeezes
+      // out the slack a generating tool left behind.
+      return [
+        '--object-streams=generate',
+        '--compress-streams=y',
+        '--recompress-flate',
+        '--compression-level=9',
+        // End option parsing so the temp paths are never mistaken for flags.
+        '--',
+        inputPath,
+        outputPath
+      ]
   }
 }
