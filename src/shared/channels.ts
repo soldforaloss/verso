@@ -15,6 +15,8 @@ export const IpcChannels = {
 
   /** Shows the native open dialog and returns the chosen document (or null). */
   openFileDialog: 'dialog:open-file',
+  /** Shows a native image picker (PNG/JPEG) and returns the chosen file's bytes. */
+  pickImage: 'dialog:pick-image',
   /** Reads a PDF from an absolute path (drag-drop, CLI, file association). */
   readFile: 'file:read',
 

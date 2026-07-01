@@ -8,6 +8,7 @@ import type {
   LocateTextRequest,
   OpenedDocument,
   PartialPreferences,
+  PickedImage,
   Preferences,
   PingRequest,
   PingResponse,
@@ -46,6 +47,8 @@ export interface VersoApi {
 
   /** Shows the native open dialog; resolves to the document or null if cancelled. */
   openFileDialog(): Promise<OpenedDocument | null>
+  /** Shows the native image picker; resolves to the chosen PNG/JPEG or null. */
+  pickImage(): Promise<PickedImage | null>
   /** Reads a PDF from an absolute path on disk. */
   readFile(request: ReadFileRequest): Promise<OpenedDocument>
 

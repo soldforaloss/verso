@@ -17,6 +17,7 @@ const api: VersoApi = {
   getAppInfo: () => ipcRenderer.invoke(IpcChannels.getAppInfo),
 
   openFileDialog: () => ipcRenderer.invoke(IpcChannels.openFileDialog),
+  pickImage: () => ipcRenderer.invoke(IpcChannels.pickImage),
   readFile: (request) => ipcRenderer.invoke(IpcChannels.readFile, request),
 
   getRecentFiles: () => ipcRenderer.invoke(IpcChannels.getRecentFiles),

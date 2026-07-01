@@ -9,6 +9,7 @@ import {
   RecentFileSchema,
   type OpenedDocument,
   type PartialPreferences,
+  type PickedImage,
   type Preferences,
   type RecentFile
 } from '@shared/ipc'
@@ -16,6 +17,8 @@ import { z } from 'zod'
 
 /** Largest PDF we will load into memory (guards against OOM / hostile input). */
 const MAX_PDF_BYTES = 512 * 1024 * 1024
+/** Largest raster image accepted for "Add image" (base64 in a data URL is +33%). */
+const MAX_IMAGE_BYTES = 30 * 1024 * 1024
 const MAX_RECENT = 15
 
 const recentFilePath = (): string => join(app.getPath('userData'), 'recent-files.json')
@@ -80,6 +83,50 @@ export async function openFileDialog(window: BrowserWindow): Promise<OpenedDocum
   })
   if (result.canceled || result.filePaths.length === 0) return null
   return readPdf(result.filePaths[0]!)
+}
+
+/**
+ * Identifies a raster image by its magic bytes (never by extension). Returns the
+ * mime type for the two formats pdf-lib can embed, or null for anything else.
+ */
+export function sniffImageMime(bytes: Uint8Array): 'image/png' | 'image/jpeg' | null {
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return 'image/png'
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg'
+  }
+  return null
+}
+
+/** Shows the native image picker and returns the chosen PNG/JPEG (null if cancelled). */
+export async function openImageDialog(window: BrowserWindow): Promise<PickedImage | null> {
+  const result = await dialog.showOpenDialog(window, {
+    title: 'Add image',
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }]
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+
+  const path = result.filePaths[0]!
+  const info = await stat(path)
+  if (!info.isFile()) throw new Error('Not a file.')
+  if (info.size > MAX_IMAGE_BYTES) throw new Error('Image is too large (max 30 MB).')
+
+  const bytes = new Uint8Array(await readFile(path))
+  const mime = sniffImageMime(bytes)
+  if (!mime) throw new Error('Only PNG or JPEG images are supported.')
+  return { bytes, mime }
 }
 
 // --- Recent files ----------------------------------------------------------

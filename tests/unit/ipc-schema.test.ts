@@ -7,6 +7,7 @@ import {
   LocateTextRequestSchema,
   EditTextRequestSchema,
   EditImageRequestSchema,
+  PickedImageSchema,
   SignPdfRequestSchema,
   VerifySignaturesRequestSchema
 } from '@shared/ipc'
@@ -162,6 +163,26 @@ describe('IPC schemas', () => {
         true
       )
       expect(VerifySignaturesRequestSchema.safeParse({ bytes: 'nope' }).success).toBe(false)
+    })
+  })
+
+  describe('PickedImageSchema', () => {
+    it('accepts PNG/JPEG bytes with an allowed mime', () => {
+      expect(
+        PickedImageSchema.safeParse({ bytes: new Uint8Array([1]), mime: 'image/png' }).success
+      ).toBe(true)
+      expect(
+        PickedImageSchema.safeParse({ bytes: new Uint8Array([1]), mime: 'image/jpeg' }).success
+      ).toBe(true)
+    })
+
+    it('rejects a disallowed mime and non-Uint8Array bytes', () => {
+      expect(
+        PickedImageSchema.safeParse({ bytes: new Uint8Array([1]), mime: 'image/gif' }).success
+      ).toBe(false)
+      expect(PickedImageSchema.safeParse({ bytes: [1, 2, 3], mime: 'image/png' }).success).toBe(
+        false
+      )
     })
   })
 

@@ -6,6 +6,7 @@ import {
   FileSignature,
   GitCompare,
   ImageDown,
+  ImagePlus,
   Info,
   Lock,
   PenTool,
@@ -14,6 +15,13 @@ import {
   Stamp
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 import { MetadataDialog } from './MetadataDialog'
 import { CompareView } from './CompareView'
 import { CropDialog } from './CropDialog'
@@ -28,6 +36,7 @@ import { InsertDialog } from './InsertDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
 import { addImageAnnotation } from '@/lib/annotationOps'
+import { rasterizeToPng } from '@/lib/imageInsert'
 import { useViewStore } from '@/store/viewStore'
 import { useToolStore } from '@/store/toolStore'
 import type { SignatureImage } from '@/lib/signature'
@@ -49,6 +58,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [signaturesOpen, setSignaturesOpen] = useState(false)
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [printing, setPrinting] = useState(false)
   const [compare, setCompare] = useState<{ bytes: Uint8Array; name: string } | null>(null)
   const hasRedactions = redactedPageNumbers(tab).length > 0
@@ -76,6 +86,26 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
     const id = addImageAnnotation(tab.id, pageKey, image.dataUrl, aspect)
     useToolStore.getState().setTool('select')
     useToolStore.getState().selectAnnotation(pageKey, id)
+  }
+
+  // "Add image": pick a PNG/JPEG from disk (mime sniffed in main), normalize it
+  // to a PNG, and drop it on the current page as a movable/resizable image
+  // annotation — the same lifecycle as stamps and signatures. Errors (too large,
+  // unsupported type, undecodable) surface to the user instead of silently
+  // no-op'ing: main throws user-safe messages, which we relay.
+  const addImage = async (): Promise<void> => {
+    try {
+      const picked = await window.api.pickImage()
+      if (!picked) return
+      const image = await rasterizeToPng(picked.bytes, picked.mime)
+      if (!image) {
+        setImageError('That image could not be decoded — the file may be corrupt.')
+        return
+      }
+      placeImage(image)
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'The image could not be added.')
+    }
   }
 
   return (
@@ -132,6 +162,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <Button
         variant="ghost"
         size="icon"
+        title="Add image (from file)"
+        onClick={() => void addImage()}
+      >
+        <ImagePlus />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         title="Watermark & page numbers"
         onClick={() => setInsertOpen(true)}
       >
@@ -184,6 +222,18 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <SignaturePanel tab={tab} open={signaturesOpen} onOpenChange={setSignaturesOpen} />
       <StampDialog open={stampOpen} onOpenChange={setStampOpen} onInsert={placeImage} />
       <InsertDialog tab={tab} open={insertOpen} onOpenChange={setInsertOpen} />
+
+      <Dialog open={imageError !== null} onOpenChange={(open) => !open && setImageError(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Couldn&apos;t add image</DialogTitle>
+            <DialogDescription>{imageError}</DialogDescription>
+          </DialogHeader>
+          <Button className="justify-self-end" onClick={() => setImageError(null)}>
+            OK
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

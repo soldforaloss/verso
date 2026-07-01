@@ -53,6 +53,13 @@ export const OpenedDocumentSchema = z.object({
 })
 export type OpenedDocument = z.infer<typeof OpenedDocumentSchema>
 
+/** A raster image chosen from disk (for "Add image"); mime is sniffed, not trusted. */
+export const PickedImageSchema = z.object({
+  bytes: z.instanceof(Uint8Array),
+  mime: z.enum(['image/png', 'image/jpeg'])
+})
+export type PickedImage = z.infer<typeof PickedImageSchema>
+
 export const ReadFileRequestSchema = z.object({
   path: z.string().min(1).max(4_096)
 })

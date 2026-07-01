@@ -14,6 +14,7 @@ import {
   getPreferences,
   getRecentFiles,
   openFileDialog,
+  openImageDialog,
   readPdf,
   selectDirectory,
   setPreferences,
@@ -32,6 +33,10 @@ function windowFor(event: Electron.IpcMainInvokeEvent): BrowserWindow {
 export function registerFileHandlers(): void {
   handle(IpcChannels.openFileDialog, EmptyRequestSchema, (_request, event) =>
     openFileDialog(windowFor(event))
+  )
+
+  handle(IpcChannels.pickImage, EmptyRequestSchema, (_request, event) =>
+    openImageDialog(windowFor(event))
   )
 
   handle(IpcChannels.readFile, ReadFileRequestSchema, (request) => readPdf(request.path))
