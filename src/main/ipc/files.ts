@@ -48,7 +48,7 @@ export function registerFileHandlers(): void {
   handle(IpcChannels.setPreferences, PartialPreferencesSchema, (request) => setPreferences(request))
 
   handle(IpcChannels.showSaveDialog, SaveDialogRequestSchema, (request, event) =>
-    showSaveDialog(windowFor(event), request.defaultName)
+    showSaveDialog(windowFor(event), request.defaultName, request.fileType)
   )
   handle(IpcChannels.selectDirectory, EmptyRequestSchema, (_request, event) =>
     selectDirectory(windowFor(event))

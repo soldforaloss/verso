@@ -174,12 +174,17 @@ export async function setPreferences(update: PartialPreferences): Promise<Prefer
 
 export async function showSaveDialog(
   window: BrowserWindow,
-  defaultName: string
+  defaultName: string,
+  fileType: 'pdf' | 'text' = 'pdf'
 ): Promise<string | null> {
+  const filters =
+    fileType === 'text'
+      ? [{ name: 'Text', extensions: ['txt'] }]
+      : [{ name: 'PDF Documents', extensions: ['pdf'] }]
   const result = await dialog.showSaveDialog(window, {
-    title: 'Save PDF',
+    title: fileType === 'text' ? 'Export text' : 'Save PDF',
     defaultPath: defaultName,
-    filters: [{ name: 'PDF Documents', extensions: ['pdf'] }]
+    filters
   })
   return result.canceled || !result.filePath ? null : result.filePath
 }

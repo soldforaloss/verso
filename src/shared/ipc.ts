@@ -105,7 +105,9 @@ export type PartialPreferences = z.infer<typeof PartialPreferencesSchema>
 // --- Saving / exporting ----------------------------------------------------
 
 export const SaveDialogRequestSchema = z.object({
-  defaultName: z.string().min(1).max(255)
+  defaultName: z.string().min(1).max(255),
+  /** Which file-type filter to show (defaults to PDF). */
+  fileType: z.enum(['pdf', 'text']).optional()
 })
 export type SaveDialogRequest = z.infer<typeof SaveDialogRequestSchema>
 

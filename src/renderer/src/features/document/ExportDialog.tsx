@@ -12,11 +12,16 @@ import {
 import { cn } from '@/lib/utils'
 import { useViewStore } from '@/store/viewStore'
 import { exportPagesToImages, type ImageFormat } from '@/lib/exportImage'
+import { exportPagesToText } from '@/lib/exportText'
+import { blockWriteIfUnappliedRedactions } from '@/lib/saveGuards'
 import type { DocumentTab } from '@/store/documentStore'
 
-const FORMATS: { value: ImageFormat; label: string }[] = [
+type ExportFormat = ImageFormat | 'text'
+
+const FORMATS: { value: ExportFormat; label: string }[] = [
   { value: 'png', label: 'PNG' },
-  { value: 'jpeg', label: 'JPEG' }
+  { value: 'jpeg', label: 'JPEG' },
+  { value: 'text', label: 'Text' }
 ]
 const SCALES: { value: number; label: string }[] = [
   { value: 1, label: '1× (72 dpi)' },
@@ -70,20 +75,31 @@ export function ExportDialog({
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const currentPage = useViewStore((s) => s.currentPage)
-  const [format, setFormat] = useState<ImageFormat>('png')
+  const [format, setFormat] = useState<ExportFormat>('png')
   const [scale, setScale] = useState(2)
   const [allPages, setAllPages] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const pageCount = tab.pages.length
+  const isText = format === 'text'
 
   const run = async (): Promise<void> => {
     const pages = allPages
       ? Array.from({ length: pageCount }, (_, index) => index + 1)
       : [Math.min(Math.max(1, currentPage), pageCount)]
+
+    // Exporting text reads the document's text layer — with unapplied redaction
+    // marks that still cover (not destroy) the text, that would leak it.
+    if (isText && blockWriteIfUnappliedRedactions(tab)) {
+      onOpenChange(false)
+      return
+    }
+
     setBusy(true)
     try {
-      const written = await exportPagesToImages(tab, { format, scale, pages })
+      const written = isText
+        ? await exportPagesToText(tab, pages)
+        : await exportPagesToImages(tab, { format, scale, pages })
       if (written > 0) onOpenChange(false)
     } finally {
       setBusy(false)
@@ -94,15 +110,18 @@ export function ExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Export as image</DialogTitle>
+          <DialogTitle>Export</DialogTitle>
           <DialogDescription>
-            Render pages to PNG or JPEG. Annotations and filled fields are included.
+            Render pages to a PNG/JPEG image, or extract the document text to a .txt file.
+            Annotations and filled fields are included.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3">
           <Choice label="Format" options={FORMATS} value={format} onChange={setFormat} />
-          <Choice label="Resolution" options={SCALES} value={scale} onChange={setScale} />
+          {!isText && (
+            <Choice label="Resolution" options={SCALES} value={scale} onChange={setScale} />
+          )}
           <Choice
             label="Pages"
             options={[

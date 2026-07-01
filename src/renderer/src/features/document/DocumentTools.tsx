@@ -137,7 +137,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <Button
         variant="ghost"
         size="icon"
-        title="Export as image (PNG/JPEG)"
+        title="Export (image or text)"
         onClick={() => setExportOpen(true)}
       >
         <ImageDown />

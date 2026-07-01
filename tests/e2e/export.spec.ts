@@ -22,8 +22,8 @@ test('exports the current page as a PNG image', async () => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath })
   }, outPath)
 
-  await window.getByTitle('Export as image (PNG/JPEG)').click()
-  await expect(window.getByText('Export as image')).toBeVisible()
+  await window.getByTitle('Export (image or text)').click()
+  await expect(window.getByText(/Render pages to a PNG\/JPEG image/)).toBeVisible()
   // PNG + current page are the defaults; export.
   await window.getByRole('button', { name: 'Export', exact: true }).click()
 
