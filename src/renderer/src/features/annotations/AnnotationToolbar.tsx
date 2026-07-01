@@ -15,6 +15,7 @@ import {
   Minus,
   MousePointer2,
   Pencil,
+  Ruler,
   SendToBack,
   Square,
   SquareChevronDown,
@@ -38,6 +39,7 @@ import {
   updateAnnotation
 } from '@/lib/annotationOps'
 import { ANNOTATION_COLORS, type Annotation, type TextFontFamily } from '@/lib/annotations'
+import { MEASURE_UNITS } from '@/lib/measure'
 import type { DocumentTab } from '@/store/documentStore'
 
 // Tools grouped by purpose (select · markup · draw · text · destructive) so the
@@ -72,6 +74,7 @@ const TOOL_GROUPS: { tool: Tool; label: string; Icon: typeof Square }[][] = [
     { tool: 'field-radio', label: 'Add radio group field (form)', Icon: CircleDot }
   ],
   [{ tool: 'link', label: 'Add link (clickable hyperlink)', Icon: Link }],
+  [{ tool: 'measure', label: 'Measure distance', Icon: Ruler }],
   [
     { tool: 'redaction', label: 'Redaction (black out & destroy content)', Icon: EyeOff },
     { tool: 'eraser', label: 'Eraser (click to delete)', Icon: Eraser }
@@ -109,6 +112,8 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   const selectedPageKey = useToolStore((s) => s.selectedPageKey)
   const clearSelection = useToolStore((s) => s.clearSelection)
   const selectAnnotation = useToolStore((s) => s.selectAnnotation)
+  const measureUnit = useToolStore((s) => s.measureUnit)
+  const setMeasureUnit = useToolStore((s) => s.setMeasureUnit)
   const currentPage = useViewStore((s) => s.currentPage)
 
   const selected: Annotation | undefined =
@@ -392,6 +397,31 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
                 className="w-12 rounded border bg-background px-1 py-0.5 text-xs text-foreground"
               />
             </label>
+          </div>
+        </>
+      )}
+
+      {tool === 'measure' && (
+        <>
+          <div className="mx-1 h-5 w-px bg-border" />
+          <div className="flex items-center gap-1" title="Measurement unit">
+            <Ruler className="size-4 text-muted-foreground" />
+            <div className="flex items-center rounded-md border p-0.5">
+              {MEASURE_UNITS.map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  aria-pressed={measureUnit === u}
+                  onClick={() => setMeasureUnit(u)}
+                  className={cn(
+                    'rounded-[5px] px-1.5 py-0.5 text-xs uppercase transition-colors',
+                    measureUnit === u ? 'bg-secondary text-secondary-foreground' : 'hover:bg-accent'
+                  )}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}

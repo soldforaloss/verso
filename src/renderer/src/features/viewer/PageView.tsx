@@ -19,6 +19,7 @@ import type { NewFormField } from '@/lib/formFields'
 import type { PageLink } from '@/lib/links'
 import { AnnotationLayer } from '@/features/annotations/AnnotationLayer'
 import { ImageEditLayer } from '@/features/annotations/ImageEditLayer'
+import { MeasureLayer } from '@/features/annotations/MeasureLayer'
 import { FormLayer } from '@/features/forms/FormLayer'
 import { FieldCreateLayer } from '@/features/forms/FieldCreateLayer'
 import { LinkCreateLayer } from '@/features/annotations/LinkCreateLayer'
@@ -110,6 +111,10 @@ function PageViewImpl({
   const [visible, setVisible] = useState(false)
   const [renderTick, setRenderTick] = useState(0)
   const [pageViewport, setPageViewport] = useState<PageViewport | null>(null)
+  // The page's /UserUnit (default 1) — 1 user-space unit = userUnit/72 inch, so
+  // the Measure tool needs it to report true physical lengths on large-format
+  // (plotter) pages.
+  const [pageUserUnit, setPageUserUnit] = useState(1)
   const [highlights, setHighlights] = useState<{
     normal: HighlightRect[]
     active: HighlightRect[]
@@ -223,6 +228,7 @@ function PageViewImpl({
 
         renderInfoRef.current = { viewport, items: textContent.items }
         setPageViewport(viewport)
+        setPageUserUnit((page as { userUnit?: number }).userUnit ?? 1)
         setRenderTick((tick) => tick + 1)
       } catch (error) {
         if (!(error instanceof Error) || error.name !== RENDERING_CANCELLED) {
@@ -320,6 +326,12 @@ function PageViewImpl({
             pageKey={pageKey}
             viewport={pageViewport}
             pageIndex={descriptor.pageIndex}
+          />
+          <MeasureLayer
+            docId={docId}
+            pageKey={pageKey}
+            viewport={pageViewport}
+            userUnit={pageUserUnit}
           />
           {descriptor.crop && <CropOverlay viewport={pageViewport} crop={descriptor.crop} />}
           <FieldCreateLayer

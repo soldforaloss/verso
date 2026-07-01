@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { ANNOTATION_COLORS, type TextFontFamily } from '@/lib/annotations'
+import type { MeasureUnit } from '@/lib/measure'
 
 export type Tool =
   | 'select'
@@ -17,6 +18,7 @@ export type Tool =
   | 'squiggly'
   | 'edittext'
   | 'editimage'
+  | 'measure'
   | 'redaction'
   | 'link'
   | 'field-text'
@@ -74,10 +76,13 @@ interface ToolState {
   bold: boolean
   italic: boolean
   letterSpacing: number
+  /** Unit shown by the measure tool. */
+  measureUnit: MeasureUnit
   /** Currently selected annotation (in select mode), if any. */
   selectedId: string | null
   selectedPageKey: string | null
   setTool: (tool: Tool) => void
+  setMeasureUnit: (unit: MeasureUnit) => void
   setColor: (color: string) => void
   setStrokeWidth: (strokeWidth: number) => void
   setOpacity: (opacity: number) => void
@@ -100,10 +105,12 @@ export const useToolStore = create<ToolState>((set) => ({
   bold: false,
   italic: false,
   letterSpacing: 0,
+  measureUnit: 'in',
   selectedId: null,
   selectedPageKey: null,
   // Switching tools clears any annotation selection.
   setTool: (tool) => set({ tool, selectedId: null, selectedPageKey: null }),
+  setMeasureUnit: (measureUnit) => set({ measureUnit }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setOpacity: (opacity) => set({ opacity }),
