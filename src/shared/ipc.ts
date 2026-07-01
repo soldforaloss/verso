@@ -272,3 +272,22 @@ export const EditTextRequestSchema = z.object({
   style: EditStyleSchema.optional()
 })
 export type EditTextRequest = z.infer<typeof EditTextRequestSchema>
+
+// --- Digital signatures (PKI) ----------------------------------------------
+
+const SIG_FIELD_MAX = 256
+
+/**
+ * Cryptographically signs the given PDF. The certificate (a `.p12`/`.pfx`) is
+ * chosen via a native file dialog in the main process — its private key never
+ * crosses this boundary. The passphrase unlocks it for this one operation.
+ */
+export const SignPdfRequestSchema = z.object({
+  bytes: PdfBytesSchema,
+  passphrase: z.string().max(1_024),
+  reason: z.string().max(SIG_FIELD_MAX).optional(),
+  name: z.string().max(SIG_FIELD_MAX).optional(),
+  location: z.string().max(SIG_FIELD_MAX).optional(),
+  contactInfo: z.string().max(SIG_FIELD_MAX).optional()
+})
+export type SignPdfRequest = z.infer<typeof SignPdfRequestSchema>

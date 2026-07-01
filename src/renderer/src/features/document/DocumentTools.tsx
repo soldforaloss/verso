@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Crop,
   EyeOff,
+  FileSignature,
   GitCompare,
   ImageDown,
   Info,
@@ -19,6 +20,7 @@ import { ExportDialog } from './ExportDialog'
 import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
 import { SignatureDialog } from './SignatureDialog'
+import { DigitalSignDialog } from './DigitalSignDialog'
 import { StampDialog } from './StampDialog'
 import { InsertDialog } from './InsertDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
@@ -41,6 +43,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [securityOpen, setSecurityOpen] = useState(false)
   const [redactionOpen, setRedactionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
+  const [digitalSignOpen, setDigitalSignOpen] = useState(false)
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
@@ -104,6 +107,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <Button variant="ghost" size="icon" title="Add signature" onClick={() => setSignOpen(true)}>
         <PenTool />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Digitally sign (certificate)"
+        onClick={() => setDigitalSignOpen(true)}
+      >
+        <FileSignature />
+      </Button>
       <Button variant="ghost" size="icon" title="Add stamp" onClick={() => setStampOpen(true)}>
         <BadgeCheck />
       </Button>
@@ -158,6 +169,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeImage} />
+      <DigitalSignDialog tab={tab} open={digitalSignOpen} onOpenChange={setDigitalSignOpen} />
       <StampDialog open={stampOpen} onOpenChange={setStampOpen} onInsert={placeImage} />
       <InsertDialog tab={tab} open={insertOpen} onOpenChange={setInsertOpen} />
     </>

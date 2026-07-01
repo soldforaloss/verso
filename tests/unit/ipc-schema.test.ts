@@ -5,7 +5,8 @@ import {
   AppInfoSchema,
   EmptyRequestSchema,
   LocateTextRequestSchema,
-  EditTextRequestSchema
+  EditTextRequestSchema,
+  SignPdfRequestSchema
 } from '@shared/ipc'
 
 describe('IPC schemas', () => {
@@ -123,6 +124,33 @@ describe('IPC schemas', () => {
         EditTextRequestSchema.safeParse({ ...ok, style: { sizePt: 0, colorHex: '#000000' } })
           .success
       ).toBe(false)
+    })
+  })
+
+  describe('SignPdfRequestSchema', () => {
+    const ok = { bytes: new Uint8Array([1]), passphrase: 'secret' }
+
+    it('accepts a minimal request and optional metadata', () => {
+      expect(SignPdfRequestSchema.safeParse(ok).success).toBe(true)
+      expect(
+        SignPdfRequestSchema.safeParse({ ...ok, reason: 'I approve', name: 'A', location: 'B' })
+          .success
+      ).toBe(true)
+    })
+
+    it('accepts an empty passphrase (some certificates have none)', () => {
+      expect(SignPdfRequestSchema.safeParse({ ...ok, passphrase: '' }).success).toBe(true)
+    })
+
+    it('rejects an over-long passphrase or metadata field', () => {
+      expect(SignPdfRequestSchema.safeParse({ ...ok, passphrase: 'x'.repeat(1025) }).success).toBe(
+        false
+      )
+      expect(SignPdfRequestSchema.safeParse({ ...ok, reason: 'x'.repeat(257) }).success).toBe(false)
+    })
+
+    it('rejects bytes that are not a Uint8Array (the trust-boundary guarantee)', () => {
+      expect(SignPdfRequestSchema.safeParse({ ...ok, bytes: 'notbytes' }).success).toBe(false)
     })
   })
 })

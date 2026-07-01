@@ -4,6 +4,7 @@ import { registerRecoveryHandlers } from './recovery'
 import { registerSecurityHandlers } from './security'
 import { registerPrintHandlers } from './print'
 import { registerEditingHandlers } from './editing'
+import { registerSigningHandlers } from './signing'
 
 /**
  * Registers all IPC handlers exactly once, at app startup.
@@ -19,4 +20,5 @@ export function registerIpcHandlers(): void {
   registerSecurityHandlers()
   registerPrintHandlers()
   registerEditingHandlers()
+  registerSigningHandlers()
 }

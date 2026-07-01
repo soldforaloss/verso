@@ -49,6 +49,7 @@ Status reflects what's on `main`.
 | Stamping   | Watermarks, running page numbers ("Page N of M"), and **Bates numbering** (prefix + zero-padded sequence) across pages                                                         |
 | OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                                                                |
 | Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                                                     |
+| Sign       | **Cryptographic digital signatures** — sign with your certificate (.p12/.pfx); a real PKCS#7 signature readers validate, plus visual draw/type signatures                      |
 | Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                                                           |
 | Robustness | Auto-decrypts owner-restricted PDFs and auto-repairs damaged ones on open                                                                                                      |
 | Platforms  | Windows, macOS, and Linux — the full test suite runs on all three in CI                                                                                                        |

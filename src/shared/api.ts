@@ -10,6 +10,7 @@ import type {
   PingResponse,
   PrintPdfRequest,
   ReadFileRequest,
+  SignPdfRequest,
   RecentFile,
   RecoveryEntry,
   RecoveryIdRequest,
@@ -89,6 +90,13 @@ export interface VersoApi {
    * stream and resolves to the re-saved PDF bytes (null if nothing was hit).
    */
   pdfiumEditText(request: EditTextRequest): Promise<Uint8Array<ArrayBuffer> | null>
+
+  /**
+   * Cryptographically signs the PDF with a certificate the user picks in a
+   * native dialog (its private key stays in the main process). Resolves to the
+   * signed bytes, or null if the certificate picker was cancelled.
+   */
+  signPdf(request: SignPdfRequest): Promise<Uint8Array<ArrayBuffer> | null>
 
   /**
    * Subscribes to "open this file" requests originating outside the UI (file

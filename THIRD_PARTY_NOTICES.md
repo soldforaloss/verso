@@ -28,24 +28,28 @@ for the optional native editing path. See `docs/decisions/0001-tech-stack.md`.
 
 ## Runtime dependencies
 
-| Package                    | Version | License    |
-| -------------------------- | ------- | ---------- |
-| `@embedpdf/pdfium`         | 2.14.4  | MIT        |
-| `@hyzyla/pdfium`           | 2.1.13  | MIT        |
-| `@pdf-lib/fontkit`         | 1.1.1   | MIT        |
-| `@tesseract.js-data/*`     | 1.0.0   | MIT        |
-| `class-variance-authority` | 0.7.1   | Apache-2.0 |
-| `clsx`                     | 2.1.1   | MIT        |
-| `electron-log`             | 5.4.4   | MIT        |
-| `electron-updater`         | 6.8.9   | MIT        |
-| `immer`                    | 11.1.8  | MIT        |
-| `lucide-react`             | 1.21.0  | ISC        |
-| `pdf-lib`                  | 1.17.1  | MIT        |
-| `pdfjs-dist`               | 6.0.227 | Apache-2.0 |
-| `tailwind-merge`           | 3.6.0   | MIT        |
-| `tesseract.js`             | 7.0.0   | Apache-2.0 |
-| `zod`                      | 4.4.3   | MIT        |
-| `zustand`                  | 5.0.14  | MIT        |
+| Package                      | Version | License                                      |
+| ---------------------------- | ------- | -------------------------------------------- |
+| `@embedpdf/pdfium`           | 2.14.4  | MIT                                          |
+| `@hyzyla/pdfium`             | 2.1.13  | MIT                                          |
+| `@pdf-lib/fontkit`           | 1.1.1   | MIT                                          |
+| `@signpdf/signpdf`           | 3.3.0   | MIT                                          |
+| `@signpdf/signer-p12`        | 3.3.0   | MIT                                          |
+| `@signpdf/placeholder-plain` | 3.3.0   | MIT                                          |
+| `node-forge`                 | 1.3.3   | BSD-3-Clause (dual with GPL-2.0; we use BSD) |
+| `@tesseract.js-data/*`       | 1.0.0   | MIT                                          |
+| `class-variance-authority`   | 0.7.1   | Apache-2.0                                   |
+| `clsx`                       | 2.1.1   | MIT                                          |
+| `electron-log`               | 5.4.4   | MIT                                          |
+| `electron-updater`           | 6.8.9   | MIT                                          |
+| `immer`                      | 11.1.8  | MIT                                          |
+| `lucide-react`               | 1.21.0  | ISC                                          |
+| `pdf-lib`                    | 1.17.1  | MIT                                          |
+| `pdfjs-dist`                 | 6.0.227 | Apache-2.0                                   |
+| `tailwind-merge`             | 3.6.0   | MIT                                          |
+| `tesseract.js`               | 7.0.0   | Apache-2.0                                   |
+| `zod`                        | 4.4.3   | MIT                                          |
+| `zustand`                    | 5.0.14  | MIT                                          |
 
 ## Development dependencies
 
