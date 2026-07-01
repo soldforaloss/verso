@@ -8,6 +8,7 @@ import {
   ImageDown,
   ImagePlus,
   Info,
+  Layers,
   Lock,
   PenTool,
   Printer,
@@ -33,12 +34,14 @@ import { DigitalSignDialog } from './DigitalSignDialog'
 import { SignaturePanel } from './SignaturePanel'
 import { StampDialog } from './StampDialog'
 import { InsertDialog } from './InsertDialog'
+import { FlattenDialog } from './FlattenDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
 import { addImageAnnotation } from '@/lib/annotationOps'
 import { rasterizeToPng } from '@/lib/imageInsert'
 import { useViewStore } from '@/store/viewStore'
 import { useToolStore } from '@/store/toolStore'
+import { useFormStore } from '@/store/formStore'
 import type { SignatureImage } from '@/lib/signature'
 import type { DocumentTab } from '@/store/documentStore'
 
@@ -58,10 +61,12 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [signaturesOpen, setSignaturesOpen] = useState(false)
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
+  const [flattenOpen, setFlattenOpen] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [printing, setPrinting] = useState(false)
   const [compare, setCompare] = useState<{ bytes: Uint8Array; name: string } | null>(null)
   const hasRedactions = redactedPageNumbers(tab).length > 0
+  const hasForm = useFormStore((s) => s.hasFields[tab.id] ?? false)
 
   const openCompare = async (): Promise<void> => {
     const doc = await window.api.openFileDialog()
@@ -192,6 +197,16 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       >
         <Printer />
       </Button>
+      {hasForm && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Flatten form fields"
+          onClick={() => setFlattenOpen(true)}
+        >
+          <Layers />
+        </Button>
+      )}
       {hasRedactions && (
         <Button
           variant="ghost"
@@ -217,6 +232,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <ExportDialog tab={tab} open={exportOpen} onOpenChange={setExportOpen} />
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
+      <FlattenDialog tab={tab} open={flattenOpen} onOpenChange={setFlattenOpen} />
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeImage} />
       <DigitalSignDialog tab={tab} open={digitalSignOpen} onOpenChange={setDigitalSignOpen} />
       <SignaturePanel tab={tab} open={signaturesOpen} onOpenChange={setSignaturesOpen} />
