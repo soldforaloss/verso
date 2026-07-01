@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   BadgeCheck,
+  Copy,
   Crop,
   EyeOff,
   FileSignature,
@@ -35,6 +36,7 @@ import { SignaturePanel } from './SignaturePanel'
 import { StampDialog } from './StampDialog'
 import { InsertDialog } from './InsertDialog'
 import { FlattenDialog } from './FlattenDialog'
+import { CombineDialog } from './CombineDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
 import { buildDocumentPdf } from '@/lib/save'
 import { addImageAnnotation } from '@/lib/annotationOps'
@@ -62,6 +64,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [flattenOpen, setFlattenOpen] = useState(false)
+  const [combineOpen, setCombineOpen] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [printing, setPrinting] = useState(false)
   const [compare, setCompare] = useState<{ bytes: Uint8Array; name: string } | null>(null)
@@ -133,6 +136,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
         onClick={() => void openCompare()}
       >
         <GitCompare />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Combine files (merge PDFs)"
+        onClick={() => setCombineOpen(true)}
+      >
+        <Copy />
       </Button>
       <Button
         variant="ghost"
@@ -233,6 +244,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <SecurityDialog tab={tab} open={securityOpen} onOpenChange={setSecurityOpen} />
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
       <FlattenDialog tab={tab} open={flattenOpen} onOpenChange={setFlattenOpen} />
+      <CombineDialog open={combineOpen} onOpenChange={setCombineOpen} />
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeImage} />
       <DigitalSignDialog tab={tab} open={digitalSignOpen} onOpenChange={setDigitalSignOpen} />
       <SignaturePanel tab={tab} open={signaturesOpen} onOpenChange={setSignaturesOpen} />
