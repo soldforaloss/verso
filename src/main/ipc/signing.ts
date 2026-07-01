@@ -1,9 +1,10 @@
 import { BrowserWindow, dialog } from 'electron'
 import { readFile } from 'node:fs/promises'
-import { SignPdfRequestSchema } from '@shared/ipc'
+import { SignPdfRequestSchema, VerifySignaturesRequestSchema } from '@shared/ipc'
 import { IpcChannels } from '@shared/channels'
 import { handle } from './registry'
 import { signPdf } from '../pdfSign'
+import { verifyPdfSignatures } from '../pdfVerify'
 
 function windowFor(event: Electron.IpcMainInvokeEvent): BrowserWindow {
   const window = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getAllWindows()[0]
@@ -32,4 +33,8 @@ export function registerSigningHandlers(): void {
       contactInfo: request.contactInfo
     })
   })
+
+  handle(IpcChannels.verifySignatures, VerifySignaturesRequestSchema, (request) =>
+    verifyPdfSignatures(request.bytes)
+  )
 }

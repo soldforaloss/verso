@@ -10,6 +10,7 @@ import {
   Lock,
   PenTool,
   Printer,
+  ShieldCheck,
   Stamp
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import { RedactionDialog } from './RedactionDialog'
 import { SecurityDialog } from './SecurityDialog'
 import { SignatureDialog } from './SignatureDialog'
 import { DigitalSignDialog } from './DigitalSignDialog'
+import { SignaturePanel } from './SignaturePanel'
 import { StampDialog } from './StampDialog'
 import { InsertDialog } from './InsertDialog'
 import { redactedPageNumbers } from '@/lib/redaction'
@@ -44,6 +46,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
   const [redactionOpen, setRedactionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
   const [digitalSignOpen, setDigitalSignOpen] = useState(false)
+  const [signaturesOpen, setSignaturesOpen] = useState(false)
   const [stampOpen, setStampOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
@@ -115,6 +118,14 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       >
         <FileSignature />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Verify digital signatures"
+        onClick={() => setSignaturesOpen(true)}
+      >
+        <ShieldCheck />
+      </Button>
       <Button variant="ghost" size="icon" title="Add stamp" onClick={() => setStampOpen(true)}>
         <BadgeCheck />
       </Button>
@@ -170,6 +181,7 @@ export function DocumentTools({ tab }: { tab: DocumentTab }): React.JSX.Element 
       <RedactionDialog tab={tab} open={redactionOpen} onOpenChange={setRedactionOpen} />
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onInsert={placeImage} />
       <DigitalSignDialog tab={tab} open={digitalSignOpen} onOpenChange={setDigitalSignOpen} />
+      <SignaturePanel tab={tab} open={signaturesOpen} onOpenChange={setSignaturesOpen} />
       <StampDialog open={stampOpen} onOpenChange={setStampOpen} onInsert={placeImage} />
       <InsertDialog tab={tab} open={insertOpen} onOpenChange={setInsertOpen} />
     </>

@@ -37,22 +37,22 @@ documents to someone else's server. Verso is neither:
 
 Status reflects what's on `main`.
 
-| Area       | Capability                                                                                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Viewer     | PDF.js rendering (+ optional Tier-3 PDFium WASM engine), text selection, zoom, layouts, themes, tabs                                                                           |
-| Navigation | Thumbnails, editable outline/bookmarks, full-text search (match-case / whole-word)                                                                                             |
-| Pages      | Reorder, rotate, delete, insert, extract, merge, split, crop — all undo/redo                                                                                                   |
-| Annotation | Highlight/underline/strike/squiggly, ink, shapes, text boxes, sticky notes, stamps, signatures                                                                                 |
-| Forms      | **Fill _and author_** AcroForms — text, checkbox, dropdown, list, radio; with required / read-only / multiline / max-length / default value                                    |
-| Links      | Author clickable hyperlinks — external URLs (sanitized) and internal page jumps                                                                                                |
-| Editing    | **True in-place text editing** — retype _and restyle_ (size, bold, italic, colour, font) real content-stream text (PDFium); add text, images, shapes; cover-&-replace fallback |
-| Stamping   | Watermarks, running page numbers ("Page N of M"), and **Bates numbering** (prefix + zero-padded sequence) across pages                                                         |
-| OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                                                                |
-| Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                                                     |
-| Sign       | **Cryptographic digital signatures** — sign with your certificate (.p12/.pfx); a real PKCS#7 signature readers validate, plus visual draw/type signatures                      |
-| Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                                                           |
-| Robustness | Auto-decrypts owner-restricted PDFs and auto-repairs damaged ones on open                                                                                                      |
-| Platforms  | Windows, macOS, and Linux — the full test suite runs on all three in CI                                                                                                        |
+| Area       | Capability                                                                                                                                                                             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Viewer     | PDF.js rendering (+ optional Tier-3 PDFium WASM engine), text selection, zoom, layouts, themes, tabs                                                                                   |
+| Navigation | Thumbnails, editable outline/bookmarks, full-text search (match-case / whole-word)                                                                                                     |
+| Pages      | Reorder, rotate, delete, insert, extract, merge, split, crop — all undo/redo                                                                                                           |
+| Annotation | Highlight/underline/strike/squiggly, ink, shapes, text boxes, sticky notes, stamps, signatures                                                                                         |
+| Forms      | **Fill _and author_** AcroForms — text, checkbox, dropdown, list, radio; with required / read-only / multiline / max-length / default value                                            |
+| Links      | Author clickable hyperlinks — external URLs (sanitized) and internal page jumps                                                                                                        |
+| Editing    | **True in-place text editing** — retype _and restyle_ (size, bold, italic, colour, font) real content-stream text (PDFium); add text, images, shapes; cover-&-replace fallback         |
+| Stamping   | Watermarks, running page numbers ("Page N of M"), and **Bates numbering** (prefix + zero-padded sequence) across pages                                                                 |
+| OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                                                                        |
+| Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                                                             |
+| Sign       | **Cryptographic digital signatures** — sign with your certificate (.p12/.pfx) and **verify** a signed PDF (integrity + signer identity); real PKCS#7, plus visual draw/type signatures |
+| Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                                                                   |
+| Robustness | Auto-decrypts owner-restricted PDFs and auto-repairs damaged ones on open                                                                                                              |
+| Platforms  | Windows, macOS, and Linux — the full test suite runs on all three in CI                                                                                                                |
 
 See [`ROADMAP.md`](./ROADMAP.md) for the full plan. The main remaining stretch
 goal is code-signed installers.

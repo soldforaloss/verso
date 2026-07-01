@@ -6,7 +6,8 @@ import {
   EmptyRequestSchema,
   LocateTextRequestSchema,
   EditTextRequestSchema,
-  SignPdfRequestSchema
+  SignPdfRequestSchema,
+  VerifySignaturesRequestSchema
 } from '@shared/ipc'
 
 describe('IPC schemas', () => {
@@ -151,6 +152,15 @@ describe('IPC schemas', () => {
 
     it('rejects bytes that are not a Uint8Array (the trust-boundary guarantee)', () => {
       expect(SignPdfRequestSchema.safeParse({ ...ok, bytes: 'notbytes' }).success).toBe(false)
+    })
+  })
+
+  describe('VerifySignaturesRequestSchema', () => {
+    it('accepts PDF bytes and rejects non-bytes', () => {
+      expect(VerifySignaturesRequestSchema.safeParse({ bytes: new Uint8Array([1]) }).success).toBe(
+        true
+      )
+      expect(VerifySignaturesRequestSchema.safeParse({ bytes: 'nope' }).success).toBe(false)
     })
   })
 })

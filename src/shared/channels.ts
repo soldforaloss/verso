@@ -61,6 +61,8 @@ export const IpcChannels = {
 
   /** Cryptographically signs a PDF with a certificate chosen in a native dialog. */
   signPdf: 'pdf:sign',
+  /** Verifies a PDF's existing digital signatures (integrity + signer). */
+  verifySignatures: 'pdf:verify-signatures',
 
   /**
    * Event (main → renderer): a file was opened outside the UI — via the OS file

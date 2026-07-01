@@ -10,7 +10,9 @@ import type {
   PingResponse,
   PrintPdfRequest,
   ReadFileRequest,
+  SignatureInfo,
   SignPdfRequest,
+  VerifySignaturesRequest,
   RecentFile,
   RecoveryEntry,
   RecoveryIdRequest,
@@ -97,6 +99,9 @@ export interface VersoApi {
    * signed bytes, or null if the certificate picker was cancelled.
    */
   signPdf(request: SignPdfRequest): Promise<Uint8Array<ArrayBuffer> | null>
+
+  /** Verifies the PDF's existing digital signatures (integrity + signer identity). */
+  verifySignatures(request: VerifySignaturesRequest): Promise<SignatureInfo[]>
 
   /**
    * Subscribes to "open this file" requests originating outside the UI (file

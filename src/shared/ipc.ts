@@ -291,3 +291,21 @@ export const SignPdfRequestSchema = z.object({
   contactInfo: z.string().max(SIG_FIELD_MAX).optional()
 })
 export type SignPdfRequest = z.infer<typeof SignPdfRequestSchema>
+
+/** Asks the main process to verify a PDF's digital signatures. */
+export const VerifySignaturesRequestSchema = z.object({ bytes: PdfBytesSchema })
+export type VerifySignaturesRequest = z.infer<typeof VerifySignaturesRequestSchema>
+
+/** The verification result for a single signature in a PDF. */
+export const SignatureInfoSchema = z.object({
+  signerName: z.string(),
+  /** integrityIntact && signatureValid. */
+  valid: z.boolean(),
+  integrityIntact: z.boolean(),
+  signatureValid: z.boolean(),
+  coversWholeDocument: z.boolean(),
+  signedAt: z.string().nullable(),
+  certValidFrom: z.string().nullable(),
+  certValidTo: z.string().nullable()
+})
+export type SignatureInfo = z.infer<typeof SignatureInfoSchema>
