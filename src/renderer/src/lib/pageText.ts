@@ -2,6 +2,7 @@ import { newAnnotationId, type Annotation } from '@/lib/annotations'
 import { addAnnotationsAcrossPages } from '@/lib/annotationOps'
 import { getSource, type DocumentTab } from '@/store/documentStore'
 import { formatPageLabel } from '@/lib/pageLabel'
+import { expandHeaderFooter, HEADER_FOOTER_SLOTS, type HeaderFooterSlot } from '@/lib/headerFooter'
 import type { PageRef } from '@/lib/pageModel'
 
 export { formatPageLabel }
@@ -111,4 +112,74 @@ export async function addPageNumbers(tab: DocumentTab, options: PageNumberOption
     ]
   }
   addAnnotationsAcrossPages(tab.id, byPageKey, 'Add page numbers')
+}
+
+/** Margin (PDF points) from the page edge for header/footer text (~0.5 inch). */
+const HEADER_FOOTER_MARGIN = 36
+
+export type HeaderFooterSlots = Record<HeaderFooterSlot, string>
+
+export interface HeaderFooterOptions extends HeaderFooterSlots {
+  fontSize: number
+  color: string
+}
+
+/**
+ * Adds positioned header/footer text to every page (one undoable command). Each
+ * of the six slots (header/footer × left/center/right) is an independent template
+ * that expands `{page}`, `{pages}`, `{date}`, and `{filename}`. Empty slots are
+ * skipped. Placement mirrors the page-number convention so text always sits
+ * inside the page margins; the result flattens on save like any annotation.
+ */
+export async function addHeaderFooter(
+  tab: DocumentTab,
+  options: HeaderFooterOptions
+): Promise<void> {
+  const active = HEADER_FOOTER_SLOTS.filter((s) => options[s.slot].trim() !== '')
+  if (active.length === 0) return
+
+  const date = new Date().toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+  const total = tab.pages.length
+  const byPageKey: Record<string, Annotation[]> = {}
+
+  for (let i = 0; i < tab.pages.length; i += 1) {
+    const ref = tab.pages[i]!
+    const size = await logicalPageSize(ref)
+    if (!size) continue
+    const ctx = { page: i + 1, pages: total, date, filename: tab.name }
+
+    const annotations: Annotation[] = []
+    for (const { slot, band, align } of active) {
+      const label = expandHeaderFooter(options[slot], ctx).trim()
+      if (!label) continue
+      const width = measureWidth(label, options.fontSize)
+      const x =
+        align === 'left'
+          ? HEADER_FOOTER_MARGIN
+          : align === 'center'
+            ? Math.max(HEADER_FOOTER_MARGIN, (size.width - width) / 2)
+            : Math.max(HEADER_FOOTER_MARGIN, size.width - HEADER_FOOTER_MARGIN - width)
+      // Header: seat the rect's TOP (not its baseline) at the margin so the text
+      // stays inside the page for any font size. Footer sits at the bottom margin.
+      const height = options.fontSize * 1.4
+      const y =
+        band === 'header' ? size.height - HEADER_FOOTER_MARGIN - height : HEADER_FOOTER_MARGIN
+      annotations.push({
+        id: newAnnotationId(),
+        pageKey: ref.key,
+        type: 'text',
+        color: options.color,
+        opacity: 1,
+        fontSize: options.fontSize,
+        text: label,
+        rect: { x, y, width: width + 4, height }
+      })
+    }
+    if (annotations.length > 0) byPageKey[ref.key] = annotations
+  }
+  addAnnotationsAcrossPages(tab.id, byPageKey, 'Add header & footer')
 }

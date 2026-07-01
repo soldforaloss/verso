@@ -10,11 +10,14 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import {
+  addHeaderFooter,
   addPageNumbers,
   addWatermark,
   formatPageLabel,
+  type HeaderFooterSlots,
   type PageNumberPosition
 } from '@/lib/pageText'
+import { HEADER_FOOTER_SLOTS } from '@/lib/headerFooter'
 import type { DocumentTab } from '@/store/documentStore'
 
 type NumberStyle = 'plain' | 'page-of' | 'bates'
@@ -47,6 +50,15 @@ const POSITIONS: { label: string; value: PageNumberPosition }[] = [
   { label: 'Bottom right', value: 'bottom-right' },
   { label: 'Top right', value: 'top-right' }
 ]
+
+const EMPTY_HF: HeaderFooterSlots = {
+  headerLeft: '',
+  headerCenter: '',
+  headerRight: '',
+  footerLeft: '',
+  footerCenter: '',
+  footerRight: ''
+}
 
 function Swatches({
   value,
@@ -114,6 +126,11 @@ export function InsertDialog({
   const [pnSuffix, setPnSuffix] = useState('')
   const [pnDigits, setPnDigits] = useState(6)
 
+  const [hf, setHf] = useState<HeaderFooterSlots>(EMPTY_HF)
+  const [hfSize, setHfSize] = useState(10)
+  const [hfColor, setHfColor] = useState(COLORS[1]!)
+  const hfEmpty = Object.values(hf).every((value) => value.trim() === '')
+
   const pnFormat = numberFormat(pnStyle, pnPrefix, pnSuffix, pnDigits)
   const pnPreview = formatPageLabel(
     pnFormat.format,
@@ -139,12 +156,12 @@ export function InsertDialog({
         <DialogHeader>
           <DialogTitle>Insert across pages</DialogTitle>
           <DialogDescription>
-            Add a watermark, page numbers, or Bates numbering to every page. All are undoable and
-            flatten on save.
+            Add a watermark, page numbers, Bates numbering, or headers &amp; footers to every page.
+            All are undoable and flatten on save.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="grid max-h-[70vh] gap-4 overflow-y-auto pr-1">
           <Section title="Watermark">
             <Input
               value={wmText}
@@ -308,6 +325,59 @@ export function InsertDialog({
               }
             >
               {pnStyle === 'bates' ? 'Add Bates numbers' : 'Add page numbers'}
+            </Button>
+          </Section>
+
+          <Section title="Header & footer">
+            <p className="text-xs text-muted-foreground">
+              Tokens: <code className="font-mono">{'{page}'}</code>{' '}
+              <code className="font-mono">{'{pages}'}</code>{' '}
+              <code className="font-mono">{'{date}'}</code>{' '}
+              <code className="font-mono">{'{filename}'}</code>
+            </p>
+            {(['header', 'footer'] as const).map((band) => (
+              <div key={band} className="grid grid-cols-3 gap-1.5">
+                {HEADER_FOOTER_SLOTS.filter((s) => s.band === band).map((s) => (
+                  <Input
+                    key={s.slot}
+                    aria-label={`${s.band} ${s.align}`}
+                    className="text-xs"
+                    placeholder={`${band === 'header' ? 'Header' : 'Footer'} ${s.align}`}
+                    value={hf[s.slot]}
+                    onChange={(event) =>
+                      setHf((prev) => ({ ...prev, [s.slot]: event.target.value }))
+                    }
+                  />
+                ))}
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                Size
+                <Input
+                  type="number"
+                  className="w-16"
+                  min={4}
+                  max={96}
+                  value={hfSize}
+                  onChange={(event) =>
+                    setHfSize(
+                      Math.max(4, Math.min(96, Number.parseInt(event.target.value, 10) || 10))
+                    )
+                  }
+                />
+              </label>
+              <Swatches value={hfColor} onChange={setHfColor} />
+            </div>
+            <Button
+              variant="secondary"
+              className="justify-self-start"
+              disabled={busy || hfEmpty}
+              onClick={() =>
+                void run(() => addHeaderFooter(tab, { ...hf, fontSize: hfSize, color: hfColor }))
+              }
+            >
+              Add header &amp; footer
             </Button>
           </Section>
         </div>
