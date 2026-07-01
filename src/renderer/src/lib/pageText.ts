@@ -1,7 +1,10 @@
 import { newAnnotationId, type Annotation } from '@/lib/annotations'
 import { addAnnotationsAcrossPages } from '@/lib/annotationOps'
 import { getSource, type DocumentTab } from '@/store/documentStore'
+import { formatPageLabel } from '@/lib/pageLabel'
 import type { PageRef } from '@/lib/pageModel'
+
+export { formatPageLabel }
 
 const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
 const measureCtx = measureCanvas?.getContext('2d') ?? null
@@ -66,17 +69,30 @@ export interface PageNumberOptions {
   fontSize: number
   position: PageNumberPosition
   color: string
+  /**
+   * Label template with two tokens: `{n}` (the running number, zero-padded to
+   * `digits`) and `{total}` (the page count). Examples: `"{n}"` (plain),
+   * `"Page {n} of {total}"`, `"ACME-{n}"` (Bates prefix).
+   */
+  format: string
+  /** Zero-pad `{n}` to this many digits (0 = no padding; Bates typically 6). */
+  digits: number
 }
 
-/** Adds a running page number to every page (one undoable command). */
+/**
+ * Adds a running page label to every page (one undoable command). Supports plain
+ * numbers, "Page N of M", and Bates numbering (prefix + zero-padded sequence)
+ * via the `format`/`digits` options.
+ */
 export async function addPageNumbers(tab: DocumentTab, options: PageNumberOptions): Promise<void> {
   const margin = 28
+  const total = tab.pages.length
   const byPageKey: Record<string, Annotation[]> = {}
   for (let i = 0; i < tab.pages.length; i += 1) {
     const ref = tab.pages[i]!
     const size = await logicalPageSize(ref)
     if (!size) continue
-    const label = String(options.start + i)
+    const label = formatPageLabel(options.format, i, options.start, total, options.digits)
     const width = measureWidth(label, options.fontSize)
     const x =
       options.position === 'bottom-center' ? (size.width - width) / 2 : size.width - margin - width

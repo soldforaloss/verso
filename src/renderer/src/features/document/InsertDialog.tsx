@@ -9,8 +9,32 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { addPageNumbers, addWatermark, type PageNumberPosition } from '@/lib/pageText'
+import {
+  addPageNumbers,
+  addWatermark,
+  formatPageLabel,
+  type PageNumberPosition
+} from '@/lib/pageText'
 import type { DocumentTab } from '@/store/documentStore'
+
+type NumberStyle = 'plain' | 'page-of' | 'bates'
+const NUMBER_STYLES: { label: string; value: NumberStyle }[] = [
+  { label: 'Number', value: 'plain' },
+  { label: 'Page N of M', value: 'page-of' },
+  { label: 'Bates', value: 'bates' }
+]
+
+/** Resolves a numbering style + Bates fields into a label template + padding. */
+function numberFormat(
+  style: NumberStyle,
+  prefix: string,
+  suffix: string,
+  digits: number
+): { format: string; digits: number } {
+  if (style === 'page-of') return { format: 'Page {n} of {total}', digits: 0 }
+  if (style === 'bates') return { format: `${prefix}{n}${suffix}`, digits }
+  return { format: '{n}', digits: 0 }
+}
 
 const COLORS = ['#9ca3af', '#111827', '#dc2626', '#1d4ed8']
 const OPACITIES: { label: string; value: number }[] = [
@@ -85,6 +109,19 @@ export function InsertDialog({
   const [pnSize, setPnSize] = useState(12)
   const [pnPosition, setPnPosition] = useState<PageNumberPosition>('bottom-center')
   const [pnColor, setPnColor] = useState(COLORS[1]!)
+  const [pnStyle, setPnStyle] = useState<NumberStyle>('plain')
+  const [pnPrefix, setPnPrefix] = useState('')
+  const [pnSuffix, setPnSuffix] = useState('')
+  const [pnDigits, setPnDigits] = useState(6)
+
+  const pnFormat = numberFormat(pnStyle, pnPrefix, pnSuffix, pnDigits)
+  const pnPreview = formatPageLabel(
+    pnFormat.format,
+    0,
+    pnStart,
+    tab.pages.length || 1,
+    pnFormat.digits
+  )
 
   const run = async (action: () => Promise<void>): Promise<void> => {
     setBusy(true)
@@ -102,7 +139,8 @@ export function InsertDialog({
         <DialogHeader>
           <DialogTitle>Insert across pages</DialogTitle>
           <DialogDescription>
-            Add a watermark or page numbers to every page. Both are undoable and flatten on save.
+            Add a watermark, page numbers, or Bates numbering to every page. All are undoable and
+            flatten on save.
           </DialogDescription>
         </DialogHeader>
 
@@ -159,7 +197,59 @@ export function InsertDialog({
             </Button>
           </Section>
 
-          <Section title="Page numbers">
+          <Section title="Page numbers & Bates">
+            <div className="flex flex-wrap gap-1">
+              {NUMBER_STYLES.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  aria-pressed={pnStyle === s.value}
+                  onClick={() => setPnStyle(s.value)}
+                  className={cn(
+                    'rounded-md border px-2 py-1 text-xs transition-colors',
+                    pnStyle === s.value ? 'border-primary bg-accent' : 'hover:bg-accent'
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {pnStyle === 'bates' && (
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Prefix
+                  <Input
+                    className="w-24"
+                    value={pnPrefix}
+                    placeholder="ACME-"
+                    onChange={(event) => setPnPrefix(event.target.value)}
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Suffix
+                  <Input
+                    className="w-24"
+                    value={pnSuffix}
+                    onChange={(event) => setPnSuffix(event.target.value)}
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Digits
+                  <Input
+                    type="number"
+                    className="w-16"
+                    value={pnDigits}
+                    onChange={(event) =>
+                      setPnDigits(
+                        Math.max(1, Math.min(12, Number.parseInt(event.target.value, 10) || 6))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Start at
@@ -197,6 +287,9 @@ export function InsertDialog({
                 </button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Preview: <span className="font-medium text-foreground">{pnPreview}</span>
+            </p>
             <Button
               variant="secondary"
               className="justify-self-start"
@@ -207,12 +300,14 @@ export function InsertDialog({
                     start: pnStart,
                     fontSize: pnSize,
                     position: pnPosition,
-                    color: pnColor
+                    color: pnColor,
+                    format: pnFormat.format,
+                    digits: pnFormat.digits
                   })
                 )
               }
             >
-              Add page numbers
+              {pnStyle === 'bates' ? 'Add Bates numbers' : 'Add page numbers'}
             </Button>
           </Section>
         </div>

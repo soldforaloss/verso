@@ -46,6 +46,7 @@ Status reflects what's on `main`.
 | Forms      | **Fill _and author_** AcroForms — text, checkbox, dropdown, list, radio; with required / read-only / multiline / max-length / default value                                    |
 | Links      | Author clickable hyperlinks — external URLs (sanitized) and internal page jumps                                                                                                |
 | Editing    | **True in-place text editing** — retype _and restyle_ (size, bold, italic, colour, font) real content-stream text (PDFium); add text, images, shapes; cover-&-replace fallback |
+| Stamping   | Watermarks, running page numbers ("Page N of M"), and **Bates numbering** (prefix + zero-padded sequence) across pages                                                         |
 | OCR        | Make scanned PDFs searchable — tesseract.js, 8 bundled languages, fully offline                                                                                                |
 | Compare    | Side-by-side visual (pixel) diff and word-level text diff between two PDFs                                                                                                     |
 | Security   | Encrypt/decrypt, permissions, repair, linearize, **true redaction**, PNG/JPEG export                                                                                           |

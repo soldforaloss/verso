@@ -60,3 +60,24 @@ test('add page numbers across pages', async () => {
     timeout: 20_000
   })
 })
+
+test('add Bates numbering (prefix + zero-padded sequence) across pages', async () => {
+  app = await launchVerso([FIXTURE_PDF])
+  const window = await app.firstWindow()
+  await expect(window.locator('[data-page-number="1"] canvas')).toBeVisible({ timeout: 30_000 })
+
+  await window.getByTitle('Watermark & page numbers').click()
+  await expect(window.getByText('Insert across pages')).toBeVisible()
+
+  // Switch the numbering style to Bates and set a prefix; the preview updates.
+  await window.getByRole('button', { name: 'Bates', exact: true }).click()
+  await window.getByPlaceholder('ACME-').fill('AB-')
+  await expect(window.getByText('AB-000001')).toBeVisible()
+
+  await window.getByRole('button', { name: 'Add Bates numbers' }).click()
+
+  // The first page carries the padded Bates label "AB-000001".
+  await expect(window.locator('[data-page-number] textarea').first()).toHaveValue('AB-000001', {
+    timeout: 20_000
+  })
+})
