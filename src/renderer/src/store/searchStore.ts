@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { searchDocument, type SearchMatch, type SearchSignal } from '@/lib/search'
 import type { TextContentItem } from '@/lib/pdf'
 import type { SourcePageRef } from '@/lib/pageModel'
-import { getSource, type DocumentTab } from './documentStore'
+import { getSource, useDocumentStore, type DocumentTab } from './documentStore'
 import { useViewStore } from './viewStore'
 
 type SearchStatus = 'idle' | 'searching' | 'done'
@@ -11,6 +11,9 @@ interface SearchState {
   isOpen: boolean
   query: string
   matches: SearchMatch[]
+  /** The tab's sourceRevision when `matches` were computed — lets consumers
+   *  (e.g. Find & Redact) detect results that went stale after an edit. */
+  resultsRevision: number
   activeIndex: number
   status: SearchStatus
   scannedPages: number
@@ -47,6 +50,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   isOpen: false,
   query: '',
   matches: [],
+  resultsRevision: 0,
   activeIndex: 0,
   status: 'idle',
   scannedPages: 0,
@@ -86,7 +90,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     )
     if (signal.cancelled) return
 
-    set({ matches, status: 'done', activeIndex: 0 })
+    // Tag the results with the source revision they were computed against, so a
+    // consumer can refuse to act on them if the document changes underneath.
+    const resultsRevision = useDocumentStore.getState().getTab(tab.id)?.sourceRevision ?? 0
+    set({ matches, status: 'done', activeIndex: 0, resultsRevision })
     scrollToMatch(matches, 0)
   },
 

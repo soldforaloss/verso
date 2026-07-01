@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { CaseSensitive, ChevronDown, ChevronUp, WholeWord, X } from 'lucide-react'
+import { CaseSensitive, ChevronDown, ChevronUp, EyeOff, WholeWord, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useSearchStore } from '@/store/searchStore'
-import type { DocumentTab } from '@/store/documentStore'
+import { markMatchesForRedaction } from '@/lib/redactMatches'
+import { useDocumentStore, type DocumentTab } from '@/store/documentStore'
 
 /** Floating find-in-document bar with live results and next/prev navigation. */
 export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
@@ -21,8 +22,17 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   const totalPages = useSearchStore((s) => s.totalPages)
   const caseSensitive = useSearchStore((s) => s.caseSensitive)
   const wholeWord = useSearchStore((s) => s.wholeWord)
+  const resultsRevision = useSearchStore((s) => s.resultsRevision)
   const toggleCaseSensitive = useSearchStore((s) => s.toggleCaseSensitive)
   const toggleWholeWord = useSearchStore((s) => s.toggleWholeWord)
+
+  // The live source revision. If it has moved past the revision the results were
+  // computed at, an edit landed underneath — the matches are stale and must not
+  // be turned into (permanent, once applied) redactions on the wrong content.
+  const liveRevision = useDocumentStore(
+    (s) => s.tabs.find((t) => t.id === tab.id)?.sourceRevision ?? 0
+  )
+  const stale = liveRevision !== resultsRevision
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -39,6 +49,16 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
   }, [query, tab, run, caseSensitive, wholeWord])
 
   const count = matches.length
+
+  // "Find & redact": mark every match for redaction, then close the bar so the
+  // marks (and the "Apply redactions" action) are visible. Marking is
+  // non-destructive — applying is the separate, confirmed step.
+  const redactMatches = async (): Promise<void> => {
+    if (count === 0 || stale) return
+    const created = await markMatchesForRedaction(tab, matches, resultsRevision)
+    if (created > 0) close()
+  }
+
   const label =
     status === 'searching'
       ? `Searching… ${scannedPages}/${totalPages}`
@@ -113,6 +133,17 @@ export function SearchBar({ tab }: { tab: DocumentTab }): React.JSX.Element {
         onClick={next}
       >
         <ChevronDown />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Mark all matches for redaction (apply to remove the text)"
+        aria-label="Mark matches for redaction"
+        className="text-destructive hover:text-destructive"
+        disabled={count === 0 || status !== 'done' || stale}
+        onClick={() => void redactMatches()}
+      >
+        <EyeOff />
       </Button>
       <Button variant="ghost" size="icon" title="Close (Esc)" onClick={close}>
         <X />
