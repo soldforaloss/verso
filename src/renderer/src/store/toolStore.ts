@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { ANNOTATION_COLORS, type TextFontFamily } from '@/lib/annotations'
-import type { MeasureUnit } from '@/lib/measure'
+import type { MeasureCalibration, MeasureUnit } from '@/lib/measure'
 
 export type Tool =
   | 'select'
@@ -78,11 +78,17 @@ interface ToolState {
   letterSpacing: number
   /** Unit shown by the measure tool. */
   measureUnit: MeasureUnit
+  /** Per-document drawing scales (blueprint calibration), keyed by doc id. */
+  measureCalibrations: Record<string, MeasureCalibration>
+  /** When true, the next measure drag defines the calibration segment. */
+  measureCalibrating: boolean
   /** Currently selected annotation (in select mode), if any. */
   selectedId: string | null
   selectedPageKey: string | null
   setTool: (tool: Tool) => void
   setMeasureUnit: (unit: MeasureUnit) => void
+  setMeasureCalibration: (docId: string, cal: MeasureCalibration | null) => void
+  setMeasureCalibrating: (on: boolean) => void
   setColor: (color: string) => void
   setStrokeWidth: (strokeWidth: number) => void
   setOpacity: (opacity: number) => void
@@ -106,11 +112,22 @@ export const useToolStore = create<ToolState>((set) => ({
   italic: false,
   letterSpacing: 0,
   measureUnit: 'in',
+  measureCalibrations: {},
+  measureCalibrating: false,
   selectedId: null,
   selectedPageKey: null,
-  // Switching tools clears any annotation selection.
-  setTool: (tool) => set({ tool, selectedId: null, selectedPageKey: null }),
+  // Switching tools clears any annotation selection (and a pending calibration).
+  setTool: (tool) =>
+    set({ tool, selectedId: null, selectedPageKey: null, measureCalibrating: false }),
   setMeasureUnit: (measureUnit) => set({ measureUnit }),
+  setMeasureCalibration: (docId, cal) =>
+    set((state) => {
+      const measureCalibrations = { ...state.measureCalibrations }
+      if (cal) measureCalibrations[docId] = cal
+      else delete measureCalibrations[docId]
+      return { measureCalibrations }
+    }),
+  setMeasureCalibrating: (measureCalibrating) => set({ measureCalibrating }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setOpacity: (opacity) => set({ opacity }),

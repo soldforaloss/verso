@@ -39,7 +39,7 @@ import {
   updateAnnotation
 } from '@/lib/annotationOps'
 import { ANNOTATION_COLORS, type Annotation, type TextFontFamily } from '@/lib/annotations'
-import { MEASURE_UNITS } from '@/lib/measure'
+import { calibrationSummary, MEASURE_UNITS } from '@/lib/measure'
 import type { DocumentTab } from '@/store/documentStore'
 
 // Tools grouped by purpose (select · markup · draw · text · destructive) so the
@@ -114,6 +114,10 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
   const selectAnnotation = useToolStore((s) => s.selectAnnotation)
   const measureUnit = useToolStore((s) => s.measureUnit)
   const setMeasureUnit = useToolStore((s) => s.setMeasureUnit)
+  const measureCalibration = useToolStore((s) => s.measureCalibrations[tab.id] ?? null)
+  const setMeasureCalibration = useToolStore((s) => s.setMeasureCalibration)
+  const measureCalibrating = useToolStore((s) => s.measureCalibrating)
+  const setMeasureCalibrating = useToolStore((s) => s.setMeasureCalibrating)
   const currentPage = useViewStore((s) => s.currentPage)
 
   const selected: Annotation | undefined =
@@ -406,22 +410,52 @@ export function AnnotationToolbar({ tab }: { tab: DocumentTab }): React.JSX.Elem
           <div className="mx-1 h-5 w-px bg-border" />
           <div className="flex items-center gap-1" title="Measurement unit">
             <Ruler className="size-4 text-muted-foreground" />
-            <div className="flex items-center rounded-md border p-0.5">
-              {MEASURE_UNITS.map((u) => (
+            {!measureCalibration && (
+              <div className="flex items-center rounded-md border p-0.5">
+                {MEASURE_UNITS.map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    aria-pressed={measureUnit === u}
+                    onClick={() => setMeasureUnit(u)}
+                    className={cn(
+                      'rounded-[5px] px-1.5 py-0.5 text-xs uppercase transition-colors',
+                      measureUnit === u
+                        ? 'bg-secondary text-secondary-foreground'
+                        : 'hover:bg-accent'
+                    )}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              title="Calibrate scale — drag a known distance, then enter its real length"
+              aria-pressed={measureCalibrating}
+              onClick={() => setMeasureCalibrating(!measureCalibrating)}
+              className={cn(
+                'rounded-md border px-2 py-0.5 text-xs transition-colors',
+                measureCalibrating ? 'border-primary bg-accent' : 'hover:bg-accent'
+              )}
+            >
+              Calibrate
+            </button>
+            {measureCalibration && (
+              <span className="flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs">
+                {calibrationSummary(measureCalibration)}
                 <button
-                  key={u}
                   type="button"
-                  aria-pressed={measureUnit === u}
-                  onClick={() => setMeasureUnit(u)}
-                  className={cn(
-                    'rounded-[5px] px-1.5 py-0.5 text-xs uppercase transition-colors',
-                    measureUnit === u ? 'bg-secondary text-secondary-foreground' : 'hover:bg-accent'
-                  )}
+                  title="Clear scale (back to physical units)"
+                  aria-label="Clear scale"
+                  onClick={() => setMeasureCalibration(tab.id, null)}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  {u}
+                  ×
                 </button>
-              ))}
-            </div>
+              </span>
+            )}
           </div>
         </>
       )}

@@ -109,9 +109,15 @@ function App(): React.JSX.Element {
       }
 
       const target = event.target as HTMLElement | null
+      // Treat focus inside any form control or an open modal dialog as "typing"
+      // so single-key tool shortcuts can't fire from dialog buttons/selects.
       const typing =
         !!target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable ||
+          target.closest('[role="dialog"]') !== null)
 
       // Escape clears any annotation selection.
       if (event.key === 'Escape') {

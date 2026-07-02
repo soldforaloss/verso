@@ -61,3 +61,44 @@ test('measures a distance and places a labelled measurement that flattens on sav
     .toBeGreaterThan(0)
   expect((await PDFDocument.load(readFileSync(outPath))).getPageCount()).toBe(8)
 })
+
+test('calibrates a drawing scale and measures in real-world units', async () => {
+  app = await launchVerso([FIXTURE_PDF])
+  const window = await app.firstWindow()
+  const canvas = window.locator('[data-page-number="1"] canvas')
+  await expect(canvas).toBeVisible({ timeout: 30_000 })
+
+  await window.getByTitle('Measure distance').click()
+  const box = (await canvas.boundingBox())!
+
+  // Calibrate: drag a 100px segment and declare it 10 ft.
+  await window.getByRole('button', { name: 'Calibrate' }).click()
+  await window.mouse.move(box.x + 60, box.y + 100)
+  await window.mouse.down()
+  await window.mouse.move(box.x + 160, box.y + 100, { steps: 6 })
+  await window.mouse.up()
+  await expect(window.getByText('Set drawing scale')).toBeVisible({ timeout: 15_000 })
+  await window.getByLabel('Real-world length').fill('10')
+  await window.getByRole('button', { name: 'Set scale' }).click()
+
+  // The active scale shows in the toolbar; wait for the dialog to fully close.
+  await expect(window.getByText(/= 10 ft/)).toBeVisible({ timeout: 15_000 })
+  await window.waitForTimeout(400)
+
+  // Measure a 200px segment at the same zoom → exactly double → 20.00 ft.
+  await window.mouse.move(box.x + 60, box.y + 160)
+  await window.mouse.down()
+  await window.mouse.move(box.x + 260, box.y + 160, { steps: 6 })
+  await window.mouse.up()
+  await expect
+    .poll(
+      async () => {
+        const values = await window
+          .locator('[data-page-number] textarea')
+          .evaluateAll((els) => els.map((el) => (el as HTMLTextAreaElement).value))
+        return values.includes('20.00 ft')
+      },
+      { timeout: 20_000 }
+    )
+    .toBe(true)
+})

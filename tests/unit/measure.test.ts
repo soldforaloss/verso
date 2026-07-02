@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { distancePoints, formatMeasurement, pointsToUnit } from '../../src/renderer/src/lib/measure'
+import {
+  calibratedLabel,
+  calibrationSummary,
+  distancePoints,
+  formatMeasurement,
+  measureLabel,
+  pointsToUnit,
+  type MeasureCalibration
+} from '../../src/renderer/src/lib/measure'
 
 describe('distancePoints', () => {
   it('is the Euclidean distance in page points', () => {
@@ -23,5 +31,25 @@ describe('formatMeasurement', () => {
     expect(formatMeasurement(36, 'in')).toBe('0.50 in')
     expect(formatMeasurement(72, 'cm')).toBe('2.54 cm')
     expect(formatMeasurement(180.4, 'pt')).toBe('180 pt')
+  })
+})
+
+describe('calibration', () => {
+  // 72pt on paper = 10 ft in the real world.
+  const cal: MeasureCalibration = { paperPoints: 72, realValue: 10, realUnit: 'ft' }
+
+  it('scales lengths proportionally to the calibration segment', () => {
+    expect(calibratedLabel(72, cal)).toBe('10.00 ft')
+    expect(calibratedLabel(144, cal)).toBe('20.00 ft')
+    expect(calibratedLabel(36, cal)).toBe('5.00 ft')
+  })
+
+  it('measureLabel uses the calibration when set, else the physical unit', () => {
+    expect(measureLabel(144, 'in', cal)).toBe('20.00 ft')
+    expect(measureLabel(144, 'in', null)).toBe('2.00 in')
+  })
+
+  it('summarizes the scale in paper inches', () => {
+    expect(calibrationSummary(cal)).toBe('1.00 in = 10 ft')
   })
 })
